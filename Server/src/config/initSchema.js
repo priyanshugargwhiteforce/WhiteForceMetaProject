@@ -1,0 +1,439 @@
+const { pool } = require('./db');
+
+const initSchema = async () => {
+    try {
+        console.log('Initializing database schema...');
+
+        // 1. Meta Ad Accounts
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS meta_ad_accounts (
+                id VARCHAR(100) PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                account_status INT DEFAULT 1,
+                currency VARCHAR(10) DEFAULT 'INR',
+                timezone_name VARCHAR(100),
+                amount_spent BIGINT DEFAULT 0,
+                balance BIGINT DEFAULT 0,
+                created_time TIMESTAMP NULL,
+                last_synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - meta_ad_accounts table created/verified');
+
+        // 2. Meta Account Insights Summary
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS meta_account_insights (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                account_id VARCHAR(100) NOT NULL,
+                date_preset VARCHAR(50) NOT NULL,
+                spend DECIMAL(15, 2) DEFAULT 0.00,
+                impressions INT DEFAULT 0,
+                clicks INT DEFAULT 0,
+                ctr DECIMAL(5, 2) DEFAULT 0.00,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_account_preset (account_id, date_preset)
+            )
+        `);
+        console.log(' - meta_account_insights table created/verified');
+
+        // 3. Meta Insights Daily/Trend Data
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS meta_insights_trend (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                account_id VARCHAR(100) NOT NULL,
+                date_preset VARCHAR(50) NOT NULL,
+                date_start DATE NOT NULL,
+                spend DECIMAL(15, 2) DEFAULT 0.00,
+                impressions INT DEFAULT 0,
+                clicks INT DEFAULT 0,
+                ctr DECIMAL(5, 2) DEFAULT 0.00,
+                cpc DECIMAL(15, 4) DEFAULT 0.00,
+                cpm DECIMAL(15, 4) DEFAULT 0.00,
+                cost_per_action_type JSON,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_account_preset_date (account_id, date_preset, date_start)
+            )
+        `);
+        console.log(' - meta_insights_trend table created/verified');
+
+        // 4. Meta Ads Table (Stores ads, adset, and campaign info)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS meta_ads (
+                id VARCHAR(100) PRIMARY KEY,
+                account_id VARCHAR(100) NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                status VARCHAR(50),
+                campaign_id VARCHAR(100),
+                campaign_name VARCHAR(255),
+                adset_id VARCHAR(100),
+                adset_name VARCHAR(255),
+                creative_id VARCHAR(100),
+                ad_active_time INT DEFAULT 0,
+                insights_impressions INT DEFAULT 0,
+                insights_spend DECIMAL(15, 2) DEFAULT 0.00,
+                raw_data JSON,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - meta_ads table created/verified');
+
+        // 5. Meta Lead Forms Table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS meta_lead_forms (
+                id VARCHAR(100) PRIMARY KEY,
+                name VARCHAR(255),
+                status VARCHAR(50),
+                leads_count INT DEFAULT 0,
+                locale VARCHAR(20),
+                created_time TIMESTAMP NULL,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - meta_lead_forms table created/verified');
+
+        // 6. Meta Leads Table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS meta_leads (
+                lead_id VARCHAR(100) PRIMARY KEY,
+                form_id VARCHAR(100) NOT NULL,
+                ad_id VARCHAR(100),
+                ad_name VARCHAR(255),
+                adset_id VARCHAR(100),
+                adset_name VARCHAR(255),
+                platform VARCHAR(50),
+                created_time TIMESTAMP NULL,
+                full_name VARCHAR(255),
+                email VARCHAR(255),
+                phone VARCHAR(50),
+                city VARCHAR(100),
+                street_address VARCHAR(255),
+                job_title VARCHAR(255),
+                field_data JSON,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - meta_leads table created/verified');
+
+        // Safe Alter queries for meta_leads migrations
+        try {
+            await pool.query("ALTER TABLE meta_leads ADD COLUMN ad_name VARCHAR(255)");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE meta_leads ADD COLUMN adset_id VARCHAR(100)");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE meta_leads ADD COLUMN adset_name VARCHAR(255)");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE meta_leads ADD COLUMN platform VARCHAR(50)");
+        } catch (e) { /* Column might exist */ }
+
+        // 7. Google Ads Snapshots
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS google_ads_snapshots (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                customer_id VARCHAR(100) NOT NULL,
+                date_preset VARCHAR(50) NOT NULL,
+                spend DECIMAL(15, 2) DEFAULT 0.00,
+                impressions INT DEFAULT 0,
+                clicks INT DEFAULT 0,
+                conversions DECIMAL(15, 2) DEFAULT 0.00,
+                graph_data JSON,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_customer_preset (customer_id, date_preset)
+            )
+        `);
+        console.log(' - google_ads_snapshots table created/verified');
+
+        // 8. WhatsApp Phone Details
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS whatsapp_phone_details (
+                phone_number_id VARCHAR(100) PRIMARY KEY,
+                waba_id VARCHAR(100) NOT NULL,
+                display_phone_number VARCHAR(50),
+                verified_name VARCHAR(255),
+                quality_rating VARCHAR(50),
+                raw_data JSON,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - whatsapp_phone_details table created/verified');
+
+        // 9. WhatsApp Templates
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS whatsapp_templates (
+                id VARCHAR(100) PRIMARY KEY,
+                waba_id VARCHAR(100) NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                status VARCHAR(50),
+                language VARCHAR(20),
+                category VARCHAR(50),
+                components JSON,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - whatsapp_templates table created/verified');
+
+        // 10. WhatsApp Message Logs
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS whatsapp_message_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                phone_number_id VARCHAR(100) NOT NULL,
+                recipient_number VARCHAR(50) NOT NULL,
+                template_name VARCHAR(255) NOT NULL,
+                status VARCHAR(50) DEFAULT 'sent',
+                message_id VARCHAR(255),
+                sent_by INT,
+                error_message TEXT,
+                sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - whatsapp_message_logs table created/verified');
+
+        // 11. Meta Creatives Table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS meta_creatives (
+                id VARCHAR(100) PRIMARY KEY,
+                raw_data JSON,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - meta_creatives table created/verified');
+
+        // 12. Meta Single Ad Insights Daily Trend
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS meta_ad_insights_trend (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ad_id VARCHAR(100) NOT NULL,
+                date_start DATE NOT NULL,
+                spend DECIMAL(15, 2) DEFAULT 0.00,
+                impressions INT DEFAULT 0,
+                clicks INT DEFAULT 0,
+                ctr DECIMAL(5, 2) DEFAULT 0.00,
+                cpc DECIMAL(15, 4) DEFAULT 0.00,
+                reach INT DEFAULT 0,
+                actions JSON,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_ad_date (ad_id, date_start)
+            )
+        `);
+        console.log(' - meta_ad_insights_trend table created/verified');
+
+        // 13. WhatsApp Channels Table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS whatsapp_channels (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                channel_name VARCHAR(255) NOT NULL,
+                manager_name VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - whatsapp_channels table created/verified');
+
+        // 14. WhatsApp Channel Daily Member Updates Table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS whatsapp_channel_member_updates (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                channel_id INT NOT NULL,
+                member_count INT NOT NULL,
+                update_date DATE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (channel_id) REFERENCES whatsapp_channels(id) ON DELETE CASCADE,
+                UNIQUE KEY uq_channel_date (channel_id, update_date)
+            )
+        `);
+        console.log(' - whatsapp_channel_member_updates table created/verified');
+
+        // 15. LinkedIn Ad Accounts (Existing compatibility)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS linkedin_ad_accounts (
+                id VARCHAR(100) PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                status VARCHAR(50) DEFAULT 'ACTIVE',
+                currency VARCHAR(10) DEFAULT 'INR',
+                total_spent DECIMAL(15, 2) DEFAULT 0.00,
+                last_synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - linkedin_ad_accounts table created/verified');
+
+        // 16. LinkedIn Campaigns
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS linkedin_campaigns (
+                id VARCHAR(100) PRIMARY KEY,
+                account_id VARCHAR(100) NOT NULL,
+                campaign_group_id VARCHAR(100),
+                name VARCHAR(255) NOT NULL,
+                status VARCHAR(50),
+                type VARCHAR(50),
+                total_spent DECIMAL(15, 2) DEFAULT 0.00,
+                last_synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - linkedin_campaigns table created/verified');
+        try {
+            await pool.query("ALTER TABLE linkedin_campaigns ADD COLUMN campaign_group_id VARCHAR(100)");
+        } catch (e) { /* Column might exist */ }
+
+        // 17. LinkedIn Daily Insights / Trends (Existing compatibility)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS linkedin_insights_trend (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                account_id VARCHAR(100) NOT NULL,
+                date_start DATE NOT NULL,
+                spend DECIMAL(15, 2) DEFAULT 0.00,
+                impressions INT DEFAULT 0,
+                clicks INT DEFAULT 0,
+                conversions INT DEFAULT 0,
+                ctr DECIMAL(5, 2) DEFAULT 0.00,
+                cpc DECIMAL(15, 4) DEFAULT 0.00,
+                cpm DECIMAL(15, 4) DEFAULT 0.00,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_li_account_date (account_id, date_start)
+            )
+        `);
+        console.log(' - linkedin_insights_trend table created/verified');
+
+        // 18. LinkedIn Access/Refresh Tokens Vault
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS linkedin_api_tokens (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                access_token TEXT NOT NULL,
+                refresh_token TEXT,
+                expires_in INT,
+                refresh_token_expires_in INT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - linkedin_api_tokens table created/verified');
+
+        // 19. LinkedIn Live Accounts Table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS linkedin_accounts (
+                id VARCHAR(100) PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                status VARCHAR(50) DEFAULT 'ACTIVE',
+                currency VARCHAR(10) DEFAULT 'INR',
+                total_spent DECIMAL(15, 2) DEFAULT 0.00,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - linkedin_accounts table created/verified');
+
+        // 20. LinkedIn Campaign Groups
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS linkedin_campaign_groups (
+                id VARCHAR(100) PRIMARY KEY,
+                account_id VARCHAR(100) NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                status VARCHAR(50),
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - linkedin_campaign_groups table created/verified');
+
+        // 21. LinkedIn Ads Individual Setup Table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS linkedin_ads (
+                id VARCHAR(100) PRIMARY KEY,
+                campaign_id VARCHAR(100) NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                status VARCHAR(50),
+                type VARCHAR(50),
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - linkedin_ads table created/verified');
+
+        // 22. LinkedIn Ad-Level Daily Time-series Analytics
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS linkedin_ad_analytics_daily (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ad_id VARCHAR(100) NOT NULL,
+                account_id VARCHAR(100) NOT NULL,
+                date_start DATE NOT NULL,
+                spend DECIMAL(15, 2) DEFAULT 0.00,
+                impressions INT DEFAULT 0,
+                clicks INT DEFAULT 0,
+                conversions INT DEFAULT 0,
+                ctr DECIMAL(5, 2) DEFAULT 0.00,
+                cpc DECIMAL(15, 4) DEFAULT 0.00,
+                cpm DECIMAL(15, 4) DEFAULT 0.00,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_li_ad_date (ad_id, date_start)
+            )
+        `);
+        console.log(' - linkedin_ad_analytics_daily table created/verified');
+
+        // 23. LinkedIn Leads Data
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS linkedin_leads (
+                id VARCHAR(100) PRIMARY KEY,
+                form_id VARCHAR(100) NOT NULL,
+                form_name VARCHAR(255),
+                ad_id VARCHAR(100),
+                full_name VARCHAR(255),
+                email VARCHAR(255),
+                phone VARCHAR(50),
+                submitted_at TIMESTAMP NULL,
+                field_data JSON,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - linkedin_leads table created/verified');
+
+        // 24. LinkedIn Demographic & Audience insights
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS linkedin_audience_insights (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                account_id VARCHAR(100) NOT NULL,
+                category VARCHAR(50) NOT NULL,
+                key_name VARCHAR(255) NOT NULL,
+                percentage DECIMAL(5, 2) DEFAULT 0.00,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_li_audience_key (account_id, category, key_name)
+            )
+        `);
+        console.log(' - linkedin_audience_insights table created/verified');
+
+        // 25. LinkedIn Sync Telemetry Logging Table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS linkedin_sync_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                account_id VARCHAR(100) NOT NULL,
+                sync_type VARCHAR(50) DEFAULT 'MANUAL',
+                status VARCHAR(50) DEFAULT 'RUNNING',
+                records_synced INT DEFAULT 0,
+                error_message TEXT,
+                started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP NULL
+            )
+        `);
+        console.log(' - linkedin_sync_logs table created/verified');
+
+        // Seed/Update initial LinkedIn tokens if needed
+        const [tokenRows] = await pool.query('SELECT * FROM linkedin_api_tokens LIMIT 1');
+        const defaultAccessToken = 'AQXZOSIj5Xy2guESTSXeAkLE_VYsLQQe41gNy-lNNBVyHudgHWAJzQNjY_biMWVTB8duxAD8urXOAQSv8Ku18M6pHoX55SiWBLpEmATBdyxmWJczmuD4Y1SZeWtk53u2IdC_4UQ6Ir_M9WxC6UAQTD6ou0nVvmL4IvDMgRnDc1G4bby8XWSz8x-WR6o-JeFBWdg90gCV18RES1EyJcNL4qTtftGHjXl_y_NFcbCCrVoRedQ2qcrmzDLXQCf3t-SUbNEjjaspgoY8lkHWGLnjjIQq0Z2iN3C7k5wJHNIWUj_jiKKkkPiW2_GRwZGI6SoAGFUNa95ljTO2VzkoJntfPM1j43FVjA';
+        const defaultRefreshToken = 'AQWAL3rh-kQ7YQlkcdRbSyx4pRgQmjJEfXsUfiC8-ZXEHk6TnqSwshXGGKKtC2mM3UiHLrcp_y208BtDbP1nNpheJLC8LWf4g49rHNLU1FknTvQxVG5bjVSt9SBkl-ZXWY02K6pOglacxGfG5CtKJZVHCfKYRfafYyRTs8mAINoL6LlAYmQvRvkBe_OUcsDWZfLYMnMjPViLBQs47gXmL0_Ec481tj2ErVRdTQNN2g9aqkBmoTazpBDyz3Ya3S2Hhz7Uoc_7uh9gc48bGTRY4usr_y-Mv5M-RdBTgqaQliCUnbPIhoTQoeyiklUCoxxsWA4WFAVVqFwWmDScyB-jXhotr0ZE7Q';
+
+        if (tokenRows.length === 0) {
+            console.log('Seeding initial LinkedIn tokens...');
+            await pool.query(
+                `INSERT INTO linkedin_api_tokens (id, access_token, refresh_token, expires_in, refresh_token_expires_in)
+                 VALUES (1, ?, ?, ?, ?)`,
+                [defaultAccessToken, defaultRefreshToken, 5184000, 31536000]
+            );
+            console.log(' - linkedin_api_tokens seeded with user-provided bootstrap credentials');
+        } else {
+            console.log('LinkedIn tokens already exist in DB. Skipping seeder overwrite.');
+        }
+
+        console.log('Database schema initialization completed successfully.');
+    } catch (error) {
+        console.error('Error initializing database schema:', error.message);
+        throw error;
+    }
+};
+
+module.exports = { initSchema };
