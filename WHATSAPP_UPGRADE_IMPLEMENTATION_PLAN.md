@@ -20,31 +20,35 @@ Detailed engineering plan to upgrade the existing WhatsApp module into a profess
 ```mermaid
 graph TD
     Sprint1[Sprint 1: Variables Engine] --> Sprint2[Sprint 2: Dynamic Headers/Buttons]
-    Sprint2 --> Sprint3[Sprint 3: Contacts ]
+    Sprint2 --> Sprint3[Sprint 3: Contacts Management]
     Sprint3 --> Sprint4[Sprint 4: Campaign Engine]
-    Sprint4 --> Sprint5[Sprint 5: Auto Matcher]
-    Sprint5 --> Sprint6[Sprint 6: Redis & BullMQ]
+    Sprint4 --> Sprint5[Sprint 5: Queue Infrastructure]
+    Sprint5 --> Sprint6[Sprint 6: Auto Matcher & Saved Mappings]
     Sprint6 --> Sprint7[Sprint 7: Scheduling Engine]
-    Sprint7 --> Sprint8[Sprint 8: Analytics  Dashboard]
-    Sprint8 --> Sprint9[Sprint 9: Crypto Security Tokens]
+    Sprint7 --> Sprint8[Sprint 8: Analytics Dashboard]
+    Sprint8 --> Sprint9[Sprint 9: Security & Integrity]
 ```
 
-### Sprint 1: Template Variable Engine
-* **Goal:** Support dynamic variable naming (e.g. `{{name}}`, `{{company}}`) in template bodies rather than strict numeric ranges.
-* **Database Changes:** Add `variables` (JSON) to the `whatsapp_templates` table.
-* **Service logic:** Implement a regex parser `const extractVariables = (text) => [...text.matchAll(/\{\{([a-zA-Z0-9_]+)\}\}/g)].map(m => m[1])` to read and cache variables when templates are created or synchronized.
+### Sprint 1: Template Variable Engine & Migration Job
+* **Goal:** Support dynamic variable naming (e.g. `{{name}}`, `{{order_id}}`) in template bodies rather than strict numeric ranges.
+* **Database Changes:** 
+  * Add `variables` (JSON) to the `whatsapp_templates` table.
+  * Create table `whatsapp_template_variables` (id, template_id, variable_name, component_type ['header','body','button'], variable_position, created_at).
+* **Service logic:** 
+  * Implement a regex parser to read and cache variables when templates are created/synchronized. Populate both the cached `variables` column and insert rows into `whatsapp_template_variables` on template sync.
+  * **Template Sync Migration Job:** Create a migration runner (run during server startup or as a one-time script) that scans all existing templates in `whatsapp_templates`, parses their components JSON to extract legacy numeric placeholders (`{{1}}`, `{{2}}`, etc.), and populates `whatsapp_template_variables` and `variables` to keep legacy templates fully functional under the upgraded architecture.
 * **Backward Compatibility:** Numeric placeholders like `{{1}}` are parsed as `["1", "2"]`, maintaining compatibility.
 
 ### Sprint 2: Dynamic Template Components
 * **Goal:** Support variables in Headers (Text, Image URL, PDF Doc URL) and interactive buttons (Dynamic URL parameters).
-* **Database changes:** No new tables; uses cached `components` JSON in `whatsapp_templates`.
+* **Database changes:** No new tables; uses cached `components` JSON in `whatsapp_templates` and updates `whatsapp_template_variables`.
 * **API changes:** Update payload builder on the server to structure parameters based on their component location (Header, Body, Button) rather than body only.
 * **Backward Compatibility:** Templates that only define body variables will map to body parameters without changing existing flows.
 
 ### Sprint 3: Contact Management
 * **Goal:** Add Lite contact logs and tag segmentation in the WhatsApp module.
 * **Database changes:** Create 4 new tables:
-  * `whatsapp_contacts` (id, phone, name, email, company, attributes JSON, created_at)
+  * `whatsapp_contacts` (id, phone, name, email, company, opt_in_status, opt_in_date, last_message_at, attributes JSON, created_at)
   * `whatsapp_contact_lists` (id, name, created_at)
   * `whatsapp_contact_list_members` (list_id, contact_id, PK compound)
   * `whatsapp_contact_tags` (id, contact_id, tag_name)
@@ -54,30 +58,32 @@ graph TD
   * `POST /api/whatsapp/lists` - Create, read, update, delete custom lists.
 * **Frontend changes:** Add a "Contacts" tab inside the WhatsApp module with list creator and CSV/Excel import wizard.
 
-### Sprint 4: Campaign Engine
+### Sprint 4: Campaign Engine & Fast Dashboard Stats
 * **Goal:** Create, save, and track broadcasting campaigns.
 * **Database changes:**
   * `whatsapp_campaigns` (id, name, template_id, contact_list_id, campaign_type ['broadcast', 'scheduled', 'recurring'], status ['draft', 'queued', 'running', 'completed', 'failed'], scheduled_time, created_at)
   * `whatsapp_campaign_recipients` (campaign_id, phone, parameters JSON, status, message_id, error_message, sent_at)
+  * `whatsapp_campaign_stats` (campaign_id, total_count, sent_count, delivered_count, read_count, failed_count, delivery_rate, read_rate, updated_at)
 * **API changes:**
   * `POST /api/whatsapp/campaigns` - Create dynamic campaign.
   * `GET /api/whatsapp/campaigns/:id` - Detailed progress & recipient delivery lists.
   * `POST /api/whatsapp/campaigns/:id/clone` - Clone campaign.
 
-### Sprint 5: Auto Variable Mapping & Saved Mappings
+### Sprint 5: Queue Infrastructure & Monitoring (Redis & BullMQ)
+* **Goal:** Relieve synchronous server processing of campaigns using a job worker queue.
+* **Queue System & Monitoring:**
+  * Add Redis connection and initialize BullMQ campaign queue.
+  * Backend worker consumes jobs asynchronously, respects Meta's rate limits (throttling), logs errors, and updates recipient progress logs.
+  * Integrate **Bull Board** dashboard middleware (`/api/whatsapp/admin/queues`) to provide admins real-time monitoring of Queued, Running, Completed, and Failed jobs, along with retry options.
+* **Backward Compatibility:** Legacy `/api/whatsapp/send-template` remains active, routing requests to the queue immediately as a "Send Now" single-recipient campaign.
+
+### Sprint 6: Auto Variable Mapping & Saved Mappings
 * **Goal:** Match template variable names automatically to Excel columns or Contact attributes, and save mappings so that they auto-apply in subsequent campaigns.
 * **Database changes:** Create table `whatsapp_template_mappings` (template_id, mappings, created_at, updated_at).
 * **API changes:**
   * `GET /api/whatsapp/templates/:templateId/mappings` - Retrieve saved mapping profile.
   * `POST /api/whatsapp/templates/:templateId/mappings` - Save or overwrite template column mappings.
 * **Frontend changes:** When a template is selected, query the server to check for saved mappings. If found, apply them. On new files, compare metadata keys against imported column headers for auto-matching. Add a checkbox/button to allow users to "Save Mappings for Future Use".
-
-### Sprint 6: Queue Infrastructure (Redis & BullMQ)
-* **Goal:** Relieve synchronous server processing of campaigns using a job worker queue.
-* **Queue System:**
-  * Add Redis connection and initialize BullMQ campaign queue.
-  * Backend worker consumes jobs asynchronously, respects Meta's rate limits (throttling), logs errors, and updates recipient progress logs.
-* **Backward Compatibility:** Legacy `/api/whatsapp/send-template` remains active, routing requests to the queue immediately as a "Send Now" single-recipient campaign.
 
 ### Sprint 7: Campaign Scheduling
 * **Goal:** support delayed and recurring campaigns.
@@ -104,11 +110,24 @@ graph TD
 
 ## 3. Database Migration Strategy
 
+> [!NOTE]
+> **Data Type Verification Note:** The column `whatsapp_templates.id` has been verified in the codebase (`initSchema.js:228`) to be of type `VARCHAR(100)`. Therefore, all foreign keys referencing it are configured as `VARCHAR(100)` to ensure compatibility and prevent migration failures.
+
 ```sql
 -- Migration queries schema changes (incremental execution)
 
 -- Sprint 1
 ALTER TABLE whatsapp_templates ADD COLUMN variables JSON DEFAULT NULL;
+
+CREATE TABLE IF NOT EXISTS whatsapp_template_variables (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    template_id VARCHAR(100) NOT NULL,
+    variable_name VARCHAR(255) NOT NULL,
+    component_type ENUM('header','body','button') NOT NULL,
+    variable_position INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (template_id) REFERENCES whatsapp_templates(id) ON DELETE CASCADE
+);
 
 -- Sprint 3
 CREATE TABLE IF NOT EXISTS whatsapp_contacts (
@@ -117,6 +136,9 @@ CREATE TABLE IF NOT EXISTS whatsapp_contacts (
     name VARCHAR(255),
     email VARCHAR(255),
     company VARCHAR(255),
+    opt_in_status BOOLEAN DEFAULT TRUE,
+    opt_in_date DATETIME DEFAULT NULL,
+    last_message_at DATETIME DEFAULT NULL,
     attributes JSON DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -169,7 +191,20 @@ CREATE TABLE IF NOT EXISTS whatsapp_campaign_recipients (
     FOREIGN KEY (campaign_id) REFERENCES whatsapp_campaigns(id) ON DELETE CASCADE
 );
 
--- Sprint 5
+CREATE TABLE IF NOT EXISTS whatsapp_campaign_stats (
+    campaign_id INT PRIMARY KEY,
+    total_count INT DEFAULT 0,
+    sent_count INT DEFAULT 0,
+    delivered_count INT DEFAULT 0,
+    read_count INT DEFAULT 0,
+    failed_count INT DEFAULT 0,
+    delivery_rate DECIMAL(5,2) DEFAULT 0.00,
+    read_rate DECIMAL(5,2) DEFAULT 0.00,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (campaign_id) REFERENCES whatsapp_campaigns(id) ON DELETE CASCADE
+);
+
+-- Sprint 6 (Auto Variable Mapping & Saved Mappings)
 CREATE TABLE IF NOT EXISTS whatsapp_template_mappings (
     template_id VARCHAR(100) PRIMARY KEY,
     mappings JSON NOT NULL,
