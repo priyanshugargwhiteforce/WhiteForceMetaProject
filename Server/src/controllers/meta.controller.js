@@ -1,4 +1,50 @@
 const metaService = require('../services/meta.service');
+const { pool } = require('../config/db');
+
+// Configs CRUD
+exports.getMetaConfigs = async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT id, name, created_at FROM meta_configs ORDER BY created_at DESC');
+        res.json({ success: true, configs: rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.createMetaConfig = async (req, res) => {
+    try {
+        const { name, accessToken } = req.body;
+        if (!name || !accessToken) {
+            return res.status(400).json({ success: false, message: 'Name and Access Token are required.' });
+        }
+        const [result] = await pool.query('INSERT INTO meta_configs (name, access_token) VALUES (?, ?)', [name, accessToken]);
+        res.status(201).json({ success: true, message: 'Meta Account Config created.', configId: result.insertId });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.updateMetaConfig = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, accessToken } = req.body;
+        await pool.query('UPDATE meta_configs SET name = ?, access_token = ? WHERE id = ?', [name, accessToken, id]);
+        res.json({ success: true, message: 'Meta Account Config updated.' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.deleteMetaConfig = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM meta_configs WHERE id = ?', [id]);
+        await pool.query('DELETE FROM meta_ad_accounts WHERE config_id = ?', [id]);
+        res.json({ success: true, message: 'Meta Account Config deleted.' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
 
 // @desc    Get all connected Meta Ad Accounts
 // @route   GET /api/meta/accounts
@@ -6,7 +52,8 @@ const metaService = require('../services/meta.service');
 exports.getAdAccounts = async (req, res) => {
     try {
         const forceSync = req.query.force === 'true';
-        const accounts = await metaService.getAdAccounts(forceSync);
+        const configId = req.headers['x-meta-config-id'] || req.query.configId;
+        const accounts = await metaService.getAdAccounts(forceSync, configId);
         res.status(200).json({
             success: true,
             adaccounts: {
@@ -29,12 +76,13 @@ exports.getAccountDetails = async (req, res) => {
     try {
         const { accountId } = req.params;
         const forceSync = req.query.force === 'true';
+        const configId = req.headers['x-meta-config-id'] || req.query.configId;
 
         if (!accountId) {
             return res.status(400).json({ success: false, message: 'Ad Account ID is required.' });
         }
 
-        const details = await metaService.getAccountDetails(accountId, forceSync);
+        const details = await metaService.getAccountDetails(accountId, forceSync, configId);
         res.status(200).json({
             success: true,
             data: details
@@ -56,12 +104,13 @@ exports.getAccountInsights = async (req, res) => {
         const { accountId } = req.params;
         const { preset = 'lifetime', force = 'false' } = req.query;
         const forceSync = force === 'true';
+        const configId = req.headers['x-meta-config-id'] || req.query.configId;
 
         if (!accountId) {
             return res.status(400).json({ success: false, message: 'Ad Account ID is required.' });
         }
 
-        const insights = await metaService.getAccountInsights(accountId, preset, forceSync);
+        const insights = await metaService.getAccountInsights(accountId, preset, forceSync, configId);
         res.status(200).json({
             success: true,
             data: insights
@@ -82,12 +131,13 @@ exports.getLeadFormData = async (req, res) => {
     try {
         const { formId } = req.params;
         const forceSync = req.query.force === 'true';
+        const configId = req.headers['x-meta-config-id'] || req.query.configId;
 
         if (!formId) {
             return res.status(400).json({ success: false, message: 'Lead Form ID is required.' });
         }
 
-        const data = await metaService.getLeadFormData(formId, forceSync);
+        const data = await metaService.getLeadFormData(formId, forceSync, configId);
         res.status(200).json({
             success: true,
             data
@@ -108,12 +158,13 @@ exports.getCreativeData = async (req, res) => {
     try {
         const { creativeId } = req.params;
         const forceSync = req.query.force === 'true';
+        const configId = req.headers['x-meta-config-id'] || req.query.configId;
 
         if (!creativeId) {
             return res.status(400).json({ success: false, message: 'Creative ID is required.' });
         }
 
-        const data = await metaService.getCreativeData(creativeId, forceSync);
+        const data = await metaService.getCreativeData(creativeId, forceSync, configId);
         res.status(200).json({
             success: true,
             data
@@ -134,12 +185,13 @@ exports.getSingleAdInsights = async (req, res) => {
     try {
         const { adId } = req.params;
         const forceSync = req.query.force === 'true';
+        const configId = req.headers['x-meta-config-id'] || req.query.configId;
 
         if (!adId) {
             return res.status(400).json({ success: false, message: 'Ad ID is required.' });
         }
 
-        const data = await metaService.getSingleAdInsights(adId, forceSync);
+        const data = await metaService.getSingleAdInsights(adId, forceSync, configId);
         res.status(200).json({
             success: true,
             data
@@ -179,11 +231,12 @@ exports.getLeads = async (req, res) => {
 exports.syncAdLeads = async (req, res) => {
     try {
         const { adId } = req.body;
+        const configId = req.headers['x-meta-config-id'] || req.query.configId;
         if (!adId) {
             return res.status(400).json({ success: false, message: 'Ad ID is required.' });
         }
 
-        await metaService.syncAdLeads(adId);
+        await metaService.syncAdLeads(adId, configId);
         
         // Return all leads after sync so the UI can update
         const updatedLeads = await metaService.getLeads();
@@ -195,6 +248,53 @@ exports.syncAdLeads = async (req, res) => {
         });
     } catch (error) {
         console.error('syncAdLeads Controller Error:', error.message);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// @desc    Update Ad Owner and Launch Date for a specific Ad ID
+// @route   POST /api/meta/ads/owner
+// @access  Private
+exports.updateAdOwner = async (req, res) => {
+    try {
+        const { adId, ownerName, launchDate } = req.body;
+        if (!adId) {
+            return res.status(400).json({ success: false, message: 'Ad ID is required.' });
+        }
+
+        await pool.query(
+            'UPDATE meta_ads SET owner_name = ?, launch_date = ?, owner_updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            [ownerName || null, launchDate || null, adId]
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Ad Owner details updated successfully.'
+        });
+    } catch (error) {
+        console.error('updateAdOwner Controller Error:', error.message);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// @desc    Get all team members (system users) for dropdown selections
+// @route   GET /api/meta/team
+// @access  Private
+exports.getTeamMembers = async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT id, username, role FROM users ORDER BY username ASC');
+        res.status(200).json({
+            success: true,
+            team: rows
+        });
+    } catch (error) {
+        console.error('getTeamMembers Controller Error:', error.message);
         res.status(500).json({
             success: false,
             message: error.message

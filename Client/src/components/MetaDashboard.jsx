@@ -8,6 +8,8 @@ import {
   IndianRupee, RefreshCw, Calendar, Users, MapPin, Phone, Mail, 
   Globe, Filter, FileText, CheckCircle, Database
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+
 const TIME_RANGES = {
   TODAY: 'today',
   THIS_WEEK: 'this_week_mon_today',
@@ -15,11 +17,16 @@ const TIME_RANGES = {
 };
 
 const MetaDashboard = () => {
+  const { user } = useAuth();
   const [adAccounts, setAdAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [timeRange, setTimeRange] = useState('this_month');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Configurations States
+  const [metaConfigs, setMetaConfigs] = useState([]);
+  const [selectedConfigId, setSelectedConfigId] = useState(localStorage.getItem('selectedMetaConfigId') || '');
   
   // Real-time synchronization states
   const [syncing, setSyncing] = useState(false);
@@ -39,13 +46,51 @@ const MetaDashboard = () => {
   const [leadsCurrentPage, setLeadsCurrentPage] = useState(1);
   const [leadsPerPage, setLeadsPerPage] = useState(5);
 
+  const fetchConfigs = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/meta/configs`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setMetaConfigs(data.configs || []);
+      }
+    } catch (err) {
+      console.error("Error fetching meta configs:", err);
+    }
+  };
+
+  const handleConfigChange = (e) => {
+    const val = e.target.value;
+    setSelectedConfigId(val);
+    localStorage.setItem('selectedMetaConfigId', val);
+  };
+
+  useEffect(() => {
+    fetchConfigs();
+
+    const handleConfigChanged = (e) => {
+      if (e.detail.type === 'meta') {
+        fetchConfigs();
+        fetchAdAccounts();
+      }
+    };
+    window.addEventListener('config-changed', handleConfigChanged);
+    return () => window.removeEventListener('config-changed', handleConfigChanged);
+  }, []);
+
   useEffect(() => {
     fetchAdAccounts();
-  }, []);
+  }, [selectedConfigId]);
 
   useEffect(() => {
     if (selectedAccount) {
       fetchDashboardData(selectedAccount.id);
+    } else {
+      setGraphDataRaw([]);
+      setAllLeads([]);
+      setAccountAdIds([]);
     }
   }, [selectedAccount]);
 
@@ -55,10 +100,15 @@ const MetaDashboard = () => {
   }, [startDate, endDate, selectedMonth, timeRange, selectedAccount]);
 
   const fetchAdAccounts = async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem('token');
+      const configId = localStorage.getItem('selectedMetaConfigId') || '';
+      const headers = { 'Authorization': `Bearer ${token}` };
+      if (configId) headers['X-Meta-Config-Id'] = configId;
+
       const response = await fetch(`http://localhost:5000/api/meta/accounts`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers
       });
       const result = await response.json();
       if (result.error) throw new Error(result.error.message);
@@ -67,7 +117,14 @@ const MetaDashboard = () => {
         setAdAccounts(result.adaccounts.data);
         if (result.adaccounts.data.length > 0) {
           setSelectedAccount(result.adaccounts.data[0]);
+        } else {
+          setSelectedAccount(null);
+          setLoading(false);
         }
+      } else {
+        setAdAccounts([]);
+        setSelectedAccount(null);
+        setLoading(false);
       }
     } catch (err) {
       setError(err.message);
@@ -80,10 +137,13 @@ const MetaDashboard = () => {
     setError(null);
     try {
       const token = localStorage.getItem('token');
+      const configId = localStorage.getItem('selectedMetaConfigId') || '';
+      const headers = { 'Authorization': `Bearer ${token}` };
+      if (configId) headers['X-Meta-Config-Id'] = configId;
       
       // 1. Fetch daily lifetime insights trend
       const insRes = await fetch(`http://localhost:5000/api/meta/insights/${accountId}?preset=lifetime`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers
       });
       const insResult = await insRes.json();
       if (insResult.error) throw new Error(insResult.error.message);
@@ -92,7 +152,7 @@ const MetaDashboard = () => {
 
       // 2. Fetch ad account ads to build accountAdIds filter list
       const accRes = await fetch(`http://localhost:5000/api/meta/accounts/${accountId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers
       });
       const accResult = await accRes.json();
       if (accResult.success && accResult.data?.ads?.data) {
@@ -104,7 +164,7 @@ const MetaDashboard = () => {
 
       // 3. Fetch all leads from the database
       const leadsRes = await fetch('http://localhost:5000/api/meta/leads', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers
       });
       const leadsResult = await leadsRes.json();
       if (leadsResult.success) {
@@ -125,18 +185,21 @@ const MetaDashboard = () => {
     setSyncSuccess(null);
     try {
       const token = localStorage.getItem('token');
+      const configId = localStorage.getItem('selectedMetaConfigId') || '';
+      const headers = { 'Authorization': `Bearer ${token}` };
+      if (configId) headers['X-Meta-Config-Id'] = configId;
       const accountId = selectedAccount.id;
 
       // 1. Force sync connected ad accounts
       const accListRes = await fetch(`http://localhost:5000/api/meta/accounts?force=true`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers
       });
       const accListResult = await accListRes.json();
       if (!accListResult.success) throw new Error(accListResult.message || "Failed to sync accounts list");
 
       // 2. Force sync selected account details and campaign ads list
       const detailsRes = await fetch(`http://localhost:5000/api/meta/accounts/${accountId}?force=true`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers
       });
       const detailsResult = await detailsRes.json();
       if (!detailsResult.success) throw new Error(detailsResult.message || "Failed to sync account details");
@@ -146,7 +209,7 @@ const MetaDashboard = () => {
 
       // 3. Force sync selected account daily insights trend
       const insRes = await fetch(`http://localhost:5000/api/meta/insights/${accountId}?preset=lifetime&force=true`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers
       });
       const insResult = await insRes.json();
       if (!insResult.success) throw new Error(insResult.message || "Failed to sync account insights");
@@ -158,8 +221,8 @@ const MetaDashboard = () => {
             await fetch('http://localhost:5000/api/meta/leads/sync', {
               method: 'POST',
               headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                ...headers,
+                'Content-Type': 'application/json'
               },
               body: JSON.stringify({ adId })
             });
@@ -360,6 +423,23 @@ const MetaDashboard = () => {
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
+          {/* Meta Account Connection Dropdown (Admin Only) */}
+          {user?.role === 'admin' && (
+            <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 transition-colors">
+              <Database className="w-4 h-4 text-blue-500" />
+              <select
+                value={selectedConfigId}
+                onChange={handleConfigChange}
+                className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-200"
+              >
+                <option value="" className="bg-white dark:bg-slate-900">Default Server Account</option>
+                {metaConfigs.map(cfg => (
+                  <option key={cfg.id} value={cfg.id} className="bg-white dark:bg-slate-900">{cfg.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Sync Button */}
           <button 
             disabled={syncing || !selectedAccount}
@@ -376,9 +456,13 @@ const MetaDashboard = () => {
             onChange={(e) => setSelectedAccount(adAccounts.find(a => a.id === e.target.value))}
             className="bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-white cursor-pointer"
           >
-            {adAccounts.map(acc => (
-              <option key={acc.id} value={acc.id}>{acc.name}</option>
-            ))}
+            {adAccounts.length === 0 ? (
+              <option value="">No Ad Accounts</option>
+            ) : (
+              adAccounts.map(acc => (
+                <option key={acc.id} value={acc.id}>{acc.name}</option>
+              ))
+            )}
           </select>
         </div>
       </div>

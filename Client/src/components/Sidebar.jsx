@@ -22,21 +22,24 @@ import {
   Briefcase
 } from 'lucide-react';
 import logo from "../assets/white-forcelogo.png";
+
 const Sidebar = () => {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const metaPaths = ['/ad-accounts', '/ad-analyzer', '/single-ad-analyzer', '/insights', '/all-leads'];
+  const metaPaths = ['/ad-accounts', '/ad-analyzer', '/single-ad-analyzer', '/insights', '/all-leads', '/ad-owners'];
   const googlePaths = ['/google-dashboard', '/google-campaigns', '/google-performance', '/google-insights', '/youtube-ads'];
   const waPaths = ['/whatsapp-manager', '/wa-channels', '/wa-templates', '/wa-templates/new', '/send-message', '/wa-analytics'];
   const linkedInPaths = ['/linkedin-manager', '/linkedin-campaigns', '/linkedin-analytics', '/linkedin-leads'];
+  const settingsPaths = ['/users', '/settings/meta', '/settings/whatsapp'];
 
   const [openMeta, setOpenMeta] = useState(metaPaths.includes(location.pathname) || location.pathname === '/');
   const [openGoogle, setOpenGoogle] = useState(googlePaths.includes(location.pathname));
   const [openWhatsApp, setOpenWhatsApp] = useState(waPaths.includes(location.pathname));
   const [openLinkedIn, setOpenLinkedIn] = useState(linkedInPaths.includes(location.pathname));
+  const [openSettings, setOpenSettings] = useState(settingsPaths.includes(location.pathname));
 
   useEffect(() => {
     const path = location.pathname;
@@ -44,6 +47,7 @@ const Sidebar = () => {
     if (googlePaths.includes(path)) setOpenGoogle(true);
     if (waPaths.includes(path)) setOpenWhatsApp(true);
     if (linkedInPaths.includes(path)) setOpenLinkedIn(true);
+    if (settingsPaths.includes(path)) setOpenSettings(true);
   }, [location.pathname]);
 
   const isActive = (path) => location.pathname === path;
@@ -57,7 +61,7 @@ const Sidebar = () => {
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight leading-none transition-colors">White Force</h1>
-            <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] mt-1 transition-colors">META Management</p>
+            <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] mt-1 transition-colors">Ad Management</p>
           </div>
         </div>
       </div>
@@ -109,6 +113,13 @@ const Sidebar = () => {
               label="All Leads"
               active={isActive('/all-leads')}
               onClick={() => navigate('/all-leads')}
+              isSubItem={true}
+            />
+            <NavItem
+              icon={Users}
+              label="Ad Owner"
+              active={isActive('/ad-owners')}
+              onClick={() => navigate('/ad-owners')}
               isSubItem={true}
             />
           </NavDropdown>
@@ -243,18 +254,41 @@ const Sidebar = () => {
         )}
 
 
-        <div className="pt-6 pb-2 px-4">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">System</p>
-        </div>
         {user?.role === 'admin' && (
-          <NavItem
-            icon={Users}
-            label="User Management"
-            active={isActive('/users')}
-            onClick={() => navigate('/users')}
-          />
+          <>
+            <div className="pt-6 pb-2 px-4">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">System</p>
+            </div>
+            <NavDropdown
+              icon={Settings}
+              label="Settings"
+              open={openSettings}
+              onToggle={() => setOpenSettings(!openSettings)}
+            >
+              <NavItem
+                icon={Users}
+                label="User Management"
+                active={isActive('/users')}
+                onClick={() => navigate('/users')}
+                isSubItem={true}
+              />
+              <NavItem
+                icon={Briefcase}
+                label="Setup Meta Accounts"
+                active={isActive('/settings/meta')}
+                onClick={() => navigate('/settings/meta')}
+                isSubItem={true}
+              />
+              <NavItem
+                icon={MessageCircle}
+                label="Setup WhatsApp"
+                active={isActive('/settings/whatsapp')}
+                onClick={() => navigate('/settings/whatsapp')}
+                isSubItem={true}
+              />
+            </NavDropdown>
+          </>
         )}
-        <NavItem icon={Settings} label="Settings" />
       </nav>
 
       <div className="p-6 border-t border-slate-200 dark:border-white/5">

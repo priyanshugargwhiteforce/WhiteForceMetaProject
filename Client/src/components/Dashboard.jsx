@@ -1,47 +1,93 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  CreditCard, 
-  Activity, 
-  Eye, 
-  TrendingUp 
+import {
+  CreditCard,
+  Activity,
+  Eye,
+  TrendingUp,
+  Database
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [adAccounts, setAdAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('adaccounts');
 
+  // Configurations States
+  const [metaConfigs, setMetaConfigs] = useState([]);
+  const [selectedConfigId, setSelectedConfigId] = useState(localStorage.getItem('selectedMetaConfigId') || '');
+
+  const fetchConfigs = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/meta/configs`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setMetaConfigs(data.configs || []);
+      }
+    } catch (err) {
+      console.error("Error fetching meta configs:", err);
+    }
+  };
+
+  const fetchAdAccounts = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { 'Authorization': `Bearer ${token}` };
+      if (selectedConfigId) {
+        headers['X-Meta-Config-Id'] = selectedConfigId;
+      }
+
+      const response = await fetch(`http://localhost:5000/api/meta/accounts`, { headers });
+      const data = await response.json();
+      if (data.adaccounts && data.adaccounts.data) {
+        setAdAccounts(data.adaccounts.data);
+      } else {
+        setAdAccounts([]);
+      }
+    } catch (error) {
+      console.error("Error fetching ad accounts:", error);
+      setAdAccounts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchAdAccounts = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:5000/api/meta/accounts`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        const data = await response.json();
-        if (data.adaccounts && data.adaccounts.data) {
-          setAdAccounts(data.adaccounts.data);
-        }
-      } catch (error) {
-        console.error("Error fetching ad accounts:", error);
-      } finally {
-        setLoading(false);
+    fetchConfigs();
+
+    const handleConfigChanged = (e) => {
+      if (e.detail.type === 'meta') {
+        fetchConfigs();
+        fetchAdAccounts();
       }
     };
-
-    fetchAdAccounts();
+    window.addEventListener('config-changed', handleConfigChanged);
+    return () => window.removeEventListener('config-changed', handleConfigChanged);
   }, []);
+
+  useEffect(() => {
+    fetchAdAccounts();
+  }, [selectedConfigId]);
+
+  const handleConfigChange = (e) => {
+    const val = e.target.value;
+    setSelectedConfigId(val);
+    localStorage.setItem('selectedMetaConfigId', val);
+  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0
-    }).format(amount / 100); 
+    }).format(amount / 100);
   };
 
   const getStatusBadge = (status) => {
@@ -57,48 +103,64 @@ const Dashboard = () => {
     }
   };
 
+
+
   return (
     <div className="p-8">
       {activeTab === 'adaccounts' && (
         <div className="fade-in">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
               <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-2 transition-colors">Ad Accounts</h2>
               <p className="text-slate-500 dark:text-slate-400 text-sm">Managing <span className="text-blue-600 dark:text-blue-400 font-semibold">{adAccounts.length}</span> connected ad accounts across Meta platforms.</p>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex items-center space-x-3 flex-wrap gap-y-2">
+              {/* Meta Account Connection Dropdown (Admin Only) */}
+              {user?.role === 'admin' && (
+                <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 transition-colors">
+                  <Database className="w-4 h-4 text-blue-500" />
+                  <select
+                    value={selectedConfigId}
+                    onChange={handleConfigChange}
+                    className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-200"
+                  >
+                    <option value="" className="bg-white dark:bg-slate-900">Default Server Account</option>
+                    {metaConfigs.map(cfg => (
+                      <option key={cfg.id} value={cfg.id} className="bg-white dark:bg-slate-900">{cfg.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <button className="px-4 py-2 bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-semibold transition-all text-slate-700 dark:text-slate-200 shadow-sm">Export CSV</button>
-              <button className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 transition-all">
-                Connect Account
-              </button>
             </div>
           </div>
 
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <SummaryCard 
-              label="Total Life Spend" 
+            <SummaryCard
+              label="Total Life Spend"
               value={formatCurrency(adAccounts.reduce((sum, acc) => sum + parseInt(acc.amount_spent || 0), 0))}
               icon={CreditCard}
               trend="+12.5%"
               color="blue"
             />
-            <SummaryCard 
-              label="Active Accounts" 
+            <SummaryCard
+              label="Active Accounts"
               value={adAccounts.filter(acc => acc.account_status === 1).length}
               icon={Activity}
               trend="Stable"
               color="emerald"
             />
-            <SummaryCard 
-              label="Total Impressions" 
+            <SummaryCard
+              label="Total Impressions"
               value={adAccounts.reduce((sum, acc) => sum + parseInt(acc.insights?.data?.[0]?.impressions || 0), 0).toLocaleString()}
               icon={Eye}
               trend="+5.2%"
               color="purple"
             />
-            <SummaryCard 
-              label="Recent Spend" 
+            <SummaryCard
+              label="Recent Spend"
               value={formatCurrency(adAccounts.reduce((sum, acc) => sum + (parseFloat(acc.insights?.data?.[0]?.spend || 0) * 100), 0))}
               icon={TrendingUp}
               trend="+8.1%"
@@ -131,12 +193,18 @@ const Dashboard = () => {
                         <td className="px-6 py-6"><div className="h-4 bg-slate-200 dark:bg-white/5 rounded w-8 mx-auto"></div></td>
                       </tr>
                     ))
+                  ) : adAccounts.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-12 text-center text-sm text-slate-500">
+                        No ad accounts found for this configuration.
+                      </td>
+                    </tr>
                   ) : adAccounts.map((account) => (
                     <tr key={account.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group cursor-pointer" onClick={() => navigate(`/ad-account/${account.id}`)}>
                       <td className="px-6 py-5">
                         <div className="flex flex-col">
                           <span className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate max-w-[280px]">{account.name}</span>
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">ID: {account.account_id}</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">ID: {account.id}</span>
                         </div>
                       </td>
                       <td className="px-6 py-5 text-center">
@@ -156,7 +224,7 @@ const Dashboard = () => {
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center justify-center space-x-2">
-                          <button 
+                          <button
                             onClick={(e) => {
                               e.stopPropagation();
                               navigate(`/ad-account/${account.id}`);

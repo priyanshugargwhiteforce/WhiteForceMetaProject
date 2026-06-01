@@ -21,10 +21,12 @@ const Overview = () => {
     const fetchAggregateData = async () => {
       try {
         const token = localStorage.getItem('token');
+        const configId = localStorage.getItem('selectedMetaConfigId') || '';
+        const headers = { 'Authorization': `Bearer ${token}` };
+        if (configId) headers['X-Meta-Config-Id'] = configId;
+
         const response = await fetch(`http://localhost:5000/api/meta/accounts`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
+            headers
         });
         const data = await response.json();
         if (data.adaccounts && data.adaccounts.data) {

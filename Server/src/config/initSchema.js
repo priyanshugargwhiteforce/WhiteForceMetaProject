@@ -4,10 +4,37 @@ const initSchema = async () => {
     try {
         console.log('Initializing database schema...');
 
+        // 0. Meta Account Configurations (Multiple Tokens)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS meta_configs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                access_token TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - meta_configs table created/verified');
+
+        // 0b. WhatsApp Configurations (Multiple WABA Credentials)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS whatsapp_configs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                phone_number_id VARCHAR(100) NOT NULL,
+                waba_id VARCHAR(100) NOT NULL,
+                access_token TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - whatsapp_configs table created/verified');
+
         // 1. Meta Ad Accounts
         await pool.query(`
             CREATE TABLE IF NOT EXISTS meta_ad_accounts (
-                id VARCHAR(100) PRIMARY KEY,
+                id VARCHAR(100) NOT NULL,
+                config_id INT DEFAULT 0,
                 name VARCHAR(255) NOT NULL,
                 account_status INT DEFAULT 1,
                 currency VARCHAR(10) DEFAULT 'INR',
@@ -15,10 +42,19 @@ const initSchema = async () => {
                 amount_spent BIGINT DEFAULT 0,
                 balance BIGINT DEFAULT 0,
                 created_time TIMESTAMP NULL,
-                last_synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                last_synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id, config_id)
             )
         `);
         console.log(' - meta_ad_accounts table created/verified');
+
+        // Apply migrations safely for existing tables
+        try {
+            await pool.query("ALTER TABLE meta_ad_accounts ADD COLUMN config_id INT DEFAULT 0");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE meta_ad_accounts DROP PRIMARY KEY, ADD PRIMARY KEY (id, config_id)");
+        } catch (e) { /* PK might already be composite */ }
 
         // 2. Meta Account Insights Summary
         await pool.query(`
@@ -72,6 +108,9 @@ const initSchema = async () => {
                 insights_impressions INT DEFAULT 0,
                 insights_spend DECIMAL(15, 2) DEFAULT 0.00,
                 raw_data JSON,
+                owner_name VARCHAR(255) DEFAULT NULL,
+                launch_date DATE DEFAULT NULL,
+                owner_updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
                 synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             )
         `);
@@ -128,6 +167,17 @@ const initSchema = async () => {
             await pool.query("ALTER TABLE meta_leads ADD COLUMN platform VARCHAR(50)");
         } catch (e) { /* Column might exist */ }
 
+        // Safe Alter queries for meta_ads migrations (Ad Owner fields)
+        try {
+            await pool.query("ALTER TABLE meta_ads ADD COLUMN owner_name VARCHAR(255) DEFAULT NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE meta_ads ADD COLUMN launch_date DATE DEFAULT NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE meta_ads ADD COLUMN owner_updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP");
+        } catch (e) { /* Column might exist */ }
+
         // 7. Google Ads Snapshots
         await pool.query(`
             CREATE TABLE IF NOT EXISTS google_ads_snapshots (
@@ -148,16 +198,29 @@ const initSchema = async () => {
         // 8. WhatsApp Phone Details
         await pool.query(`
             CREATE TABLE IF NOT EXISTS whatsapp_phone_details (
-                phone_number_id VARCHAR(100) PRIMARY KEY,
+                phone_number_id VARCHAR(100) NOT NULL,
+                config_id INT DEFAULT 0,
                 waba_id VARCHAR(100) NOT NULL,
                 display_phone_number VARCHAR(50),
                 verified_name VARCHAR(255),
                 quality_rating VARCHAR(50),
+                name_status VARCHAR(100) DEFAULT 'NONE',
                 raw_data JSON,
-                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (phone_number_id, config_id)
             )
         `);
         console.log(' - whatsapp_phone_details table created/verified');
+
+        try {
+            await pool.query("ALTER TABLE whatsapp_phone_details ADD COLUMN config_id INT DEFAULT 0");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE whatsapp_phone_details DROP PRIMARY KEY, ADD PRIMARY KEY (phone_number_id, config_id)");
+        } catch (e) { /* PK might already be composite */ }
+        try {
+            await pool.query("ALTER TABLE whatsapp_phone_details ADD COLUMN name_status VARCHAR(100) DEFAULT 'NONE'");
+        } catch (e) { /* Column might exist */ }
 
         // 9. WhatsApp Templates
         await pool.query(`

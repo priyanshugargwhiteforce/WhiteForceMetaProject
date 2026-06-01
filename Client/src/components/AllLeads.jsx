@@ -36,11 +36,11 @@ const AllLeads = () => {
   const fetchLeads = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/meta/leads', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const configId = localStorage.getItem('selectedMetaConfigId') || '';
+      const headers = { 'Authorization': `Bearer ${token}` };
+      if (configId) headers['X-Meta-Config-Id'] = configId;
+
+      const res = await fetch('http://localhost:5000/api/meta/leads', { headers });
       const data = await res.json();
       if (data.success) {
         setLeads(data.data);
@@ -57,11 +57,11 @@ const AllLeads = () => {
   const fetchAccounts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/meta/accounts', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const configId = localStorage.getItem('selectedMetaConfigId') || '';
+      const headers = { 'Authorization': `Bearer ${token}` };
+      if (configId) headers['X-Meta-Config-Id'] = configId;
+
+      const res = await fetch('http://localhost:5000/api/meta/accounts', { headers });
       const data = await res.json();
       if (data.success && data.adaccounts?.data) {
         setAccounts(data.adaccounts.data);
@@ -79,11 +79,11 @@ const AllLeads = () => {
     if (!accountId) return;
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/meta/accounts/${accountId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const configId = localStorage.getItem('selectedMetaConfigId') || '';
+      const headers = { 'Authorization': `Bearer ${token}` };
+      if (configId) headers['X-Meta-Config-Id'] = configId;
+
+      const res = await fetch(`http://localhost:5000/api/meta/accounts/${accountId}`, { headers });
       const data = await res.json();
       if (data.success && data.data?.ads?.data) {
         setAds(data.data.ads.data);
@@ -116,12 +116,16 @@ const AllLeads = () => {
 
     try {
       const token = localStorage.getItem('token');
+      const configId = localStorage.getItem('selectedMetaConfigId') || '';
+      const headers = { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      if (configId) headers['X-Meta-Config-Id'] = configId;
+
       const res = await fetch('http://localhost:5000/api/meta/leads/sync', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers,
         body: JSON.stringify({ adId: selectedAdId })
       });
       const data = await res.json();

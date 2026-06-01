@@ -10,8 +10,18 @@ const isStale = (lastSyncedAt) => {
 };
 
 // Fetch Ad Accounts list from Facebook and cache in DB
-const syncAdAccounts = async () => {
-    const token = process.env.META_ACCESS_TOKEN;
+const syncAdAccounts = async (configId = null) => {
+    let token = process.env.META_ACCESS_TOKEN;
+    const configIdVal = configId ? parseInt(configId) : 0;
+    if (configIdVal > 0) {
+        const [[config]] = await pool.query('SELECT access_token FROM meta_configs WHERE id = ?', [configIdVal]);
+        if (config) {
+            token = config.access_token;
+        } else {
+            throw new Error(`Meta configuration with ID ${configIdVal} not found.`);
+        }
+    }
+
     if (!token) {
         throw new Error('Meta Access Token is missing in server environment.');
     }
@@ -29,8 +39,8 @@ const syncAdAccounts = async () => {
             for (const acc of accounts) {
                 // Upsert Ad Account details
                 await pool.query(
-                    `INSERT INTO meta_ad_accounts (id, name, account_status, currency, timezone_name, amount_spent)
-                     VALUES (?, ?, ?, ?, ?, ?)
+                    `INSERT INTO meta_ad_accounts (id, config_id, name, account_status, currency, timezone_name, amount_spent)
+                     VALUES (?, ?, ?, ?, ?, ?, ?)
                      ON DUPLICATE KEY UPDATE 
                         name = VALUES(name),
                         account_status = VALUES(account_status),
@@ -40,6 +50,7 @@ const syncAdAccounts = async () => {
                         last_synced_at = CURRENT_TIMESTAMP`,
                     [
                         `act_${acc.account_id}`,
+                        configIdVal,
                         acc.name,
                         acc.account_status,
                         acc.currency,
@@ -79,13 +90,14 @@ const syncAdAccounts = async () => {
     }
 };
 
-const getAdAccounts = async (forceSync = false) => {
+const getAdAccounts = async (forceSync = false, configId = null) => {
+    const configIdVal = configId ? parseInt(configId) : 0;
     // Check if we have active/recent sync cache
-    const [rows] = await pool.query('SELECT *, last_synced_at FROM meta_ad_accounts');
+    const [rows] = await pool.query('SELECT *, last_synced_at FROM meta_ad_accounts WHERE config_id = ?', [configIdVal]);
     
     if (rows.length === 0 || forceSync || rows.some(row => isStale(row.last_synced_at))) {
-        await syncAdAccounts();
-        const [updatedRows] = await pool.query('SELECT * FROM meta_ad_accounts');
+        await syncAdAccounts(configIdVal);
+        const [updatedRows] = await pool.query('SELECT * FROM meta_ad_accounts WHERE config_id = ?', [configIdVal]);
         
         // Re-attach insights
         for (const row of updatedRows) {
@@ -114,8 +126,13 @@ const getAdAccounts = async (forceSync = false) => {
 };
 
 // Fetch insights for specific preset/range from FB Graph API and cache in DB
-const syncAccountInsights = async (accountId, datePreset = 'lifetime') => {
-    const token = process.env.META_ACCESS_TOKEN;
+const syncAccountInsights = async (accountId, datePreset = 'lifetime', configId = null) => {
+    let token = process.env.META_ACCESS_TOKEN;
+    const configIdVal = configId ? parseInt(configId) : 0;
+    if (configIdVal > 0) {
+        const [[config]] = await pool.query('SELECT access_token FROM meta_configs WHERE id = ?', [configIdVal]);
+        if (config) token = config.access_token;
+    }
     if (!token) throw new Error('Meta Access Token is missing.');
 
     try {
@@ -162,7 +179,8 @@ const syncAccountInsights = async (accountId, datePreset = 'lifetime') => {
     }
 };
 
-const getAccountInsights = async (accountId, datePreset = 'lifetime', forceSync = false) => {
+const getAccountInsights = async (accountId, datePreset = 'lifetime', forceSync = false, configId = null) => {
+    const configIdVal = configId ? parseInt(configId) : 0;
     // Check if we have trend data in cache
     const [rows] = await pool.query(
         'SELECT * FROM meta_insights_trend WHERE account_id = ? AND date_preset = ? ORDER BY date_start ASC',
@@ -170,7 +188,7 @@ const getAccountInsights = async (accountId, datePreset = 'lifetime', forceSync 
     );
 
     if (rows.length === 0 || forceSync || rows.some(row => isStale(row.synced_at))) {
-        await syncAccountInsights(accountId, datePreset);
+        await syncAccountInsights(accountId, datePreset, configIdVal);
         const [updatedRows] = await pool.query(
             'SELECT * FROM meta_insights_trend WHERE account_id = ? AND date_preset = ? ORDER BY date_start ASC',
             [accountId, datePreset]
@@ -188,22 +206,27 @@ const getAccountInsights = async (accountId, datePreset = 'lifetime', forceSync 
 };
 
 // Fetch Ad Account Details & its Ads list from FB Graph API and cache in DB
-const syncAccountDetails = async (accountId) => {
-    const token = process.env.META_ACCESS_TOKEN;
+const syncAccountDetails = async (accountId, configId = null) => {
+    let token = process.env.META_ACCESS_TOKEN;
+    const configIdVal = configId ? parseInt(configId) : 0;
+    if (configIdVal > 0) {
+        const [[config]] = await pool.query('SELECT access_token FROM meta_configs WHERE id = ?', [configIdVal]);
+        if (config) token = config.access_token;
+    }
     if (!token) throw new Error('Meta Access Token is missing.');
 
     try {
         console.log(`Syncing details for Ad Account ${accountId}...`);
         const response = await axios.get(
-            `https://graph.facebook.com/v19.0/${accountId}?fields=account_id,account_status,amount_spent,balance,created_time,ads{name,account_id,status,adset{name,start_time,end_time,targeting},campaign,campaign_id,creative,insights}&access_token=${token}`
+            `https://graph.facebook.com/v19.0/${accountId}?fields=account_id,account_status,amount_spent,balance,created_time,ads{name,account_id,status,created_time,adset{name,start_time,end_time,targeting},campaign,campaign_id,creative,insights}&access_token=${token}`
         );
 
         const data = response.data;
         
         // Update account metrics
         await pool.query(
-            `INSERT INTO meta_ad_accounts (id, name, account_status, amount_spent, balance, created_time)
-             VALUES (?, ?, ?, ?, ?, ?)
+            `INSERT INTO meta_ad_accounts (id, config_id, name, account_status, amount_spent, balance, created_time)
+             VALUES (?, ?, ?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE
                 account_status = VALUES(account_status),
                 amount_spent = VALUES(amount_spent),
@@ -211,6 +234,7 @@ const syncAccountDetails = async (accountId) => {
                 last_synced_at = CURRENT_TIMESTAMP`,
             [
                 accountId,
+                configIdVal,
                 data.name || `act_${data.account_id}`,
                 data.account_status,
                 data.amount_spent || 0,
@@ -267,16 +291,17 @@ const syncAccountDetails = async (accountId) => {
     }
 };
 
-const getAccountDetails = async (accountId, forceSync = false) => {
+const getAccountDetails = async (accountId, forceSync = false, configId = null) => {
+    const configIdVal = configId ? parseInt(configId) : 0;
     // Check if account details exist and are fresh
-    const [[account]] = await pool.query('SELECT *, last_synced_at FROM meta_ad_accounts WHERE id = ?', [accountId]);
+    const [[account]] = await pool.query('SELECT *, last_synced_at FROM meta_ad_accounts WHERE id = ? AND config_id = ?', [accountId, configIdVal]);
     const [ads] = await pool.query('SELECT * FROM meta_ads WHERE account_id = ?', [accountId]);
 
     if (!account || ads.length === 0 || forceSync || isStale(account.last_synced_at)) {
-        await syncAccountDetails(accountId);
+        await syncAccountDetails(accountId, configIdVal);
         
         // Fetch freshly synced data
-        const [[updatedAccount]] = await pool.query('SELECT * FROM meta_ad_accounts WHERE id = ?', [accountId]);
+        const [[updatedAccount]] = await pool.query('SELECT * FROM meta_ad_accounts WHERE id = ? AND config_id = ?', [accountId, configIdVal]);
         const [updatedAds] = await pool.query('SELECT * FROM meta_ads WHERE account_id = ?', [accountId]);
 
         return formatAccountDetailsResponse(updatedAccount, updatedAds);
@@ -305,7 +330,10 @@ const formatAccountDetailsResponse = (account, ads) => {
                     status: ad.status,
                     campaign_id: ad.campaign_id,
                     adset_id: ad.adset_id,
-                    creative: ad.creative_id ? { id: ad.creative_id } : null
+                    creative: ad.creative_id ? { id: ad.creative_id } : null,
+                    owner_name: ad.owner_name || null,
+                    launch_date: ad.launch_date || null,
+                    owner_updated_at: ad.owner_updated_at || null
                 };
             })
         }
@@ -313,8 +341,13 @@ const formatAccountDetailsResponse = (account, ads) => {
 };
 
 // Fetch Lead Form Data & Leads list from Facebook Graph API and cache in DB
-const syncLeadFormData = async (formId) => {
-    const token = process.env.META_ACCESS_TOKEN;
+const syncLeadFormData = async (formId, configId = null) => {
+    let token = process.env.META_ACCESS_TOKEN;
+    const configIdVal = configId ? parseInt(configId) : 0;
+    if (configIdVal > 0) {
+        const [[config]] = await pool.query('SELECT access_token FROM meta_configs WHERE id = ?', [configIdVal]);
+        if (config) token = config.access_token;
+    }
     if (!token) throw new Error('Meta Access Token is missing.');
 
     try {
@@ -389,12 +422,13 @@ const syncLeadFormData = async (formId) => {
     }
 };
 
-const getLeadFormData = async (formId, forceSync = false) => {
+const getLeadFormData = async (formId, forceSync = false, configId = null) => {
+    const configIdVal = configId ? parseInt(configId) : 0;
     const [[form]] = await pool.query('SELECT *, synced_at FROM meta_lead_forms WHERE id = ?', [formId]);
     const [leads] = await pool.query('SELECT * FROM meta_leads WHERE form_id = ? ORDER BY created_time DESC', [formId]);
 
     if (!form || forceSync || isStale(form.synced_at)) {
-        await syncLeadFormData(formId);
+        await syncLeadFormData(formId, configIdVal);
 
         const [[updatedForm]] = await pool.query('SELECT * FROM meta_lead_forms WHERE id = ?', [formId]);
         const [updatedLeads] = await pool.query('SELECT * FROM meta_leads WHERE form_id = ? ORDER BY created_time DESC', [formId]);
@@ -425,8 +459,13 @@ const formatLeadFormResponse = (form, leads) => {
 };
 
 // Fetch and cache specific Ad Creative spec
-const syncCreativeData = async (creativeId) => {
-    const token = process.env.META_ACCESS_TOKEN;
+const syncCreativeData = async (creativeId, configId = null) => {
+    let token = process.env.META_ACCESS_TOKEN;
+    const configIdVal = configId ? parseInt(configId) : 0;
+    if (configIdVal > 0) {
+        const [[config]] = await pool.query('SELECT access_token FROM meta_configs WHERE id = ?', [configIdVal]);
+        if (config) token = config.access_token;
+    }
     if (!token) throw new Error('Meta Access Token is missing.');
 
     try {
@@ -453,11 +492,12 @@ const syncCreativeData = async (creativeId) => {
     }
 };
 
-const getCreativeData = async (creativeId, forceSync = false) => {
+const getCreativeData = async (creativeId, forceSync = false, configId = null) => {
+    const configIdVal = configId ? parseInt(configId) : 0;
     const [[creative]] = await pool.query('SELECT *, synced_at FROM meta_creatives WHERE id = ?', [creativeId]);
 
     if (!creative || forceSync || isStale(creative.synced_at)) {
-        await syncCreativeData(creativeId);
+        await syncCreativeData(creativeId, configIdVal);
         const [[updatedCreative]] = await pool.query('SELECT * FROM meta_creatives WHERE id = ?', [creativeId]);
         return typeof updatedCreative.raw_data === 'string' ? JSON.parse(updatedCreative.raw_data) : updatedCreative.raw_data;
     }
@@ -466,8 +506,13 @@ const getCreativeData = async (creativeId, forceSync = false) => {
 };
 
 // Fetch and cache single ad insights (daily breakdown)
-const syncSingleAdInsights = async (adId) => {
-    const token = process.env.META_ACCESS_TOKEN;
+const syncSingleAdInsights = async (adId, configId = null) => {
+    let token = process.env.META_ACCESS_TOKEN;
+    const configIdVal = configId ? parseInt(configId) : 0;
+    if (configIdVal > 0) {
+        const [[config]] = await pool.query('SELECT access_token FROM meta_configs WHERE id = ?', [configIdVal]);
+        if (config) token = config.access_token;
+    }
     if (!token) throw new Error('Meta Access Token is missing.');
 
     try {
@@ -516,14 +561,15 @@ const syncSingleAdInsights = async (adId) => {
     }
 };
 
-const getSingleAdInsights = async (adId, forceSync = false) => {
+const getSingleAdInsights = async (adId, forceSync = false, configId = null) => {
+    const configIdVal = configId ? parseInt(configId) : 0;
     const [rows] = await pool.query(
         'SELECT * FROM meta_ad_insights_trend WHERE ad_id = ? ORDER BY date_start ASC',
         [adId]
     );
 
     if (rows.length === 0 || forceSync || rows.some(row => isStale(row.synced_at))) {
-        await syncSingleAdInsights(adId);
+        await syncSingleAdInsights(adId, configIdVal);
         const [updatedRows] = await pool.query(
             'SELECT * FROM meta_ad_insights_trend WHERE ad_id = ? ORDER BY date_start ASC',
             [adId]
@@ -555,8 +601,13 @@ const getLeads = async () => {
     }));
 };
 
-const syncAdLeads = async (adId) => {
-    const token = process.env.META_ACCESS_TOKEN;
+const syncAdLeads = async (adId, configId = null) => {
+    let token = process.env.META_ACCESS_TOKEN;
+    const configIdVal = configId ? parseInt(configId) : 0;
+    if (configIdVal > 0) {
+        const [[config]] = await pool.query('SELECT access_token FROM meta_configs WHERE id = ?', [configIdVal]);
+        if (config) token = config.access_token;
+    }
     if (!token) throw new Error('Meta Access Token is missing.');
 
     try {

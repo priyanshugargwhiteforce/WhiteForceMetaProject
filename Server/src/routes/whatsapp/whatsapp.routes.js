@@ -13,6 +13,12 @@ router.post('/webhook', whatsappTemplatesController.receiveWebhook);
 router.use(protect);
 router.use(authorizeWhatsapp);
 
+// WhatsApp configurations management routes
+router.get('/configs', whatsappController.getWhatsAppConfigs);
+router.post('/configs', whatsappController.createWhatsAppConfig);
+router.put('/configs/:id', whatsappController.updateWhatsAppConfig);
+router.delete('/configs/:id', whatsappController.deleteWhatsAppConfig);
+
 // Protected WhatsApp Account and Sender endpoints
 router.get('/details', whatsappController.getWhatsAppDetails);
 router.get('/templates', whatsappController.getTemplates);

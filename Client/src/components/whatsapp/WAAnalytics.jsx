@@ -38,8 +38,12 @@ const WAAnalytics = () => {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem('token');
+      const configId = localStorage.getItem('selectedWhatsAppConfigId') || '';
+      const headers = { Authorization: `Bearer ${token}` };
+      if (configId) headers['X-WhatsApp-Config-Id'] = configId;
+
       const response = await axios.get('http://localhost:5000/api/whatsapp/analytics', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers
       });
       if (response.data.success) {
         setData(response.data.data);

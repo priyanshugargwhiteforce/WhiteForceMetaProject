@@ -40,12 +40,12 @@ const AdAccountDetail = () => {
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
+        const configId = localStorage.getItem('selectedMetaConfigId') || '';
+        const headers = { 'Authorization': `Bearer ${token}` };
+        if (configId) headers['X-Meta-Config-Id'] = configId;
+
         const response = await fetch(
-          `http://localhost:5000/api/meta/accounts/${id}`, {
-              headers: {
-                  'Authorization': `Bearer ${token}`
-              }
-          }
+          `http://localhost:5000/api/meta/accounts/${id}`, { headers }
         );
         const data = await response.json();
         

@@ -26,6 +26,9 @@ import LinkedInManager from './components/linkedin/LinkedInManager';
 import LinkedInCampaigns from './components/linkedin/LinkedInCampaigns';
 import LinkedInAnalytics from './components/linkedin/LinkedInAnalytics';
 import LinkedInLeads from './components/linkedin/LinkedInLeads';
+import MetaSettings from './components/MetaSettings';
+import WhatsAppSettings from './components/WhatsAppSettings';
+import AdOwner from './components/AdOwner';
 import './App.css';
 
 import Layout from './components/Layout';
@@ -263,11 +266,41 @@ function App() {
                             } 
                         />
                         <Route 
+                            path="/settings/meta" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="admin">
+                                        <MetaSettings />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/settings/whatsapp" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="admin">
+                                        <WhatsAppSettings />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
                             path="/all-leads" 
                             element={
                                 <ProtectedRoute>
                                     <PermissionRoute permission="meta_access">
                                         <AllLeads />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/ad-owners" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="meta_access">
+                                        <AdOwner />
                                     </PermissionRoute>
                                 </ProtectedRoute>
                             } 

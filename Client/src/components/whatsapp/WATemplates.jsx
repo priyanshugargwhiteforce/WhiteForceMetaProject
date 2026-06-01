@@ -32,8 +32,12 @@ const WATemplates = () => {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem('token');
+      const configId = localStorage.getItem('selectedWhatsAppConfigId') || '';
+      const headers = { Authorization: `Bearer ${token}` };
+      if (configId) headers['X-WhatsApp-Config-Id'] = configId;
+
       const response = await axios.get('http://localhost:5000/api/whatsapp/templates', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers
       });
       if (response.data.success) {
         setTemplates(response.data.templates);
@@ -50,8 +54,12 @@ const WATemplates = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
+      const configId = localStorage.getItem('selectedWhatsAppConfigId') || '';
+      const headers = { Authorization: `Bearer ${token}` };
+      if (configId) headers['X-WhatsApp-Config-Id'] = configId;
+
       const response = await axios.delete(`http://localhost:5000/api/whatsapp/templates/${name}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers
       });
       if (response.data.success) {
         fetchTemplates();
