@@ -45,13 +45,19 @@ const SendMessage = () => {
   const [phoneColIdx, setPhoneColIdx] = useState(0);
   const [variableMappings, setVariableMappings] = useState([]);
 
+  const activeTemplate = templates.find(t => t.name === selectedTemplate);
+
   const getTemplateVariableCount = (template) => {
-    if (!template || !template.components) return 0;
+    if (!template) return 0;
+    if (template.variables && Array.isArray(template.variables)) {
+      return template.variables.length;
+    }
+    if (!template.components) return 0;
     const bodyComp = template.components.find(c => c.type === 'BODY');
     if (!bodyComp || !bodyComp.text) return 0;
 
-    // Find unique occurrences of {{n}}
-    const matches = bodyComp.text.match(/\{\{\d+\}\}/g);
+    // Find unique occurrences of alphanumeric variables (e.g. {{name}}, {{1}})
+    const matches = bodyComp.text.match(/\{\{([a-zA-Z0-9_]+)\}\}/g);
     return matches ? new Set(matches).size : 0;
   };
 
@@ -496,48 +502,52 @@ const SendMessage = () => {
                             </div>
 
                             {/* Variables Mappings */}
-                            {variableMappings.map((mappedColIdx, varIdx) => (
-                              <div key={varIdx} className="space-y-2">
-                                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
-                                  Template Variable {`{{${varIdx + 1}}}`}
-                                </label>
-                                <div className="relative">
-                                  <select
-                                    value={mappedColIdx}
-                                    onChange={(e) => {
-                                      const newVal = parseInt(e.target.value);
-                                      setVariableMappings(prev => {
-                                        const updated = [...prev];
-                                        updated[varIdx] = newVal;
-                                        return updated;
-                                      });
-                                    }}
-                                    className="w-full bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 pr-10 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all text-slate-800 dark:text-slate-100 cursor-pointer appearance-none"
-                                  >
-                                    <option value={-1} className="bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500">-- Select Column (or Empty) --</option>
-                                    {detectedHeaders.map((header, idx) => (
-                                      <option key={idx} value={idx} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
-                                        Column {idx + 1}: {header}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                                    <ChevronDown className="w-4 h-4" />
+                            {variableMappings.map((mappedColIdx, varIdx) => {
+                              const variableName = (activeTemplate?.variables && activeTemplate.variables[varIdx]) || `${varIdx + 1}`;
+                              return (
+                                <div key={varIdx} className="space-y-2">
+                                  <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
+                                    Template Variable {`{{${variableName}}}`}
+                                  </label>
+                                  <div className="relative">
+                                    <select
+                                      value={mappedColIdx}
+                                      onChange={(e) => {
+                                        const newVal = parseInt(e.target.value);
+                                        setVariableMappings(prev => {
+                                          const updated = [...prev];
+                                          updated[varIdx] = newVal;
+                                          return updated;
+                                        });
+                                      }}
+                                      className="w-full bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 pr-10 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all text-slate-800 dark:text-slate-100 cursor-pointer appearance-none"
+                                    >
+                                      <option value={-1} className="bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500">-- Select Column (or Empty) --</option>
+                                      {detectedHeaders.map((header, idx) => (
+                                        <option key={idx} value={idx} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                                          Column {idx + 1}: {header}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                      <ChevronDown className="w-4 h-4" />
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
 
                           {/* Dynamic Warning Messages */}
                           {(() => {
                             const unmappedIndex = variableMappings.findIndex(idx => idx === -1);
                             if (unmappedIndex !== -1) {
+                              const variableName = (activeTemplate?.variables && activeTemplate.variables[unmappedIndex]) || `${unmappedIndex + 1}`;
                               return (
                                 <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-2xl text-[10px] leading-relaxed">
                                   <Info className="w-4 h-4 shrink-0 mt-0.5" />
                                   <span>
-                                    <strong>Warning:</strong> Template Variable <strong>{`{{${unmappedIndex + 1}}}`}</strong> is not mapped to any column. It will be sent as an empty string.
+                                    <strong>Warning:</strong> Template Variable <strong>{`{{${variableName}}}`}</strong> is not mapped to any column. It will be sent as an empty string.
                                   </span>
                                 </div>
                               );
@@ -634,13 +644,13 @@ const SendMessage = () => {
               {results.map((res, i) => (
                 <div key={i} className="bg-black/40 border border-white/5 p-5 rounded-2xl flex items-center justify-between">
                    <div className="flex items-center space-x-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${res.success ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${res.success ? (res.status === 'queued' ? 'bg-indigo-500/10 text-indigo-500' : 'bg-emerald-500/10 text-emerald-500') : 'bg-red-500/10 text-red-500'}`}>
                          {res.success ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
                       </div>
                       <div>
                          <p className="text-xs font-mono text-white">{res.number}</p>
-                         <p className={`text-[10px] font-bold uppercase ${res.success ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {res.success ? 'Delivered' : 'Failed'}
+                         <p className={`text-[10px] font-bold uppercase ${res.success ? (res.status === 'queued' ? 'text-indigo-400' : 'text-emerald-500') : 'text-red-500'}`}>
+                            {res.success ? (res.status === 'queued' ? 'Enqueued' : 'Delivered') : 'Failed'}
                          </p>
                       </div>
                    </div>

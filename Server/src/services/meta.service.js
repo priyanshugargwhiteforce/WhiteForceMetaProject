@@ -29,7 +29,7 @@ const syncAdAccounts = async (configId = null) => {
     try {
         console.log('Syncing Meta Ad Accounts from FB Graph API...');
         const response = await axios.get(
-            `https://graph.facebook.com/v19.0/me?fields=adaccounts{name,account_status,account_id,amount_spent,currency,timezone_name,insights}&access_token=${token}`
+            `https://graph.facebook.com/v24.0/me?fields=adaccounts{name,account_status,account_id,amount_spent,currency,timezone_name,insights}&access_token=${token}`
         );
 
         const data = response.data;
@@ -94,11 +94,11 @@ const getAdAccounts = async (forceSync = false, configId = null) => {
     const configIdVal = configId ? parseInt(configId) : 0;
     // Check if we have active/recent sync cache
     const [rows] = await pool.query('SELECT *, last_synced_at FROM meta_ad_accounts WHERE config_id = ?', [configIdVal]);
-    
+
     if (rows.length === 0 || forceSync || rows.some(row => isStale(row.last_synced_at))) {
         await syncAdAccounts(configIdVal);
         const [updatedRows] = await pool.query('SELECT * FROM meta_ad_accounts WHERE config_id = ?', [configIdVal]);
-        
+
         // Re-attach insights
         for (const row of updatedRows) {
             const [insights] = await pool.query(
@@ -137,9 +137,9 @@ const syncAccountInsights = async (accountId, datePreset = 'lifetime', configId 
 
     try {
         console.log(`Syncing insights for ${accountId} with preset ${datePreset}...`);
-        
+
         // If daily breakdown trend is needed, we query insights with time_increment=1
-        const url = `https://graph.facebook.com/v19.0/${accountId}/insights?fields=spend,date_start,account_name,date_stop,clicks,cost_per_action_type,cpc,cpm,cpp,ctr,impressions&limit=1000&time_increment=1&access_token=${token}`;
+        const url = `https://graph.facebook.com/v24.0/${accountId}/insights?fields=spend,date_start,account_name,date_stop,clicks,cost_per_action_type,cpc,cpm,cpp,ctr,impressions&limit=1000&time_increment=1&access_token=${token}`;
         const response = await axios.get(url);
         const data = response.data.data || [];
 
@@ -218,11 +218,11 @@ const syncAccountDetails = async (accountId, configId = null) => {
     try {
         console.log(`Syncing details for Ad Account ${accountId}...`);
         const response = await axios.get(
-            `https://graph.facebook.com/v19.0/${accountId}?fields=account_id,account_status,amount_spent,balance,created_time,ads{name,account_id,status,created_time,adset{name,start_time,end_time,targeting},campaign,campaign_id,creative,insights}&access_token=${token}`
+            `https://graph.facebook.com/v24.0/${accountId}?fields=account_id,account_status,amount_spent,balance,created_time,ads{name,account_id,status,created_time,adset{name,start_time,end_time,targeting},campaign,campaign_id,creative,insights}&access_token=${token}`
         );
 
         const data = response.data;
-        
+
         // Update account metrics
         await pool.query(
             `INSERT INTO meta_ad_accounts (id, config_id, name, account_status, amount_spent, balance, created_time)
@@ -299,7 +299,7 @@ const getAccountDetails = async (accountId, forceSync = false, configId = null) 
 
     if (!account || ads.length === 0 || forceSync || isStale(account.last_synced_at)) {
         await syncAccountDetails(accountId, configIdVal);
-        
+
         // Fetch freshly synced data
         const [[updatedAccount]] = await pool.query('SELECT * FROM meta_ad_accounts WHERE id = ? AND config_id = ?', [accountId, configIdVal]);
         const [updatedAds] = await pool.query('SELECT * FROM meta_ads WHERE account_id = ?', [accountId]);
@@ -353,7 +353,7 @@ const syncLeadFormData = async (formId, configId = null) => {
     try {
         console.log(`Syncing lead form details for ${formId}...`);
         const response = await axios.get(
-            `https://graph.facebook.com/v19.0/${formId}?fields=name,id,locale,status,leads_count,created_time,leads{created_time,id,field_data}&access_token=${token}`
+            `https://graph.facebook.com/v24.0/${formId}?fields=name,id,locale,status,leads_count,created_time,leads{created_time,id,field_data}&access_token=${token}`
         );
 
         const data = response.data;
@@ -471,11 +471,11 @@ const syncCreativeData = async (creativeId, configId = null) => {
     try {
         console.log(`Syncing creative details for ${creativeId}...`);
         const response = await axios.get(
-            `https://graph.facebook.com/v19.0/${creativeId}?fields=id,name,title,body,image_url,video_id,object_story_spec,thumbnail_url,asset_feed_spec,url_tags,call_to_action&access_token=${token}`
+            `https://graph.facebook.com/v24.0/${creativeId}?fields=id,name,title,body,image_url,video_id,object_story_spec,thumbnail_url,asset_feed_spec,url_tags,call_to_action&access_token=${token}`
         );
 
         const data = response.data;
-        
+
         await pool.query(
             `INSERT INTO meta_creatives (id, raw_data)
              VALUES (?, ?)
@@ -522,8 +522,8 @@ const syncSingleAdInsights = async (adId, configId = null) => {
         sinceDate.setDate(sinceDate.getDate() - 30);
         const since = sinceDate.toISOString().split('T')[0];
 
-        const url = `https://graph.facebook.com/v19.0/${adId}/insights?fields=ad_id,ad_name,campaign_name,adset_name,spend,impressions,reach,clicks,ctr,cpc,actions,cost_per_action_type&time_range={"since":"${since}","until":"${until}"}&time_increment=1&access_token=${token}`;
-        
+        const url = `https://graph.facebook.com/v24.0/${adId}/insights?fields=ad_id,ad_name,campaign_name,adset_name,spend,impressions,reach,clicks,ctr,cpc,actions,cost_per_action_type&time_range={"since":"${since}","until":"${until}"}&time_increment=1&access_token=${token}`;
+
         const response = await axios.get(url);
         const data = response.data.data || [];
 
@@ -613,7 +613,7 @@ const syncAdLeads = async (adId, configId = null) => {
     try {
         console.log(`Syncing leads for Ad: ${adId}...`);
         const response = await axios.get(
-            `https://graph.facebook.com/v19.0/${adId}/leads?fields=ad_id,ad_name,adset_id,adset_name,form_id,platform,field_data,created_time&limit=1000&access_token=${token}`
+            `https://graph.facebook.com/v24.0/${adId}/leads?fields=ad_id,ad_name,adset_id,adset_name,form_id,platform,field_data,created_time&limit=1000&access_token=${token}`
         );
 
         const data = response.data.data || [];

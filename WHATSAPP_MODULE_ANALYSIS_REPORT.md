@@ -47,7 +47,7 @@ graph TD
     Router -->|Authenticate| ProtectMiddleware[Auth Middleware]
     ProtectMiddleware -->|Routes to| Controllers[WhatsApp Controllers]
     Controllers -->|Uses| Services[WhatsApp Services]
-    Services -->|HTTP API calls| MetaAPI[Meta Graph API v19.0]
+    Services -->|HTTP API calls| MetaAPI[Meta Graph API v24.0]
     Services -->|Queries| MySQL[(MySQL Database)]
     MetaAPI -->|Status Webhook Events| WebhookReceiver[Webhook Controller]
     WebhookReceiver -->|Updates Logs| MySQL
@@ -62,7 +62,7 @@ By default, the platform uses configuration variables defined in backend environ
 To support multi-tenancy, administrator users can configure individual sender credentials (phone number configurations) inside `WhatsAppSettings.jsx`. These custom accounts are stored in the MySQL database.
 
 ### WABA & Phone Number Integration
-When a client requests account details, the server queries the Meta API node `/v19.0/{phone_number_id}` and updates/caches details into `whatsapp_phone_details`:
+When a client requests account details, the server queries the Meta API node `/v24.0/{phone_number_id}` and updates/caches details into `whatsapp_phone_details`:
 * **Details retrieved:** `display_phone_number`, `verified_name`, `quality_rating`, `name_status`, `code_verification_status`, `platform_type`, `throughput`.
 * WABA metadata (WABA name, review status, currency, timezone, template namespace, business verification status) is queried dynamically using `/{waba_id}`.
 
@@ -85,7 +85,7 @@ The webhook exposes two public endpoints:
 ### Template Creation Process
 1. Done inside `WATemplateBuilder.jsx` where a visual phone mockup simulates the user's template.
 2. Supports **Header** (NONE, TEXT, IMAGE, DOCUMENT), **Body** (supports dynamic variable inputs like `{{1}}`), **Footer** (text), and **Buttons** (QUICK_REPLY, URL web links, PHONE support lines).
-3. Payload is compiled into Meta API specifications and sent to `POST /v19.0/{waba_id}/message_templates`.
+3. Payload is compiled into Meta API specifications and sent to `POST /v24.0/{waba_id}/message_templates`.
 4. Stored locally in `whatsapp_templates` cache with `PENDING` status.
 
 ### Template Sync Process
@@ -259,7 +259,7 @@ To compete directly with enterprise CRM tools like **AiSensy**, **WATI**, and **
 * **Database Indexes:** Key tables like `whatsapp_message_logs` lack indexed columns for `phone_number_id`, `recipient_number`, or `message_id`, which slows down search queries as log size increases.
 
 ### 4. Hardcoded Versions
-* The API endpoints reference version `/v19.0/` in string literals. If Meta deprecates v19.0, multiple service files will break. Version variables should be stored in environment configurations.
+* The API endpoints reference version `/v24.0/` in string literals. If Meta deprecates v24.0, multiple service files will break. Version variables should be stored in environment configurations.
 
 ---
 
@@ -279,7 +279,7 @@ Phase 1: Security & Robustness ──> Phase 2: Asynchronous Queues ──> Phas
 1. **Phase 1: Security & Stability (Immediate)**
    * Add AES-256 encryption for access tokens stored in `whatsapp_configs`.
    * Implement Meta Signature Verification (`x-hub-signature-256`) inside `receiveWebhook`.
-   * Move the Meta Graph API version string (`v19.0`) to a shared environment variable.
+   * Move the Meta Graph API version string (`v24.0`) to a shared environment variable.
 2. **Phase 2: Queue Infrastructure (Short Term)**
    * Install **Redis** and setup **BullMQ** on the server.
    * Modify `sendTemplateMessage` to push broadcast requests onto the queue, enabling instant HTTP success response to the client.

@@ -13,6 +13,9 @@ const startServer = async () => {
     // Connect to Database
     await connectDB();
 
+    // Initialize Queue Worker
+    require('./src/services/whatsapp-queue.service');
+
     // Start listening
     app.listen(PORT, () => {
         console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on http://localhost:${PORT}`);

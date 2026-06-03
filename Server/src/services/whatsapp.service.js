@@ -39,7 +39,7 @@ const syncWabaDetails = async (configId = null) => {
 
     try {
         console.log(`Syncing WABA Details for Phone ID: ${phoneId} and config: ${configIdVal}...`);
-        const url = `https://graph.facebook.com/v19.0/${phoneId}?fields=display_phone_number,verified_name,quality_rating,name_status,code_verification_status,platform_type,throughput&access_token=${token}`;
+        const url = `https://graph.facebook.com/v24.0/${phoneId}?fields=display_phone_number,verified_name,quality_rating,name_status,code_verification_status,platform_type,throughput&access_token=${token}`;
         const response = await axios.get(url);
         const data = response.data;
 
@@ -96,7 +96,7 @@ const syncTemplates = async (configId = null) => {
     try {
         console.log(`Syncing WhatsApp templates for WABA ID: ${wabaId} and config: ${configIdVal}...`);
         const response = await axios.get(
-            `https://graph.facebook.com/v19.0/${wabaId}/message_templates?access_token=${token}`
+            `https://graph.facebook.com/v24.0/${wabaId}/message_templates?access_token=${token}`
         );
 
         const data = response.data.data || [];
@@ -122,6 +122,7 @@ const syncTemplates = async (configId = null) => {
                     JSON.stringify(tmpl.components || [])
                 ]
             );
+            await processAndSaveTemplateVariables(tmpl.id, tmpl.components || []);
         }
 
         return data;
@@ -165,8 +166,101 @@ const logSentMessage = async (phoneId, recipient, templateName, status, messageI
     }
 };
 
+// Parse template components and save dynamic variables to dedicated database tables
+async function processAndSaveTemplateVariables(templateId, components) {
+    try {
+        const comps = typeof components === 'string' ? JSON.parse(components) : (components || []);
+        const extracted = [];
+
+        comps.forEach(comp => {
+            const compType = String(comp.type).toLowerCase();
+            if (compType === 'body' && comp.text) {
+                const matches = [...comp.text.matchAll(/\{\{([a-zA-Z0-9_]+)\}\}/g)];
+                matches.forEach((match, index) => {
+                    extracted.push({
+                        name: match[1],
+                        componentType: 'body',
+                        position: index + 1
+                    });
+                });
+            } else if (compType === 'header') {
+                const format = String(comp.format).toUpperCase();
+                if (format === 'TEXT' && comp.text) {
+                    const matches = [...comp.text.matchAll(/\{\{([a-zA-Z0-9_]+)\}\}/g)];
+                    matches.forEach((match, index) => {
+                        extracted.push({
+                            name: match[1],
+                            componentType: 'header',
+                            position: index + 1
+                        });
+                    });
+                } else if (format === 'IMAGE') {
+                    extracted.push({
+                        name: 'header_image_url',
+                        componentType: 'header',
+                        position: 1
+                    });
+                } else if (format === 'DOCUMENT') {
+                    extracted.push({
+                        name: 'header_document_url',
+                        componentType: 'header',
+                        position: 1
+                    });
+                } else if (format === 'VIDEO') {
+                    extracted.push({
+                        name: 'header_video_url',
+                        componentType: 'header',
+                        position: 1
+                    });
+                }
+            } else if (compType === 'buttons' && Array.isArray(comp.buttons)) {
+                comp.buttons.forEach((btn, btnIdx) => {
+                    if (btn.type === 'URL' && btn.url) {
+                        const matches = [...btn.url.matchAll(/\{\{([a-zA-Z0-9_]+)\}\}/g)];
+                        matches.forEach((match, index) => {
+                            extracted.push({
+                                name: match[1],
+                                componentType: 'button',
+                                position: btnIdx + 1
+                            });
+                        });
+                    }
+                });
+            }
+        });
+
+        // 1. Delete existing variables
+        await pool.query('DELETE FROM whatsapp_template_variables WHERE template_id = ?', [templateId]);
+
+        // 2. Save variables to variables table
+        if (extracted.length > 0) {
+            const insertValues = extracted.map(v => [
+                templateId,
+                v.name,
+                v.componentType,
+                v.position
+            ]);
+            await pool.query(
+                'INSERT INTO whatsapp_template_variables (template_id, variable_name, component_type, variable_position) VALUES ?',
+                [insertValues]
+            );
+        }
+
+        // 3. Cache variables JSON array inside whatsapp_templates
+        const varNames = [...new Set(extracted.map(v => v.name))];
+        await pool.query(
+            'UPDATE whatsapp_templates SET variables = ? WHERE id = ?',
+            [JSON.stringify(varNames), templateId]
+        );
+    } catch (err) {
+        console.error(`Error processing variables for template ${templateId}:`, err.message);
+    }
+}
+
 module.exports = {
+    resolveWhatsAppConfig,
     getWabaDetails,
     getTemplates,
-    logSentMessage
+    logSentMessage,
+    processAndSaveTemplateVariables
 };

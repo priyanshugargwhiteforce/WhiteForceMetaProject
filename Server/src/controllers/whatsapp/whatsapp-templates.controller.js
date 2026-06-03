@@ -6,6 +6,7 @@ const whatsappTemplatesService = require('../../services/whatsapp-templates.serv
 exports.createTemplate = async (req, res) => {
     try {
         const { name, category, language, components } = req.body;
+        const configId = req.headers['x-whatsapp-config-id'] || req.query.configId;
 
         if (!name || !category || !components) {
             return res.status(400).json({
@@ -19,7 +20,7 @@ exports.createTemplate = async (req, res) => {
             category,
             language,
             components
-        });
+        }, configId);
 
         res.status(201).json({
             success: true,
@@ -41,6 +42,7 @@ exports.createTemplate = async (req, res) => {
 exports.deleteTemplate = async (req, res) => {
     try {
         const { name } = req.params;
+        const configId = req.headers['x-whatsapp-config-id'] || req.query.configId;
 
         if (!name) {
             return res.status(400).json({
@@ -49,7 +51,7 @@ exports.deleteTemplate = async (req, res) => {
             });
         }
 
-        await whatsappTemplatesService.deleteMetaTemplate(name);
+        await whatsappTemplatesService.deleteMetaTemplate(name, configId);
 
         res.json({
             success: true,
@@ -154,5 +156,94 @@ exports.receiveWebhook = async (req, res) => {
     } catch (error) {
         console.error('Webhook Receiver Error:', error.message);
         res.status(500).send(error.message);
+    }
+};
+
+exports.getTemplateVariables = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id) {
+            return res.status(400).json({ success: false, message: 'Template ID is required.' });
+        }
+        const variables = await whatsappTemplatesService.getTemplateVariables(id);
+        res.status(200).json({ success: true, variables });
+    } catch (error) {
+        console.error('Get template variables controller error:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.getTemplateMappings = async (req, res) => {
+    try {
+        const { templateId } = req.params;
+        if (!templateId) {
+            return res.status(400).json({ success: false, message: 'Template ID is required.' });
+        }
+        const mappings = await whatsappTemplatesService.getTemplateMappings(templateId);
+        res.status(200).json({ success: true, mappings });
+    } catch (error) {
+        console.error('Get template mappings controller error:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.saveTemplateMappings = async (req, res) => {
+    try {
+        const { templateId } = req.params;
+        const { mappingName, mappings, isDefault } = req.body;
+        
+        if (!templateId) {
+            return res.status(400).json({ success: false, message: 'Template ID is required.' });
+        }
+        if (!mappingName || String(mappingName).trim().length === 0) {
+            return res.status(400).json({ success: false, message: 'Mapping profile name is required.' });
+        }
+        if (!mappings) {
+            return res.status(400).json({ success: false, message: 'Mappings configuration is required.' });
+        }
+
+        const userId = req.user?.id || null;
+        const result = await whatsappTemplatesService.saveTemplateMappings(templateId, mappingName, mappings, isDefault, userId);
+        res.status(200).json({ success: true, ...result });
+    } catch (error) {
+        console.error('Save template mappings controller error:', error.message);
+        if (error.code === 'ER_DUP_MAPPING' || error.message.includes('already exists')) {
+            return res.status(400).json({ success: false, message: 'Mapping profile already exists.' });
+        }
+        if (error.message.includes('Version') || error.message.includes('required') || error.message.includes('integer')) {
+            return res.status(400).json({ success: false, message: error.message });
+        }
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.deleteTemplateMapping = async (req, res) => {
+    try {
+        const { templateId, mappingId } = req.params;
+        if (!templateId || !mappingId) {
+            return res.status(400).json({ success: false, message: 'Template ID and Mapping ID are required.' });
+        }
+        await whatsappTemplatesService.deleteTemplateMapping(templateId, mappingId);
+        res.status(200).json({ success: true, message: 'Mapping profile deleted successfully.' });
+    } catch (error) {
+        console.error('Delete template mapping controller error:', error.message);
+        if (error.message.includes('Cannot delete the default')) {
+            return res.status(400).json({ success: false, message: error.message });
+        }
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.useTemplateMapping = async (req, res) => {
+    try {
+        const { templateId, mappingId } = req.params;
+        if (!templateId || !mappingId) {
+            return res.status(400).json({ success: false, message: 'Template ID and Mapping ID are required.' });
+        }
+        const result = await whatsappTemplatesService.useTemplateMapping(templateId, mappingId);
+        res.status(200).json({ success: true, ...result });
+    } catch (error) {
+        console.error('Use template mapping controller error:', error.message);
+        res.status(500).json({ success: false, message: error.message });
     }
 };

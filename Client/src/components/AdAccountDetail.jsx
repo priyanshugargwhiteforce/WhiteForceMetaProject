@@ -26,7 +26,6 @@ const AdAccountDetail = () => {
   const { theme, toggleTheme } = useTheme();
   const { id } = useParams();
   const navigate = useNavigate();
-  const { logout } = useAuth();
   const [accountData, setAccountData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

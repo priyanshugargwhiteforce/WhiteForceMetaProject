@@ -1,6 +1,7 @@
 const axios = require('axios');
 const whatsappService = require('../../services/whatsapp.service');
 const { pool } = require('../../config/db');
+const campaignsService = require('../../services/whatsapp-campaigns.service');
 
 // WhatsApp Configs CRUD
 exports.getWhatsAppConfigs = async (req, res) => {
@@ -68,7 +69,7 @@ exports.getWhatsAppDetails = async (req, res) => {
             }
         }
 
-        const wabaUrl = `https://graph.facebook.com/v19.0/${wabaId}?fields=id,name,currency,timezone_id,message_template_namespace,account_review_status,business_verification_status&access_token=${accessToken}`;
+        const wabaUrl = `https://graph.facebook.com/v24.0/${wabaId}?fields=id,name,currency,timezone_id,message_template_namespace,account_review_status,business_verification_status&access_token=${accessToken}`;
         const wabaResponse = await axios.get(wabaUrl);
 
         res.json({
@@ -131,88 +132,61 @@ exports.sendTemplateMessage = async (req, res) => {
 
         // Resolve config keys
         const configIdVal = configId ? parseInt(configId) : 0;
-        let accessToken = process.env.META_ACCESS_TOKEN;
-        let phoneNumberId = process.env.PHONE_NUMBER_ID;
+        let wabaId = process.env.WABA_ID;
         if (configIdVal > 0) {
-            const [[config]] = await pool.query('SELECT phone_number_id, access_token FROM whatsapp_configs WHERE id = ?', [configIdVal]);
+            const [[config]] = await pool.query('SELECT waba_id FROM whatsapp_configs WHERE id = ?', [configIdVal]);
             if (config) {
-                accessToken = config.access_token;
-                phoneNumberId = config.phone_number_id;
+                wabaId = config.waba_id;
             }
         }
 
-        const results = [];
-        for (const recipient of recipientsList) {
-            const number = recipient.number;
-            const parameters = recipient.parameters || [];
-
-            if (!number) continue;
-
-            try {
-                const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
-
-                const templatePayload = {
-                    name: templateName,
-                    language: {
-                        code: languageCode || "en_US"
-                    }
-                };
-
-                if (parameters.length > 0) {
-                    templatePayload.components = [
-                        {
-                            type: "body",
-                            parameters: parameters.map(p => ({
-                                type: "text",
-                                text: String(p)
-                            }))
-                        }
-                    ];
-                }
-
-                const response = await axios.post(url, {
-                    messaging_product: "whatsapp",
-                    to: number.trim(),
-                    type: "template",
-                    template: templatePayload
-                }, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-
-                const messageId = response.data.messages[0].id;
-                results.push({ number, success: true, messageId });
-
-                // Log successfully sent message
-                await whatsappService.logSentMessage(
-                    phoneNumberId,
-                    number.trim(),
-                    templateName,
-                    'sent',
-                    messageId,
-                    sentByUserId
-                );
-            } catch (err) {
-                const errorMsg = err.response?.data?.error?.message || err.message;
-                results.push({ number, success: false, error: errorMsg });
-
-                // Log failed sent message
-                await whatsappService.logSentMessage(
-                    phoneNumberId,
-                    number.trim(),
-                    templateName,
-                    'failed',
-                    null,
-                    sentByUserId,
-                    errorMsg
-                );
-            }
+        // Fetch template
+        let templateObj;
+        if (wabaId) {
+            const [[resTmpl]] = await pool.query('SELECT id FROM whatsapp_templates WHERE name = ? AND waba_id = ?', [templateName, wabaId]);
+            templateObj = resTmpl;
         }
+        if (!templateObj) {
+            const [[resTmpl]] = await pool.query('SELECT id FROM whatsapp_templates WHERE name = ?', [templateName]);
+            templateObj = resTmpl;
+        }
+
+        if (!templateObj) {
+            return res.status(400).json({ success: false, message: `Template "${templateName}" not found.` });
+        }
+
+        // Check/Create Default Contact List
+        let [[defaultList]] = await pool.query('SELECT id FROM whatsapp_contact_lists WHERE name = "Default Direct Send List"');
+        let defaultListId;
+        if (!defaultList) {
+            const [insertRes] = await pool.query('INSERT INTO whatsapp_contact_lists (name) VALUES ("Default Direct Send List")');
+            defaultListId = insertRes.insertId;
+        } else {
+            defaultListId = defaultList.id;
+        }
+
+        // Create Campaign with status = 'queued' (this enqueues jobs to BullMQ queue automatically)
+        const result = await campaignsService.createCampaign({
+            configId: configIdVal,
+            name: `Direct Send - ${templateName} - ${new Date().toISOString()}`,
+            templateId: templateObj.id,
+            contactListId: defaultListId,
+            campaignType: 'broadcast',
+            status: 'queued',
+            recipients: recipientsList
+        });
 
         res.json({
             success: true,
-            results
+            campaignId: result.campaignId,
+            results: recipientsList.map(r => ({
+                number: r.number || r.phone,
+                success: true,
+                status: 'queued'
+            }))
         });
     } catch (error) {
+        console.error("WhatsApp Controller Send Template Message Error:", error.message);
         res.status(500).json({
             success: false,
             message: error.message

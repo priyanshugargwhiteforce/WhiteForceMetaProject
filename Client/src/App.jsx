@@ -17,9 +17,12 @@ import Overview from './components/Overview';
 import WhatsAppManager from './components/whatsapp/WhatsAppManager';
 import WATemplates from './components/whatsapp/WATemplates';
 import SendMessage from './components/whatsapp/SendMessage';
+import WAContacts from './components/whatsapp/WAContacts';
 import WAChannels from './components/whatsapp/WAChannels';
 import WATemplateBuilder from './components/whatsapp/WATemplateBuilder';
 import WAAnalytics from './components/whatsapp/WAAnalytics';
+import WACampaigns from './components/whatsapp/WACampaigns';
+import WASchedules from './components/whatsapp/WASchedules';
 import UserManagement from './components/UserManagement';
 import AllLeads from './components/AllLeads';
 import LinkedInManager from './components/linkedin/LinkedInManager';
@@ -251,6 +254,36 @@ function App() {
                                 <ProtectedRoute>
                                     <PermissionRoute permission="whatsapp_access">
                                         <SendMessage />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/wa-contacts" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="whatsapp_access">
+                                        <WAContacts />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/wa-campaigns" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="whatsapp_access">
+                                        <WACampaigns />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/wa-schedules" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="whatsapp_access">
+                                        <WASchedules />
                                     </PermissionRoute>
                                 </ProtectedRoute>
                             } 

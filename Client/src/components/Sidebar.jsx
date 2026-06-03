@@ -19,7 +19,8 @@ import {
   FileText,
   Send,
   TrendingUp,
-  Briefcase
+  Briefcase,
+  Calendar
 } from 'lucide-react';
 import logo from "../assets/white-forcelogo.png";
 
@@ -31,7 +32,7 @@ const Sidebar = () => {
 
   const metaPaths = ['/ad-accounts', '/ad-analyzer', '/single-ad-analyzer', '/insights', '/all-leads', '/ad-owners'];
   const googlePaths = ['/google-dashboard', '/google-campaigns', '/google-performance', '/google-insights', '/youtube-ads'];
-  const waPaths = ['/whatsapp-manager', '/wa-channels', '/wa-templates', '/wa-templates/new', '/send-message', '/wa-analytics'];
+  const waPaths = ['/whatsapp-manager', '/wa-channels', '/wa-templates', '/wa-templates/new', '/send-message', '/wa-analytics', '/wa-contacts', '/wa-campaigns', '/wa-schedules'];
   const linkedInPaths = ['/linkedin-manager', '/linkedin-campaigns', '/linkedin-analytics', '/linkedin-leads'];
   const settingsPaths = ['/users', '/settings/meta', '/settings/whatsapp'];
 
@@ -199,10 +200,31 @@ const Sidebar = () => {
               isSubItem={true}
             />
             <NavItem
+              icon={Target}
+              label="Campaigns Manager"
+              active={isActive('/wa-campaigns')}
+              onClick={() => navigate('/wa-campaigns')}
+              isSubItem={true}
+            />
+            <NavItem
+              icon={Calendar}
+              label="Schedules Dashboard"
+              active={isActive('/wa-schedules')}
+              onClick={() => navigate('/wa-schedules')}
+              isSubItem={true}
+            />
+            <NavItem
               icon={Send}
               label="Send Message"
               active={isActive('/send-message')}
               onClick={() => navigate('/send-message')}
+              isSubItem={true}
+            />
+            <NavItem
+              icon={Users}
+              label="Contacts Manager"
+              active={isActive('/wa-contacts')}
+              onClick={() => navigate('/wa-contacts')}
               isSubItem={true}
             />
             <NavItem
@@ -296,7 +318,7 @@ const Sidebar = () => {
           <p className="text-xs font-semibold text-indigo-300 mb-1">API Status</p>
           <div className="flex items-center">
             <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2 shadow-lg shadow-emerald-500/50"></div>
-            <span className="text-[10px] text-slate-400">Connected to v19.0</span>
+            <span className="text-[10px] text-slate-400">Connected to v24.0</span>
           </div>
         </div>
         <button

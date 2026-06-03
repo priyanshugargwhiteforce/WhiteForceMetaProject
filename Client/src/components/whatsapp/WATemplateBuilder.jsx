@@ -260,9 +260,9 @@ const WATemplateBuilder = () => {
                 onChange={(e) => setLanguage(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800 dark:text-white cursor-pointer"
               >
-                <option value="en_US" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">English (US)</option>
-                <option value="hi_IN" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">Hindi (IN)</option>
-                <option value="es_ES" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">Spanish (ES)</option>
+                <option value="en" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">English</option>
+                <option value="hi" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">Hindi</option>
+                <option value="es" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">Spanish</option>
               </select>
             </div>
           </div>
