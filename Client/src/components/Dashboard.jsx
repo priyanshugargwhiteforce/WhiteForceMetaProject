@@ -28,7 +28,12 @@ const Dashboard = () => {
       });
       const data = await response.json();
       if (data.success) {
-        setMetaConfigs(data.configs || []);
+        const configs = data.configs || [];
+        setMetaConfigs(configs);
+        if (configs.length > 0 && !localStorage.getItem('selectedMetaConfigId')) {
+          setSelectedConfigId(configs[0].id.toString());
+          localStorage.setItem('selectedMetaConfigId', configs[0].id.toString());
+        }
       }
     } catch (err) {
       console.error("Error fetching meta configs:", err);
@@ -115,22 +120,20 @@ const Dashboard = () => {
               <p className="text-slate-500 dark:text-slate-400 text-sm">Managing <span className="text-blue-600 dark:text-blue-400 font-semibold">{adAccounts.length}</span> connected ad accounts across Meta platforms.</p>
             </div>
             <div className="flex items-center space-x-3 flex-wrap gap-y-2">
-              {/* Meta Account Connection Dropdown (Admin Only) */}
-              {user?.role === 'admin' && (
-                <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 transition-colors">
-                  <Database className="w-4 h-4 text-blue-500" />
-                  <select
-                    value={selectedConfigId}
-                    onChange={handleConfigChange}
-                    className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-200"
-                  >
-                    <option value="" className="bg-white dark:bg-slate-900">Default Server Account</option>
-                    {metaConfigs.map(cfg => (
-                      <option key={cfg.id} value={cfg.id} className="bg-white dark:bg-slate-900">{cfg.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              {/* Meta Account Connection Dropdown */}
+              <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 transition-colors">
+                <Database className="w-4 h-4 text-blue-500" />
+                <select
+                  value={selectedConfigId}
+                  onChange={handleConfigChange}
+                  className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-200"
+                >
+                  <option value="" className="bg-white dark:bg-slate-900">Default Server Account</option>
+                  {metaConfigs.map(cfg => (
+                    <option key={cfg.id} value={cfg.id} className="bg-white dark:bg-slate-900">{cfg.name}</option>
+                  ))}
+                </select>
+              </div>
 
               <button className="px-4 py-2 bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-semibold transition-all text-slate-700 dark:text-slate-200 shadow-sm">Export CSV</button>
             </div>

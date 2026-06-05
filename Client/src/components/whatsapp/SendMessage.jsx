@@ -184,9 +184,7 @@ const SendMessage = () => {
   }, [rawRows, phoneColIdx, variableMappings]);
 
   useEffect(() => {
-    if (user?.role === 'admin') {
-      fetchConfigs();
-    }
+    fetchConfigs();
   }, [user]);
 
   useEffect(() => {
@@ -200,7 +198,12 @@ const SendMessage = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.data.success) {
-        setWhatsappConfigs(response.data.configs || []);
+        const configs = response.data.configs || [];
+        setWhatsappConfigs(configs);
+        if (configs.length > 0 && !localStorage.getItem('selectedWhatsAppConfigId')) {
+          setSelectedConfigId(configs[0].id.toString());
+          localStorage.setItem('selectedWhatsAppConfigId', configs[0].id.toString());
+        }
       }
     } catch (err) {
       console.error("Error fetching whatsapp configs:", err);
@@ -300,31 +303,29 @@ const SendMessage = () => {
                 1. Sender & Template Setup
               </h3>
 
-              {user?.role === 'admin' && (
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                    <Database className="w-3.5 h-3.5 text-indigo-500/70" />
-                    Select WhatsApp Sender Account
-                  </label>
-                  <div className="relative">
-                    <select 
-                      value={selectedConfigId}
-                      onChange={(e) => setSelectedConfigId(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 appearance-none transition-all cursor-pointer text-slate-800 dark:text-slate-100"
-                    >
-                      <option value="" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Default Server Config</option>
-                      {whatsappConfigs.map(cfg => (
-                        <option key={cfg.id} value={cfg.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
-                          {cfg.name} ({cfg.phone_number_id})
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 dark:text-slate-400">
-                      <ChevronDown className="w-5 h-5" />
-                    </div>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                  <Database className="w-3.5 h-3.5 text-indigo-500/70" />
+                  Select WhatsApp Sender Account
+                </label>
+                <div className="relative">
+                  <select 
+                    value={selectedConfigId}
+                    onChange={(e) => setSelectedConfigId(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 appearance-none transition-all cursor-pointer text-slate-800 dark:text-slate-100"
+                  >
+                    <option value="" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Default Server Config</option>
+                    {whatsappConfigs.map(cfg => (
+                      <option key={cfg.id} value={cfg.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                        {cfg.name} ({cfg.phone_number_id})
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 dark:text-slate-400">
+                    <ChevronDown className="w-5 h-5" />
                   </div>
                 </div>
-              )}
+              </div>
 
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">

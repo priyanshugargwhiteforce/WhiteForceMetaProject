@@ -36,12 +36,12 @@ const LeadDataModal = ({ isOpen, onClose, formId }) => {
       setFormData(null);
       try {
         const token = localStorage.getItem('token');
+        const configId = localStorage.getItem('selectedMetaConfigId') || '';
+        const headers = { 'Authorization': `Bearer ${token}` };
+        if (configId) headers['X-Meta-Config-Id'] = configId;
+
         const response = await fetch(
-          `http://localhost:5000/api/meta/leadforms/${formId}`, {
-              headers: {
-                  'Authorization': `Bearer ${token}`
-              }
-          }
+          `http://localhost:5000/api/meta/leadforms/${formId}`, { headers }
         );
         const result = await response.json();
         if (result.error) throw new Error(result.error.message);

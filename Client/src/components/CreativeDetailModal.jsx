@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  Eye, 
-  ExternalLink, 
-  Calendar, 
-  Activity, 
-  Settings, 
+import {
+  X,
+  Eye,
+  ExternalLink,
+  Calendar,
+  Activity,
+  Settings,
   AlertCircle,
   Globe,
   Camera,
@@ -32,18 +32,18 @@ const CreativeDetailModal = ({ isOpen, onClose, creativeId }) => {
   useEffect(() => {
     const fetchDetails = async () => {
       if (!creativeId || !isOpen) return;
-      
+
       setLoading(true);
       setError(null);
       setData(null); // Reset data to avoid showing old creative info
       try {
         const token = localStorage.getItem('token');
+        const configId = localStorage.getItem('selectedMetaConfigId') || '';
+        const headers = { 'Authorization': `Bearer ${token}` };
+        if (configId) headers['X-Meta-Config-Id'] = configId;
+
         const response = await fetch(
-          `http://localhost:5000/api/meta/creatives/${creativeId}`, {
-              headers: {
-                  'Authorization': `Bearer ${token}`
-              }
-          }
+          `http://localhost:5000/api/meta/creatives/${creativeId}`, { headers }
         );
         const result = await response.json();
         if (result.error) throw new Error(result.error.message);
@@ -77,13 +77,13 @@ const CreativeDetailModal = ({ isOpen, onClose, creativeId }) => {
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <button 
+            <button
               onClick={toggleTheme}
               className="w-10 h-10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl text-slate-500 hover:text-blue-600 dark:hover:text-white transition-all border border-transparent"
             >
               {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
-            <button 
+            <button
               onClick={onClose}
               className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-slate-500 hover:text-red-500 dark:hover:text-white transition-all"
             >
@@ -94,24 +94,24 @@ const CreativeDetailModal = ({ isOpen, onClose, creativeId }) => {
 
         {loading ? (
           <div className="p-20 flex flex-col items-center justify-center">
-             <div className="w-10 h-10 border-2 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-4"></div>
-             <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Fetching Creative Data...</p>
+            <div className="w-10 h-10 border-2 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Fetching Creative Data...</p>
           </div>
         ) : error ? (
           <div className="p-12 text-center">
-             <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-4" />
-             <p className="text-sm text-white font-bold mb-2">Failed to Load Creative</p>
-             <p className="text-xs text-slate-500 mb-6">{error}</p>
-             <button onClick={onClose} className="px-6 py-2 bg-white/10 rounded-xl text-xs font-bold text-white">Close</button>
+            <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-4" />
+            <p className="text-sm text-white font-bold mb-2">Failed to Load Creative</p>
+            <p className="text-xs text-slate-500 mb-6">{error}</p>
+            <button onClick={onClose} className="px-6 py-2 bg-white/10 rounded-xl text-xs font-bold text-white">Close</button>
           </div>
         ) : data && (
           <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
             {/* Preview Image/Video */}
             {(data.image_url || data.thumbnail_url) && (
               <div className="relative aspect-video rounded-2xl overflow-hidden border border-white/10 bg-black/40">
-                <img 
-                  src={data.image_url || data.thumbnail_url} 
-                  alt="Creative Preview" 
+                <img
+                  src={data.image_url || data.thumbnail_url}
+                  alt="Creative Preview"
                   className="w-full h-full object-contain"
                 />
                 <div className="absolute top-3 left-3 px-2 py-1 bg-black/60 backdrop-blur-md rounded text-[8px] font-bold text-white uppercase tracking-tighter border border-white/10">
@@ -140,7 +140,7 @@ const CreativeDetailModal = ({ isOpen, onClose, creativeId }) => {
                       </div>
                       <p className="text-xs font-mono text-slate-900 dark:text-white tracking-wider">ID: {data.call_to_action?.value?.lead_gen_form_id || data.object_story_spec?.link_data?.call_to_action?.value?.lead_gen_form_id}</p>
                     </div>
-                    <button 
+                    <button
                       onClick={() => {
                         const formId = data.call_to_action?.value?.lead_gen_form_id || data.object_story_spec?.link_data?.call_to_action?.value?.lead_gen_form_id;
                         setSelectedFormId(formId);
@@ -158,65 +158,65 @@ const CreativeDetailModal = ({ isOpen, onClose, creativeId }) => {
               {/* Dynamic Asset Feed Spec */}
               {data.asset_feed_spec && (
                 <div className="space-y-3">
-                   <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center px-1">
-                     <List className="w-3 h-3 mr-2 text-indigo-400" />
-                     Dynamic Asset Variants
-                   </h4>
-                   
-                   <div className="grid grid-cols-1 gap-3">
-                     {data.asset_feed_spec.titles && (
-                       <AssetList label="Alternative Titles" items={data.asset_feed_spec.titles} color="indigo" />
-                     )}
-                     {data.asset_feed_spec.bodies && (
-                       <AssetList label="Ad Copy Variants" items={data.asset_feed_spec.bodies} color="blue" />
-                     )}
-                     {data.asset_feed_spec.descriptions && (
-                       <AssetList label="Description Variants" items={data.asset_feed_spec.descriptions} color="emerald" />
-                     )}
-                   </div>
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center px-1">
+                    <List className="w-3 h-3 mr-2 text-indigo-400" />
+                    Dynamic Asset Variants
+                  </h4>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {data.asset_feed_spec.titles && (
+                      <AssetList label="Alternative Titles" items={data.asset_feed_spec.titles} color="indigo" />
+                    )}
+                    {data.asset_feed_spec.bodies && (
+                      <AssetList label="Ad Copy Variants" items={data.asset_feed_spec.bodies} color="blue" />
+                    )}
+                    {data.asset_feed_spec.descriptions && (
+                      <AssetList label="Description Variants" items={data.asset_feed_spec.descriptions} color="emerald" />
+                    )}
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Technical Specs & Platforms */}
             <div className="space-y-4">
-               <div className="grid grid-cols-2 gap-3">
-                 <div className="bg-slate-50 dark:bg-white/[0.02] p-3 rounded-2xl border border-slate-200 dark:border-white/5 transition-colors">
-                   <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1 flex items-center">
-                     <Globe className="w-2 h-2 mr-1.5 text-blue-600 dark:text-blue-400" /> Page ID
-                   </p>
-                   <p className="text-[11px] font-mono text-slate-700 dark:text-slate-300 transition-colors">{data.object_story_spec?.page_id || 'N/A'}</p>
-                 </div>
-                 <div className="bg-slate-50 dark:bg-white/[0.02] p-3 rounded-2xl border border-slate-200 dark:border-white/5 transition-colors">
-                   <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1 flex items-center">
-                     <Camera className="w-2 h-2 mr-1.5 text-pink-600 dark:text-pink-400" /> Insta User ID
-                   </p>
-                   <p className="text-[11px] font-mono text-slate-700 dark:text-slate-300 transition-colors">{data.object_story_spec?.instagram_user_id || 'N/A'}</p>
-                 </div>
-               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 dark:bg-white/[0.02] p-3 rounded-2xl border border-slate-200 dark:border-white/5 transition-colors">
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1 flex items-center">
+                    <Globe className="w-2 h-2 mr-1.5 text-blue-600 dark:text-blue-400" /> Page ID
+                  </p>
+                  <p className="text-[11px] font-mono text-slate-700 dark:text-slate-300 transition-colors">{data.object_story_spec?.page_id || 'N/A'}</p>
+                </div>
+                <div className="bg-slate-50 dark:bg-white/[0.02] p-3 rounded-2xl border border-slate-200 dark:border-white/5 transition-colors">
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1 flex items-center">
+                    <Camera className="w-2 h-2 mr-1.5 text-pink-600 dark:text-pink-400" /> Insta User ID
+                  </p>
+                  <p className="text-[11px] font-mono text-slate-700 dark:text-slate-300 transition-colors">{data.object_story_spec?.instagram_user_id || 'N/A'}</p>
+                </div>
+              </div>
 
-               <div className="bg-slate-50 dark:bg-white/[0.02] p-3 rounded-2xl border border-slate-200 dark:border-white/5 transition-colors">
-                 <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">URL Tags / Landing Link</p>
-                 <p className="text-[10px] font-mono text-blue-600 dark:text-blue-400 break-all leading-relaxed transition-colors">{data.url_tags || 'None'}</p>
-               </div>
+              <div className="bg-slate-50 dark:bg-white/[0.02] p-3 rounded-2xl border border-slate-200 dark:border-white/5 transition-colors">
+                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">URL Tags / Landing Link</p>
+                <p className="text-[10px] font-mono text-blue-600 dark:text-blue-400 break-all leading-relaxed transition-colors">{data.url_tags || 'None'}</p>
+              </div>
 
-               {/* Object Story Spec Snippet */}
-               {data.object_story_spec && (
-                 <div className="bg-slate-900/40 p-4 rounded-2xl border border-white/5">
-                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Object Story Spec</p>
-                    <div className="text-[10px] font-mono text-slate-500 overflow-hidden h-12 opacity-50">
-                      {JSON.stringify(data.object_story_spec)}
-                    </div>
-                    <button className="mt-2 text-[8px] font-bold text-blue-400 uppercase tracking-widest hover:text-blue-300">View Raw Spec</button>
-                 </div>
-               )}
+              {/* Object Story Spec Snippet */}
+              {data.object_story_spec && (
+                <div className="bg-slate-900/40 p-4 rounded-2xl border border-white/5">
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Object Story Spec</p>
+                  <div className="text-[10px] font-mono text-slate-500 overflow-hidden h-12 opacity-50">
+                    {JSON.stringify(data.object_story_spec)}
+                  </div>
+                  <button className="mt-2 text-[8px] font-bold text-blue-400 uppercase tracking-widest hover:text-blue-300">View Raw Spec</button>
+                </div>
+              )}
             </div>
           </div>
         )}
 
         {/* Modal Footer */}
         <div className="px-6 py-4 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-200 dark:border-white/5 flex justify-end transition-colors">
-          <button 
+          <button
             onClick={onClose}
             className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20"
           >
@@ -227,7 +227,7 @@ const CreativeDetailModal = ({ isOpen, onClose, creativeId }) => {
       </div>
 
       {/* Lead Data Modal (Deeper Drill-down - Moved outside for better z-index handling) */}
-      <LeadDataModal 
+      <LeadDataModal
         isOpen={isLeadModalOpen}
         onClose={() => setIsLeadModalOpen(false)}
         formId={selectedFormId}
@@ -238,7 +238,7 @@ const CreativeDetailModal = ({ isOpen, onClose, creativeId }) => {
 
 const AssetList = ({ label, items, color }) => {
   const { theme } = useTheme();
-  
+
   const colors = {
     indigo: {
       light: 'text-indigo-700 bg-indigo-50 border-indigo-200',

@@ -14,7 +14,9 @@ const User = {
                 google_access TINYINT(1) DEFAULT 0,
                 whatsapp_access TINYINT(1) DEFAULT 0,
                 linkedin_access TINYINT(1) DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                manager_id INT NULL DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_user_manager FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE SET NULL
             )
         `;
         await pool.query(query);
@@ -30,6 +32,8 @@ const User = {
         try { await pool.query("ALTER TABLE users ADD COLUMN google_access TINYINT(1) DEFAULT 0"); } catch (e) {}
         try { await pool.query("ALTER TABLE users ADD COLUMN whatsapp_access TINYINT(1) DEFAULT 0"); } catch (e) {}
         try { await pool.query("ALTER TABLE users ADD COLUMN linkedin_access TINYINT(1) DEFAULT 0"); } catch (e) {}
+        try { await pool.query("ALTER TABLE users ADD COLUMN manager_id INT NULL DEFAULT NULL"); } catch (e) {}
+        try { await pool.query("ALTER TABLE users ADD CONSTRAINT fk_user_manager FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE SET NULL"); } catch (e) {}
     },
 
     async findByEmail(email) {
@@ -38,21 +42,43 @@ const User = {
     },
 
     async create(userData) {
-        const { username, email, password, role = 'user', status = 'active', meta_access = 0, google_access = 0, whatsapp_access = 0, linkedin_access = 0 } = userData;
+        const { username, email, password, role = 'user', status = 'active', meta_access = 0, google_access = 0, whatsapp_access = 0, linkedin_access = 0, manager_id = null } = userData;
         const [result] = await pool.query(
-            'INSERT INTO users (username, email, password, role, status, meta_access, google_access, whatsapp_access, linkedin_access) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [username, email, password, role, status, meta_access, google_access, whatsapp_access, linkedin_access]
+            'INSERT INTO users (username, email, password, role, status, meta_access, google_access, whatsapp_access, linkedin_access, manager_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [username, email, password, role, status, meta_access, google_access, whatsapp_access, linkedin_access, manager_id || null]
         );
         return result.insertId;
     },
 
     async findById(id) {
-        const [rows] = await pool.query('SELECT id, username, email, role, status, meta_access, google_access, whatsapp_access, linkedin_access, created_at FROM users WHERE id = ?', [id]);
+        const query = `
+            SELECT u.id, u.username, u.email, u.role, u.status, u.meta_access, u.google_access, u.whatsapp_access, u.linkedin_access, u.manager_id, mgr.username AS manager_name, u.created_at 
+            FROM users u 
+            LEFT JOIN users mgr ON u.manager_id = mgr.id 
+            WHERE u.id = ?
+        `;
+        const [rows] = await pool.query(query, [id]);
         return rows[0];
     },
 
-    async findAll() {
-        const [rows] = await pool.query('SELECT id, username, email, role, status, meta_access, google_access, whatsapp_access, linkedin_access, created_at FROM users ORDER BY created_at DESC');
+    async findAll(managerId = null) {
+        let query = `
+            SELECT u.id, u.username, u.email, u.role, u.status, u.meta_access, u.google_access, u.whatsapp_access, u.linkedin_access, u.manager_id, mgr.username AS manager_name, u.created_at 
+            FROM users u 
+            LEFT JOIN users mgr ON u.manager_id = mgr.id
+        `;
+        const params = [];
+        if (managerId !== null) {
+            query += ' WHERE u.manager_id = ? OR u.id = ?';
+            params.push(managerId, managerId);
+        }
+        query += ' ORDER BY u.created_at DESC';
+        const [rows] = await pool.query(query, params);
+        return rows;
+    },
+
+    async findManagers() {
+        const [rows] = await pool.query("SELECT id, username, email FROM users WHERE role = 'manager' AND status = 'active' ORDER BY username ASC");
         return rows;
     },
 

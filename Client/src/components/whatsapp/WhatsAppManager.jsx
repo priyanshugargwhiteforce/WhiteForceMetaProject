@@ -34,7 +34,12 @@ const WhatsAppManager = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.data.success) {
-        setWhatsappConfigs(response.data.configs || []);
+        const configs = response.data.configs || [];
+        setWhatsappConfigs(configs);
+        if (configs.length > 0 && !localStorage.getItem('selectedWhatsAppConfigId')) {
+          setSelectedConfigId(configs[0].id.toString());
+          localStorage.setItem('selectedWhatsAppConfigId', configs[0].id.toString());
+        }
       }
     } catch (err) {
       console.error("Error fetching whatsapp configs:", err);
@@ -116,22 +121,20 @@ const WhatsAppManager = () => {
           </div>
         </div>
         <div className="flex items-center space-x-3 flex-wrap gap-y-2">
-          {/* WhatsApp Account Connection Dropdown (Admin Only) */}
-          {user?.role === 'admin' && (
-            <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 transition-colors">
-              <Database className="w-4 h-4 text-green-500" />
-              <select
-                value={selectedConfigId}
-                onChange={handleConfigChange}
-                className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-200"
-              >
-                <option value="" className="bg-white dark:bg-slate-900">Default Server Config</option>
-                {whatsappConfigs.map(cfg => (
-                  <option key={cfg.id} value={cfg.id} className="bg-white dark:bg-slate-900">{cfg.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* WhatsApp Account Connection Dropdown */}
+          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 transition-colors">
+            <Database className="w-4 h-4 text-green-500" />
+            <select
+              value={selectedConfigId}
+              onChange={handleConfigChange}
+              className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-200"
+            >
+              <option value="" className="bg-white dark:bg-slate-900">Default Server Config</option>
+              {whatsappConfigs.map(cfg => (
+                <option key={cfg.id} value={cfg.id} className="bg-white dark:bg-slate-900">{cfg.name}</option>
+              ))}
+            </select>
+          </div>
 
           <button
             onClick={fetchWhatsAppDetails}

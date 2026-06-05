@@ -4,23 +4,26 @@ const {
     getUser,
     createUser,
     updateUser,
-    deleteUser
+    deleteUser,
+    getManagers
 } = require('../controllers/user.controller');
 
 const { protect, authorize } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 
-// All routes here are restricted to admin (protect is applied in app.js)
-router.use(authorize('admin'));
+// Route to get list of managers (strictly Admin)
+router.route('/managers/list')
+    .get(authorize('admin'), getManagers);
 
+// Main user routes
 router.route('/')
-    .get(getUsers)
-    .post(createUser);
+    .get(authorize('admin', 'manager'), getUsers)
+    .post(authorize('admin', 'manager'), createUser);
 
 router.route('/:id')
-    .get(getUser)
-    .put(updateUser)
-    .delete(deleteUser);
+    .get(authorize('admin', 'manager'), getUser)
+    .put(authorize('admin', 'manager'), updateUser)
+    .delete(authorize('admin', 'manager'), deleteUser);
 
 module.exports = router;

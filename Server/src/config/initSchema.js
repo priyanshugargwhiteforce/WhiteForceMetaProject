@@ -905,6 +905,52 @@ const initSchema = async () => {
         `);
         console.log(' - whatsapp_waba_pricing_analytics table created/verified');
 
+        // --- Task Management Table ---
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                description TEXT NULL,
+                assigned_to INT NOT NULL,
+                assigned_by INT NOT NULL,
+                ad_platform VARCHAR(50) DEFAULT 'general',
+                ad_id VARCHAR(255) DEFAULT NULL,
+                ad_name VARCHAR(255) DEFAULT NULL,
+                status ENUM('pending', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending',
+                priority ENUM('low', 'medium', 'high', 'critical') DEFAULT 'medium',
+                due_date DATE DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE CASCADE
+            )
+        `);
+        console.log(' - tasks table created/verified');
+
+        // Indexes for tasks table
+        try {
+            await pool.query("ALTER TABLE tasks ADD INDEX idx_tasks_assigned_to (assigned_to)");
+        } catch (e) { /* Index might exist */ }
+        try {
+            await pool.query("ALTER TABLE tasks ADD INDEX idx_tasks_assigned_by (assigned_by)");
+        } catch (e) { /* Index might exist */ }
+        try {
+            await pool.query("ALTER TABLE tasks ADD INDEX idx_tasks_status (status)");
+        } catch (e) { /* Index might exist */ }
+        try {
+            await pool.query("ALTER TABLE tasks ADD INDEX idx_tasks_ad_id (ad_id)");
+        } catch (e) { /* Index might exist */ }
+
+        // --- User Hierarchy Migrations ---
+        try {
+            await pool.query("ALTER TABLE users ADD COLUMN manager_id INT NULL DEFAULT NULL");
+            console.log(' - Added manager_id column to users table');
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE users ADD CONSTRAINT fk_user_manager FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE SET NULL");
+            console.log(' - Added fk_user_manager foreign key constraint to users table');
+        } catch (e) { /* Constraint might exist */ }
+
         console.log('Database schema initialization completed successfully.');
     } catch (error) {
         console.error('Error initializing database schema:', error.message);

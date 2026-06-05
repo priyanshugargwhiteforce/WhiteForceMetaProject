@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import axios from 'axios';
 import {
   LayoutDashboard,
   Users,
@@ -20,7 +21,8 @@ import {
   Send,
   TrendingUp,
   Briefcase,
-  Calendar
+  Calendar,
+  ClipboardList
 } from 'lucide-react';
 import logo from "../assets/white-forcelogo.png";
 
@@ -42,6 +44,23 @@ const Sidebar = () => {
   const [openLinkedIn, setOpenLinkedIn] = useState(linkedInPaths.includes(location.pathname));
   const [openSettings, setOpenSettings] = useState(settingsPaths.includes(location.pathname));
 
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const fetchPendingCount = async () => {
+    if (!user) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get('http://localhost:5000/api/tasks/pending-count', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        setPendingCount(res.data.count || 0);
+      }
+    } catch (err) {
+      console.error('Error fetching pending tasks count:', err);
+    }
+  };
+
   useEffect(() => {
     const path = location.pathname;
     if (metaPaths.includes(path)) setOpenMeta(true);
@@ -50,6 +69,10 @@ const Sidebar = () => {
     if (linkedInPaths.includes(path)) setOpenLinkedIn(true);
     if (settingsPaths.includes(path)) setOpenSettings(true);
   }, [location.pathname]);
+
+  useEffect(() => {
+    fetchPendingCount();
+  }, [location.pathname, user]);
 
   const isActive = (path) => location.pathname === path;
 
@@ -73,6 +96,13 @@ const Sidebar = () => {
           label="Overview"
           active={isActive('/')}
           onClick={() => navigate('/')}
+        />
+        <NavItem
+          icon={ClipboardList}
+          label="Tasks Manager"
+          active={isActive('/tasks')}
+          onClick={() => navigate('/tasks')}
+          badge={pendingCount}
         />
         {(user?.role === 'admin' || !!user?.meta_access) && (
           <NavDropdown
@@ -276,7 +306,7 @@ const Sidebar = () => {
         )}
 
 
-        {user?.role === 'admin' && (
+        {(user?.role === 'admin' || user?.role === 'manager') && (
           <>
             <div className="pt-6 pb-2 px-4">
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">System</p>
@@ -294,20 +324,24 @@ const Sidebar = () => {
                 onClick={() => navigate('/users')}
                 isSubItem={true}
               />
-              <NavItem
-                icon={Briefcase}
-                label="Setup Meta Accounts"
-                active={isActive('/settings/meta')}
-                onClick={() => navigate('/settings/meta')}
-                isSubItem={true}
-              />
-              <NavItem
-                icon={MessageCircle}
-                label="Setup WhatsApp"
-                active={isActive('/settings/whatsapp')}
-                onClick={() => navigate('/settings/whatsapp')}
-                isSubItem={true}
-              />
+              {user?.role === 'admin' && (
+                <>
+                  <NavItem
+                    icon={Briefcase}
+                    label="Setup Meta Accounts"
+                    active={isActive('/settings/meta')}
+                    onClick={() => navigate('/settings/meta')}
+                    isSubItem={true}
+                  />
+                  <NavItem
+                    icon={MessageCircle}
+                    label="Setup WhatsApp"
+                    active={isActive('/settings/whatsapp')}
+                    onClick={() => navigate('/settings/whatsapp')}
+                    isSubItem={true}
+                  />
+                </>
+              )}
             </NavDropdown>
           </>
         )}
@@ -354,7 +388,7 @@ const NavDropdown = ({ icon: Icon, label, open, onToggle, children }) => (
   </div>
 );
 
-const NavItem = ({ icon: Icon, label, active = false, onClick, isSubItem = false }) => (
+const NavItem = ({ icon: Icon, label, active = false, onClick, isSubItem = false, badge = null }) => (
   <button
     onClick={onClick}
     className={`flex items-center w-full transition-all duration-300 group relative ${isSubItem ? 'px-3 py-2.5 rounded-xl' : 'px-4 py-3 rounded-2xl'
@@ -367,7 +401,12 @@ const NavItem = ({ icon: Icon, label, active = false, onClick, isSubItem = false
     {active && isSubItem && <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-[0_0_12px_rgba(59,130,246,0.5)]"></div>}
     <Icon className={`transition-colors ${isSubItem ? 'w-4 h-4 mr-3' : 'w-5 h-5 mr-3'} ${active ? 'text-blue-500 dark:text-blue-400' : 'group-hover:text-blue-500 dark:group-hover:text-blue-400'}`} />
     <span className={`font-semibold ${isSubItem ? 'text-xs' : 'text-sm'}`}>{label}</span>
-    {active && !isSubItem && <ChevronRight className="w-4 h-4 ml-auto text-blue-500 dark:text-blue-400" />}
+    {badge !== null && badge > 0 && (
+      <span className="ml-auto bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.4)] animate-pulse">
+        {badge}
+      </span>
+    )}
+    {active && !isSubItem && badge === null && <ChevronRight className="w-4 h-4 ml-auto text-blue-500 dark:text-blue-400" />}
   </button>
 );
 

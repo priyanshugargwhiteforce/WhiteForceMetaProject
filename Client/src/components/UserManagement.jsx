@@ -22,6 +22,7 @@ const STATUSES = ['active', 'hold', 'rejected'];
 const UserManagement = () => {
     const { user, token } = useAuth();
     const [users, setUsers] = useState([]);
+    const [managers, setManagers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -40,7 +41,8 @@ const UserManagement = () => {
         meta_access: false,
         google_access: false,
         whatsapp_access: false,
-        linkedin_access: false
+        linkedin_access: false,
+        manager_id: ''
     });
 
     // Filtering, Searching & Pagination
@@ -52,7 +54,23 @@ const UserManagement = () => {
 
     useEffect(() => {
         fetchUsers();
+        if (user?.role === 'admin') {
+            fetchManagers();
+        }
     }, []);
+
+    const fetchManagers = async () => {
+        try {
+            const res = await axios.get('http://localhost:5000/api/users/managers/list', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                setManagers(res.data.managers || []);
+            }
+        } catch (err) {
+            console.error('Failed to load managers:', err);
+        }
+    };
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -70,6 +88,13 @@ const UserManagement = () => {
     };
 
     // Derived State
+    const availableRoles = useMemo(() => {
+        if (user?.role === 'manager') {
+            return ROLES.filter(r => r !== 'admin' && r !== 'manager');
+        }
+        return ROLES;
+    }, [user]);
+
     const filteredUsers = useMemo(() => {
         return users.filter(u => {
             const matchesSearch = u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -103,7 +128,8 @@ const UserManagement = () => {
             meta_access: !!u.meta_access,
             google_access: !!u.google_access,
             whatsapp_access: !!u.whatsapp_access,
-            linkedin_access: !!u.linkedin_access
+            linkedin_access: !!u.linkedin_access,
+            manager_id: u.manager_id || ''
         });
         setIsEditModalOpen(true);
     };
@@ -118,7 +144,8 @@ const UserManagement = () => {
             meta_access: false,
             google_access: false,
             whatsapp_access: false,
-            linkedin_access: false
+            linkedin_access: false,
+            manager_id: ''
         });
         setIsCreateModalOpen(true);
     };
@@ -131,7 +158,8 @@ const UserManagement = () => {
                 meta_access: formData.meta_access,
                 google_access: formData.google_access,
                 whatsapp_access: formData.whatsapp_access,
-                linkedin_access: formData.linkedin_access
+                linkedin_access: formData.linkedin_access,
+                manager_id: formData.manager_id || null
             };
             if (formData.password) updatePayload.password = formData.password;
             if (formData.username) updatePayload.username = formData.username;
@@ -150,7 +178,11 @@ const UserManagement = () => {
 
     const handleCreateUser = async () => {
         try {
-            await axios.post('http://localhost:5000/api/users', formData, {
+            const createPayload = {
+                ...formData,
+                manager_id: formData.manager_id || null
+            };
+            await axios.post('http://localhost:5000/api/users', createPayload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setIsCreateModalOpen(false);
@@ -205,13 +237,15 @@ const UserManagement = () => {
                     <h1 className="text-xl font-bold text-[var(--text-primary)]">User Management</h1>
                     <p className="text-[var(--text-secondary)] mt-0.5 text-xs">Manage access, roles, and accounts.</p>
                 </div>
-                <button
-                    onClick={handleCreateClick}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all shadow-sm"
-                >
-                    <UserPlus className="w-4 h-4" />
-                    <span>Add User</span>
-                </button>
+                {(user?.role === 'admin' || user?.role === 'manager') && (
+                    <button
+                        onClick={handleCreateClick}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all shadow-sm"
+                    >
+                        <UserPlus className="w-4 h-4" />
+                        <span>Add User</span>
+                    </button>
+                )}
             </div>
 
             {error && (
@@ -267,21 +301,23 @@ const UserManagement = () => {
                             <tr className="bg-[var(--bg-tertiary)] border-b border-[var(--border-color)]">
                                 <th className="px-4 py-3 font-semibold text-[var(--text-secondary)]">User Details</th>
                                 <th className="px-4 py-3 font-semibold text-[var(--text-secondary)]">Role</th>
+                                <th className="px-4 py-3 font-semibold text-[var(--text-secondary)]">Manager</th>
                                 <th className="px-4 py-3 font-semibold text-[var(--text-secondary)]">Permissions</th>
                                 <th className="px-4 py-3 font-semibold text-[var(--text-secondary)]">Status</th>
+                                <th className="px-4 py-3 font-semibold text-[var(--text-secondary)]">Created At</th>
                                 <th className="px-4 py-3 font-semibold text-[var(--text-secondary)] text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan="5" className="px-4 py-8 text-center">
+                                    <td colSpan={7} className="px-4 py-8 text-center">
                                         <div className="inline-block animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full"></div>
                                     </td>
                                 </tr>
                             ) : currentUsers.length === 0 ? (
                                 <tr>
-                                    <td colSpan="5" className="px-4 py-8 text-center text-[var(--text-secondary)]">
+                                    <td colSpan={7} className="px-4 py-8 text-center text-[var(--text-secondary)]">
                                         No users found.
                                     </td>
                                 </tr>
@@ -306,6 +342,9 @@ const UserManagement = () => {
                                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${getRoleBadgeColor(u.role)} uppercase tracking-wider`}>
                                                 {u.role}
                                             </span>
+                                        </td>
+                                        <td className="px-4 py-2 text-xs text-[var(--text-primary)] font-medium">
+                                            {u.manager_name || <span className="text-[var(--text-secondary)] italic">None</span>}
                                         </td>
                                         <td className="px-4 py-2">
                                             <div className="flex gap-1.5 flex-wrap">
@@ -333,24 +372,26 @@ const UserManagement = () => {
                                             {new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                         </td>
                                         <td className="px-4 py-2">
-                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button
-                                                    onClick={() => handleEditClick(u)}
-                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-500/20 rounded transition-colors"
-                                                    title="Edit User"
-                                                >
-                                                    <Edit2 className="w-4 h-4" />
-                                                </button>
-                                                {u.id !== user?.id && (
+                                            {(user?.role === 'admin' || (user?.role === 'manager' && u.manager_id === user.id)) && (
+                                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button
-                                                        onClick={() => handleDelete(u.id)}
-                                                        className="p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/20 rounded transition-colors"
-                                                        title="Delete User"
+                                                        onClick={() => handleEditClick(u)}
+                                                        className="p-1.5 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-500/20 rounded transition-colors"
+                                                        title="Edit User"
                                                     >
-                                                        <Trash2 className="w-4 h-4" />
+                                                        <Edit2 className="w-4 h-4" />
                                                     </button>
-                                                )}
-                                            </div>
+                                                    {u.id !== user?.id && (
+                                                        <button
+                                                            onClick={() => handleDelete(u.id)}
+                                                            className="p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/20 rounded transition-colors"
+                                                            title="Delete User"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
                                         </td>
                                     </tr>
                                 ))
@@ -468,7 +509,7 @@ const UserManagement = () => {
                                         onChange={handleInputChange}
                                         className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer transition-all"
                                     >
-                                        {ROLES.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
+                                        {availableRoles.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
                                     </select>
                                 </div>
 
@@ -485,6 +526,24 @@ const UserManagement = () => {
                                     </select>
                                 </div>
                             </div>
+
+                            {/* Manager Dropdown */}
+                            {formData.role !== 'admin' && user?.role === 'admin' && (
+                                <div className="space-y-1">
+                                    <label className="block text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Assign Manager</label>
+                                    <select
+                                        name="manager_id"
+                                        value={formData.manager_id || ''}
+                                        onChange={handleInputChange}
+                                        className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer transition-all"
+                                    >
+                                        <option value="">No Manager / None</option>
+                                        {managers.map(m => (
+                                            <option key={m.id} value={m.id}>{m.username}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
 
                             {/* Access Permissions Section */}
                             {formData.role !== 'admin' && (

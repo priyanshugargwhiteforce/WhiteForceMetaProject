@@ -107,7 +107,12 @@ const WAAnalytics = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.data.success) {
-        setWhatsappConfigs(response.data.configs || []);
+        const configs = response.data.configs || [];
+        setWhatsappConfigs(configs);
+        if (configs.length > 0 && !localStorage.getItem('selectedWhatsAppConfigId')) {
+          setSelectedConfigId(configs[0].id.toString());
+          localStorage.setItem('selectedWhatsAppConfigId', configs[0].id.toString());
+        }
       }
     } catch (err) {
       console.error("Error fetching whatsapp configs:", err);

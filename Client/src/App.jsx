@@ -32,6 +32,7 @@ import LinkedInLeads from './components/linkedin/LinkedInLeads';
 import MetaSettings from './components/MetaSettings';
 import WhatsAppSettings from './components/WhatsAppSettings';
 import AdOwner from './components/AdOwner';
+import TaskManager from './components/TaskManager';
 import './App.css';
 
 import Layout from './components/Layout';
@@ -70,6 +71,21 @@ const PermissionRoute = ({ children, permission }) => {
     }
 
     return children;
+};
+
+const ManagerOrAdminRoute = ({ children }) => {
+    const { user, loading } = useAuth();
+    if (loading) return (
+        <div className="flex items-center justify-center min-h-screen bg-[#0f172a]">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+    );
+    if (!user) return <Navigate to="/login" />;
+
+    if (user?.role === 'admin' || user?.role === 'manager') {
+        return children;
+    }
+    return <Navigate to="/" replace />;
 };
 
 import { ThemeProvider } from './context/ThemeContext';
@@ -292,9 +308,9 @@ function App() {
                             path="/users" 
                             element={
                                 <ProtectedRoute>
-                                    <PermissionRoute permission="admin">
+                                    <ManagerOrAdminRoute>
                                         <UserManagement />
-                                    </PermissionRoute>
+                                    </ManagerOrAdminRoute>
                                 </ProtectedRoute>
                             } 
                         />
@@ -335,6 +351,14 @@ function App() {
                                     <PermissionRoute permission="meta_access">
                                         <AdOwner />
                                     </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/tasks" 
+                            element={
+                                <ProtectedRoute>
+                                    <TaskManager />
                                 </ProtectedRoute>
                             } 
                         />

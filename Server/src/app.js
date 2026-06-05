@@ -32,6 +32,7 @@ app.use('/api/google', protect, require('./routes/google.routes'));
 app.use('/api/whatsapp', require('./routes/whatsapp/whatsapp.routes'));
 app.use('/api/youtube-ads', protect, require('./routes/youtubeAd.routes'));
 app.use('/api/linkedin', require('./routes/linkedin/linkedin.routes'));
+app.use('/api/tasks', protect, require('./routes/task.routes'));
 
 // Health check route
 app.get('/health', (req, res) => {

@@ -57,7 +57,12 @@ const AdOwner = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.data.success) {
-        setMetaConfigs(response.data.configs || []);
+        const configs = response.data.configs || [];
+        setMetaConfigs(configs);
+        if (configs.length > 0 && !localStorage.getItem('selectedMetaConfigId')) {
+          setSelectedConfigId(configs[0].id.toString());
+          localStorage.setItem('selectedMetaConfigId', configs[0].id.toString());
+        }
       }
     } catch (err) {
       console.error("Error fetching configs:", err);
@@ -225,28 +230,26 @@ const AdOwner = () => {
 
         {/* Dropdowns Filters */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Config select (Admin Only) */}
-          {user?.role === 'admin' && (
-            <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1.5 transition-colors relative">
-              <Database className="w-3.5 h-3.5 text-blue-500" />
-              <select
-                value={selectedConfigId}
-                onChange={(e) => {
-                  setSelectedConfigId(e.target.value);
-                  localStorage.setItem('selectedMetaConfigId', e.target.value);
-                }}
-                className="bg-transparent text-[11px] font-bold focus:outline-none cursor-pointer pr-6 appearance-none text-slate-700 dark:text-slate-200"
-              >
-                <option value="" className="bg-white dark:bg-slate-900">Default Server Config</option>
-                {metaConfigs.map(cfg => (
-                  <option key={cfg.id} value={cfg.id} className="bg-white dark:bg-slate-900">{cfg.name}</option>
-                ))}
-              </select>
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                <ChevronDown className="w-3 h-3" />
-              </div>
+          {/* Config select */}
+          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1.5 transition-colors relative">
+            <Database className="w-3.5 h-3.5 text-blue-500" />
+            <select
+              value={selectedConfigId}
+              onChange={(e) => {
+                setSelectedConfigId(e.target.value);
+                localStorage.setItem('selectedMetaConfigId', e.target.value);
+              }}
+              className="bg-transparent text-[11px] font-bold focus:outline-none cursor-pointer pr-6 appearance-none text-slate-700 dark:text-slate-200"
+            >
+              <option value="" className="bg-white dark:bg-slate-900">Default Server Config</option>
+              {metaConfigs.map(cfg => (
+                <option key={cfg.id} value={cfg.id} className="bg-white dark:bg-slate-900">{cfg.name}</option>
+              ))}
+            </select>
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+              <ChevronDown className="w-3 h-3" />
             </div>
-          )}
+          </div>
 
           {/* Ad Account select */}
           <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1.5 transition-colors relative">
@@ -346,15 +349,20 @@ const AdOwner = () => {
                         {ad.created_time ? formatDate(ad.created_time) : (ad.adset?.start_time ? formatDate(ad.adset.start_time) : 'N/A')}
                       </td>
 
-                      {/* Ad Owner Text Input */}
+                      {/* Ad Owner Select Dropdown */}
                       <td className="px-4 py-2.5">
-                        <input
-                          type="text"
+                        <select
                           value={adEdits.ownerName}
-                          placeholder="Enter owner name..."
                           onChange={(e) => handleFieldChange(ad.id, 'ownerName', e.target.value)}
-                          className="w-40 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100 placeholder-slate-400"
-                        />
+                          className="w-40 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100"
+                        >
+                          <option value="">Unassigned</option>
+                          {teamMembers.map(member => (
+                            <option key={member.id} value={member.username}>
+                              {member.username} ({member.role})
+                            </option>
+                          ))}
+                        </select>
                       </td>
 
                       {/* Launch Date picker */}
