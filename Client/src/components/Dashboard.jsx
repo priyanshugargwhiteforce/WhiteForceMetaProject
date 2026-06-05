@@ -23,7 +23,7 @@ const Dashboard = () => {
   const fetchConfigs = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/meta/configs`, {
+      const response = await fetch(`/api/meta/configs`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
@@ -49,7 +49,7 @@ const Dashboard = () => {
         headers['X-Meta-Config-Id'] = selectedConfigId;
       }
 
-      const response = await fetch(`http://localhost:5000/api/meta/accounts`, { headers });
+      const response = await fetch(`/api/meta/accounts`, { headers });
       const data = await response.json();
       if (data.adaccounts && data.adaccounts.data) {
         setAdAccounts(data.adaccounts.data);

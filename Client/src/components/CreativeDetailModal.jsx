@@ -43,7 +43,7 @@ const CreativeDetailModal = ({ isOpen, onClose, creativeId }) => {
         if (configId) headers['X-Meta-Config-Id'] = configId;
 
         const response = await fetch(
-          `http://localhost:5000/api/meta/creatives/${creativeId}`, { headers }
+          `/api/meta/creatives/${creativeId}`, { headers }
         );
         const result = await response.json();
         if (result.error) throw new Error(result.error.message);

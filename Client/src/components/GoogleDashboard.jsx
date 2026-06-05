@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   AreaChart, Area
 } from 'recharts';
-import { 
+import {
   DollarSign, Eye, MousePointerClick, Target, TrendingUp, AlertCircle, ChevronRight, LayoutDashboard, Key,
   IndianRupee, Search, Layers, Info
 } from 'lucide-react';
@@ -22,7 +22,7 @@ const MONTHS = [
   { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' }
 ];
 
-const YEARS = Array.from({length: 10}, (_, i) => new Date().getFullYear() - i); // Last 10 years
+const YEARS = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i); // Last 10 years
 
 const GoogleDashboard = () => {
   const [timeRange, setTimeRange] = useState(TIME_RANGES.THIS_MONTH);
@@ -31,7 +31,7 @@ const GoogleDashboard = () => {
   const [missingCreds, setMissingCreds] = useState(false);
   const [accounts, setAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
-  
+
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
 
@@ -62,10 +62,10 @@ const GoogleDashboard = () => {
 
   useEffect(() => {
     if (selectedAccount || accounts.length === 0) {
-        fetchGoogleData(timeRange, selectedAccount, selectedYear, selectedMonth);
-        if (selectedAccount) {
-            fetchGoogleAds(selectedAccount);
-        }
+      fetchGoogleData(timeRange, selectedAccount, selectedYear, selectedMonth);
+      if (selectedAccount) {
+        fetchGoogleAds(selectedAccount);
+      }
     }
   }, [timeRange, selectedAccount, selectedYear, selectedMonth]);
 
@@ -74,7 +74,7 @@ const GoogleDashboard = () => {
     setAdsError(null);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/google/ads?customerId=${customerId}`, {
+      const res = await fetch(`/api/google/ads?customerId=${customerId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -91,7 +91,7 @@ const GoogleDashboard = () => {
   const filteredAds = React.useMemo(() => {
     if (!searchQuery.trim()) return ads;
     const query = searchQuery.toLowerCase();
-    return ads.filter(ad => 
+    return ads.filter(ad =>
       ad.ad_name.toLowerCase().includes(query) ||
       ad.campaign_name.toLowerCase().includes(query) ||
       ad.campaign_id.toString().includes(query)
@@ -105,19 +105,19 @@ const GoogleDashboard = () => {
 
   const fetchAccounts = async () => {
     try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`http://localhost:5000/api/google/accounts`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        const data = await res.json();
-        if (data.success && data.accounts.length > 0) {
-            setAccounts(data.accounts);
-            setSelectedAccount(data.accounts[0]);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/google/accounts`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-    } catch(e) {
-        console.error("Failed to fetch accounts", e);
+      });
+      const data = await res.json();
+      if (data.success && data.accounts.length > 0) {
+        setAccounts(data.accounts);
+        setSelectedAccount(data.accounts[0]);
+      }
+    } catch (e) {
+      console.error("Failed to fetch accounts", e);
     }
   };
 
@@ -126,7 +126,7 @@ const GoogleDashboard = () => {
     setError(null);
     setMissingCreds(false);
     try {
-      const url = new URL('http://localhost:5000/api/google/dashboard');
+      const url = new URL('/api/google/dashboard');
       url.searchParams.append('range', range);
       if (customerId) url.searchParams.append('customerId', customerId);
       if (range === TIME_RANGES.CUSTOM) {
@@ -136,12 +136,12 @@ const GoogleDashboard = () => {
 
       const token = localStorage.getItem('token');
       const response = await fetch(url, {
-          headers: {
-              'Authorization': `Bearer ${token}`
-          }
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       const data = await response.json();
-      
+
       if (!response.ok) {
         if (data.missingCredentials) {
           setMissingCreds(true);
@@ -199,39 +199,39 @@ const GoogleDashboard = () => {
             Campaign Performance
           </h2>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-3">
           {timeRange === TIME_RANGES.CUSTOM && (
-             <div className="flex items-center space-x-2 animate-in fade-in slide-in-from-right-4">
-               <select 
-                  value={selectedMonth} 
-                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                  className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold focus:outline-none transition-all text-slate-800 dark:text-slate-100"
-                >
-                  {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-               </select>
-               <select 
-                  value={selectedYear} 
-                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                  className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold focus:outline-none transition-all text-slate-800 dark:text-slate-100"
-                >
-                  {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-               </select>
-             </div>
+            <div className="flex items-center space-x-2 animate-in fade-in slide-in-from-right-4">
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold focus:outline-none transition-all text-slate-800 dark:text-slate-100"
+              >
+                {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </select>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold focus:outline-none transition-all text-slate-800 dark:text-slate-100"
+              >
+                {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
           )}
 
           {accounts.length > 0 && (
-              <select 
-                value={selectedAccount || ""} 
-                onChange={(e) => setSelectedAccount(e.target.value)}
-                className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-slate-100"
-              >
-                {accounts.map(acc => (
-                  <option key={acc} value={acc}>Account: {acc}</option>
-                ))}
-              </select>
+            <select
+              value={selectedAccount || ""}
+              onChange={(e) => setSelectedAccount(e.target.value)}
+              className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-slate-100"
+            >
+              {accounts.map(acc => (
+                <option key={acc} value={acc}>Account: {acc}</option>
+              ))}
+            </select>
           )}
-          
+
           <div className="flex bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-1 shadow-sm">
             {[
               { label: 'Today', value: TIME_RANGES.TODAY },
@@ -264,10 +264,10 @@ const GoogleDashboard = () => {
           </div>
           <h3 className="text-2xl font-bold mb-3 text-amber-600 dark:text-amber-500">API Setup Required</h3>
           <p className="text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
-            We received your <code className="bg-white/50 dark:bg-black/20 px-2 py-1 rounded">client_id</code> and <code className="bg-white/50 dark:bg-black/20 px-2 py-1 rounded">client_secret</code>. 
+            We received your <code className="bg-white/50 dark:bg-black/20 px-2 py-1 rounded">client_id</code> and <code className="bg-white/50 dark:bg-black/20 px-2 py-1 rounded">client_secret</code>.
             However, to execute queries against your Google Ads account, we still need the following secure tokens added to the backend environment:
           </p>
-          
+
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 text-left mb-8 shadow-sm border border-slate-200 dark:border-white/10">
             <ul className="space-y-4">
               <li className="flex items-start">
@@ -293,7 +293,7 @@ const GoogleDashboard = () => {
               </li>
             </ul>
           </div>
-          
+
           <button onClick={() => fetchGoogleData(timeRange)} className="px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-xl font-bold transition-all shadow-lg shadow-amber-500/20">
             I've Added Them - Retry Connection
           </button>
@@ -307,34 +307,34 @@ const GoogleDashboard = () => {
         </div>
       ) : (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          
+
           {/* Metrics Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <MetricCard 
-              title="Total Cost" 
-              value={formatCurrency(metrics.spend)} 
-              icon={IndianRupee} 
+            <MetricCard
+              title="Total Cost"
+              value={formatCurrency(metrics.spend)}
+              icon={IndianRupee}
               colorClass="red"
               gradientClass="from-red-500 to-rose-600"
             />
-            <MetricCard 
-              title="Total Impressions" 
-              value={formatNumber(metrics.impressions)} 
-              icon={Eye} 
+            <MetricCard
+              title="Total Impressions"
+              value={formatNumber(metrics.impressions)}
+              icon={Eye}
               colorClass="yellow"
               gradientClass="from-amber-400 to-orange-500"
             />
-            <MetricCard 
-              title="Total Clicks" 
-              value={formatNumber(metrics.clicks)} 
-              icon={MousePointerClick} 
+            <MetricCard
+              title="Total Clicks"
+              value={formatNumber(metrics.clicks)}
+              icon={MousePointerClick}
               colorClass="blue"
               gradientClass="from-blue-500 to-indigo-600"
             />
-            <MetricCard 
-              title="Total Conversions" 
-              value={formatNumber(metrics.conversions)} 
-              icon={Target} 
+            <MetricCard
+              title="Total Conversions"
+              value={formatNumber(metrics.conversions)}
+              icon={Target}
               colorClass="emerald"
               gradientClass="from-emerald-500 to-teal-600"
             />
@@ -359,14 +359,14 @@ const GoogleDashboard = () => {
                     <AreaChart data={graphData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorGoogle" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-main)" />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(val) => val > 1000 ? (val/1000).toFixed(1)+'k' : val} />
-                      <RechartsTooltip 
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(val) => val > 1000 ? (val / 1000).toFixed(1) + 'k' : val} />
+                      <RechartsTooltip
                         contentStyle={{ backgroundColor: 'var(--bg-sidebar)', borderRadius: '12px', border: '1px solid var(--border-main)', fontSize: '12px' }}
                         itemStyle={{ fontWeight: 'bold' }}
                       />
@@ -396,8 +396,8 @@ const GoogleDashboard = () => {
                     <BarChart data={graphData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-main)" />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(val) => '₹'+val} />
-                      <RechartsTooltip 
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(val) => '₹' + val} />
+                      <RechartsTooltip
                         cursor={{ fill: 'rgba(239, 68, 68, 0.05)' }}
                         contentStyle={{ backgroundColor: 'var(--bg-sidebar)', borderRadius: '12px', border: '1px solid var(--border-main)', fontSize: '12px' }}
                         itemStyle={{ color: '#ef4444', fontWeight: 'bold' }}
@@ -485,8 +485,8 @@ const GoogleDashboard = () => {
                           const statusClass = statusColors[ad.ad_status] || 'bg-slate-500/10 text-slate-500 border-slate-500/20';
 
                           return (
-                            <tr 
-                              key={ad.ad_id || idx} 
+                            <tr
+                              key={ad.ad_id || idx}
                               onClick={() => {
                                 setSelectedAd(ad);
                                 setIsModalOpen(true);
@@ -554,7 +554,7 @@ const GoogleDashboard = () => {
                       >
                         Previous
                       </button>
-                      
+
                       {Array.from({ length: totalPages }, (_, i) => i + 1)
                         .filter(page => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
                         .map((page, idx, arr) => {
@@ -564,11 +564,10 @@ const GoogleDashboard = () => {
                               {showEllipsisBefore && <span className="text-slate-400 text-xs px-2">...</span>}
                               <button
                                 onClick={() => setCurrentPage(page)}
-                                className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded-xl transition-all ${
-                                  currentPage === page
+                                className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded-xl transition-all ${currentPage === page
                                     ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
                                     : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300'
-                                }`}
+                                  }`}
                               >
                                 {page}
                               </button>
@@ -609,7 +608,7 @@ const GoogleDashboard = () => {
                   <p className="text-[10px] text-slate-400">Deep performance analysis</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setIsModalOpen(false)}
                 className="p-1.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all text-xs font-bold"
               >
@@ -633,11 +632,10 @@ const GoogleDashboard = () => {
                   <div className="bg-slate-50 dark:bg-white/[0.02] p-4 rounded-2xl border border-slate-200 dark:border-white/5">
                     <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Status</p>
                     <div className="flex">
-                      <span className={`px-2 py-0.5 rounded-full text-[8px] font-extrabold uppercase border ${
-                        selectedAd.ad_status === 'ENABLED' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                        selectedAd.ad_status === 'PAUSED' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                        'bg-red-500/10 text-red-500 border-red-500/20'
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded-full text-[8px] font-extrabold uppercase border ${selectedAd.ad_status === 'ENABLED' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                          selectedAd.ad_status === 'PAUSED' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                            'bg-red-500/10 text-red-500 border-red-500/20'
+                        }`}>
                         {selectedAd.ad_status}
                       </span>
                     </div>
@@ -709,10 +707,10 @@ const GoogleDashboard = () => {
                 <div className="p-5 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 dark:to-transparent border border-blue-500/10 rounded-2xl space-y-4">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-semibold text-slate-750">Enter proposed budget scaling (INR):</label>
-                    <input 
-                      type="number" 
-                      placeholder="e.g. 50000" 
-                      value={scaleSpend} 
+                    <input
+                      type="number"
+                      placeholder="e.g. 50000"
+                      value={scaleSpend}
                       onChange={(e) => setScaleSpend(e.target.value)}
                       className="w-32 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold focus:outline-none text-slate-800 dark:text-slate-100"
                     />
@@ -745,7 +743,7 @@ const GoogleDashboard = () => {
 
             {/* Modal Footer */}
             <div className="px-8 py-5 border-t border-slate-100 dark:border-white/5 flex justify-end bg-slate-50 dark:bg-white/[0.01]">
-              <button 
+              <button
                 onClick={() => setIsModalOpen(false)}
                 className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-600/20"
               >

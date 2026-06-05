@@ -87,7 +87,7 @@ const WALiveAnalytics = ({ selectedConfigId }) => {
       }
 
       console.log(`Fetching live WABA analytics for range: ${startDate} to ${endDate}`);
-      const res = await axios.get('http://localhost:5000/api/whatsapp/analytics/live', {
+      const res = await axios.get('/api/whatsapp/analytics/live', {
         headers: getHeaders(),
         params: { startDate, endDate }
       });
@@ -169,8 +169,8 @@ const WALiveAnalytics = ({ selectedConfigId }) => {
                 key={r.id}
                 onClick={() => setDateRange(r.id)}
                 className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${dateRange === r.id
-                    ? 'bg-indigo-600 dark:bg-indigo-500 text-white shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                  ? 'bg-indigo-600 dark:bg-indigo-500 text-white shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
 
 
                   }`}
@@ -358,12 +358,12 @@ const WALiveAnalytics = ({ selectedConfigId }) => {
                         <td className="py-4 px-6 text-center text-slate-500 dark:text-slate-400">{dp.delivered.toLocaleString()}</td>
                         <td className="py-4 px-6 text-center">
                           <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${dp.deliveryRate >= 90
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : dp.deliveryRate >= 75
-                                ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                                : dp.deliveryRate > 0
-                                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                  : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : dp.deliveryRate >= 75
+                              ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                              : dp.deliveryRate > 0
+                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
                             }`}>
                             {dp.deliveryRate.toFixed(1)}%
                           </span>

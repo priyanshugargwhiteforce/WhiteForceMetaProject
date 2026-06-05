@@ -61,7 +61,7 @@ const UserManagement = () => {
 
     const fetchManagers = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/users/managers/list', {
+            const res = await axios.get('/api/users/managers/list', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data.success) {
@@ -75,7 +75,7 @@ const UserManagement = () => {
     const fetchUsers = async () => {
         setLoading(true);
         try {
-            const res = await axios.get('http://localhost:5000/api/users', {
+            const res = await axios.get('/api/users', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setUsers(res.data.users);
@@ -165,7 +165,7 @@ const UserManagement = () => {
             if (formData.username) updatePayload.username = formData.username;
             if (formData.email) updatePayload.email = formData.email;
 
-            await axios.put(`http://localhost:5000/api/users/${currentUser.id}`, updatePayload, {
+            await axios.put(`/api/users/${currentUser.id}`, updatePayload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setIsEditModalOpen(false);
@@ -182,7 +182,7 @@ const UserManagement = () => {
                 ...formData,
                 manager_id: formData.manager_id || null
             };
-            await axios.post('http://localhost:5000/api/users', createPayload, {
+            await axios.post('/api/users', createPayload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setIsCreateModalOpen(false);
@@ -196,7 +196,7 @@ const UserManagement = () => {
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this user?')) {
             try {
-                await axios.delete(`http://localhost:5000/api/users/${id}`, {
+                await axios.delete(`/api/users/${id}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 fetchUsers();

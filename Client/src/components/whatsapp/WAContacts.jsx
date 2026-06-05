@@ -11,7 +11,7 @@ import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { useTheme } from '../../context/ThemeContext';
 
-const API = 'http://localhost:5000/api/whatsapp';
+const API = '/api/whatsapp';
 const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 
 // ─── Engagement Score Ring ──────────────────────────────────────────────────
@@ -38,23 +38,23 @@ const ScoreRing = ({ score = 0, size = 48 }) => {
 
 // ─── Segment Config ──────────────────────────────────────────────────────────
 const SEGMENT_CONFIG = {
-  all:          { label: 'All Contacts',   icon: Users,       color: 'text-slate-400',  bg: 'bg-slate-500/10',  border: 'border-slate-500/20' },
-  champions:    { label: 'Champions',      icon: Trophy,      color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
-  engaged:      { label: 'Engaged',        icon: Zap,         color: 'text-indigo-400', bg: 'bg-indigo-500/10',  border: 'border-indigo-500/20' },
-  at_risk:      { label: 'At Risk',        icon: TrendingDown,color: 'text-amber-400',  bg: 'bg-amber-500/10',   border: 'border-amber-500/20' },
-  never_opened: { label: 'Never Opened',   icon: EyeOff,      color: 'text-slate-400',  bg: 'bg-slate-500/10',   border: 'border-slate-500/20' },
-  unsubscribed: { label: 'Unsubscribed',   icon: UserX,       color: 'text-red-400',    bg: 'bg-red-500/10',     border: 'border-red-500/20' },
-  archived:     { label: 'Archived',       icon: Archive,     color: 'text-gray-400',   bg: 'bg-gray-500/10',    border: 'border-gray-500/20' },
+  all: { label: 'All Contacts', icon: Users, color: 'text-slate-400', bg: 'bg-slate-500/10', border: 'border-slate-500/20' },
+  champions: { label: 'Champions', icon: Trophy, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+  engaged: { label: 'Engaged', icon: Zap, color: 'text-indigo-400', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20' },
+  at_risk: { label: 'At Risk', icon: TrendingDown, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
+  never_opened: { label: 'Never Opened', icon: EyeOff, color: 'text-slate-400', bg: 'bg-slate-500/10', border: 'border-slate-500/20' },
+  unsubscribed: { label: 'Unsubscribed', icon: UserX, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' },
+  archived: { label: 'Archived', icon: Archive, color: 'text-gray-400', bg: 'bg-gray-500/10', border: 'border-gray-500/20' },
 };
 
 // ─── Event Type Badge ────────────────────────────────────────────────────────
 const EventBadge = ({ type }) => {
   const map = {
-    sent:         'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    delivered:    'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-    read:         'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    failed:       'bg-red-500/10 text-red-400 border-red-500/20',
-    replied:      'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    sent: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    delivered: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+    read: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    failed: 'bg-red-500/10 text-red-400 border-red-500/20',
+    replied: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
     unsubscribed: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
   };
   return (
@@ -627,11 +627,10 @@ const WAContacts = () => {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">{drawerContact.name || 'Unknown Contact'}</h3>
-                  <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${
-                    drawerContact.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                    drawerContact.status === 'unsubscribed' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                    'bg-gray-500/10 text-gray-400 border-gray-500/20'
-                  }`}>{drawerContact.status || 'active'}</span>
+                  <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${drawerContact.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                      drawerContact.status === 'unsubscribed' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                        'bg-gray-500/10 text-gray-400 border-gray-500/20'
+                    }`}>{drawerContact.status || 'active'}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -666,8 +665,8 @@ const WAContacts = () => {
                         <p className="text-3xl font-black text-slate-900 dark:text-white">{Math.round(parseFloat(drawerContact.engagement_score || 0))}<span className="text-lg text-slate-500 font-medium">/100</span></p>
                         <p className="text-xs text-slate-500 mt-1">
                           {parseFloat(drawerContact.engagement_score || 0) >= 80 ? '🏆 Champion Tier' :
-                           parseFloat(drawerContact.engagement_score || 0) >= 50 ? '⚡ Engaged' :
-                           parseFloat(drawerContact.engagement_score || 0) > 0 ? '⚠️ At Risk' : '💤 No activity yet'}
+                            parseFloat(drawerContact.engagement_score || 0) >= 50 ? '⚡ Engaged' :
+                              parseFloat(drawerContact.engagement_score || 0) > 0 ? '⚠️ At Risk' : '💤 No activity yet'}
                         </p>
                       </div>
                       <ScoreRing score={parseFloat(drawerContact.engagement_score || 0)} size={72} />

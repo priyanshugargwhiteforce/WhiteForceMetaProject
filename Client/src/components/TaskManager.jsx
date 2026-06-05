@@ -76,7 +76,7 @@ const TaskManager = () => {
   const fetchTasks = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:5000/api/tasks', {
+      const res = await axios.get('/api/tasks', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -92,7 +92,7 @@ const TaskManager = () => {
 
   const fetchAssignees = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/tasks/users', {
+      const res = await axios.get('/api/tasks/users', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -106,7 +106,7 @@ const TaskManager = () => {
   const fetchAdsForPlatform = async (platform) => {
     setAdsLoading(true);
     try {
-      const res = await axios.get(`http://localhost:5000/api/tasks/ads`, {
+      const res = await axios.get(`/api/tasks/ads`, {
         headers: { Authorization: `Bearer ${token}` },
         params: { platform }
       });
@@ -138,7 +138,7 @@ const TaskManager = () => {
   const handleCreateTask = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:5000/api/tasks', formData, {
+      const res = await axios.post('/api/tasks', formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -170,7 +170,7 @@ const TaskManager = () => {
   const handleUpdateTask = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.put(`http://localhost:5000/api/tasks/${currentTask.id}`, formData, {
+      const res = await axios.put(`/api/tasks/${currentTask.id}`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -186,7 +186,7 @@ const TaskManager = () => {
 
   const handleStatusChange = async (taskId, newStatus) => {
     try {
-      const res = await axios.put(`http://localhost:5000/api/tasks/${taskId}`, { status: newStatus }, {
+      const res = await axios.put(`/api/tasks/${taskId}`, { status: newStatus }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -201,7 +201,7 @@ const TaskManager = () => {
   const handleDeleteTask = async (taskId) => {
     if (window.confirm('Are you sure you want to delete this task?')) {
       try {
-        const res = await axios.delete(`http://localhost:5000/api/tasks/${taskId}`, {
+        const res = await axios.delete(`/api/tasks/${taskId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.data.success) {

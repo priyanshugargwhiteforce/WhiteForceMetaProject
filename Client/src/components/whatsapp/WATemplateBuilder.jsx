@@ -186,7 +186,7 @@ const WATemplateBuilder = () => {
       const headers = { Authorization: `Bearer ${token}` };
       if (configId) headers['X-WhatsApp-Config-Id'] = configId;
 
-      const response = await axios.post('http://localhost:5000/api/whatsapp/templates', payload, {
+      const response = await axios.post('/api/whatsapp/templates', payload, {
         headers
       });
 

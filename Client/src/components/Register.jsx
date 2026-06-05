@@ -23,7 +23,7 @@ const Register = () => {
         setError('');
         setLoading(true);
         try {
-            const res = await axios.post('http://localhost:5000/api/auth/register', formData);
+            const res = await axios.post('/api/auth/register', formData);
             login(res.data.token, res.data.user);
             navigate('/');
         } catch (err) {
@@ -35,7 +35,7 @@ const Register = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4">
-            <button 
+            <button
                 onClick={toggleTheme}
                 className="fixed top-8 right-8 w-12 h-12 rounded-2xl bg-white/5 dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-blue-500 dark:hover:text-white transition-all shadow-xl z-50"
             >

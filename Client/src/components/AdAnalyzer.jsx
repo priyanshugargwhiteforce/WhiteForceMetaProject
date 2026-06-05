@@ -54,7 +54,7 @@ const AdAnalyzer = () => {
         const headers = { 'Authorization': `Bearer ${token}` };
         if (configId) headers['X-Meta-Config-Id'] = configId;
 
-        const response = await fetch(`http://localhost:5000/api/meta/accounts`, { headers });
+        const response = await fetch(`/api/meta/accounts`, { headers });
         const result = await response.json();
         if (result.adaccounts && result.adaccounts.data) {
           setAdAccounts(result.adaccounts.data);
@@ -83,7 +83,7 @@ const AdAnalyzer = () => {
       if (configId) headers['X-Meta-Config-Id'] = configId;
 
       const response = await fetch(
-        `http://localhost:5000/api/meta/insights/${accountId}?preset=lifetime`, { headers }
+        `/api/meta/insights/${accountId}?preset=lifetime`, { headers }
       );
       const result = await response.json();
 
@@ -119,12 +119,12 @@ const AdAnalyzer = () => {
       if (configId) headers['X-Meta-Config-Id'] = configId;
 
       // 1. Force sync connected ad accounts
-      const accListRes = await fetch(`http://localhost:5000/api/meta/accounts?force=true`, { headers });
+      const accListRes = await fetch(`/api/meta/accounts?force=true`, { headers });
       const accListResult = await accListRes.json();
       if (!accListResult.success) throw new Error(accListResult.message || "Failed to sync accounts list");
 
       // 2. Force sync selected account details and campaign ads list
-      const detailsRes = await fetch(`http://localhost:5000/api/meta/accounts/${accountId}?force=true`, { headers });
+      const detailsRes = await fetch(`/api/meta/accounts/${accountId}?force=true`, { headers });
       const detailsResult = await detailsRes.json();
       if (!detailsResult.success) throw new Error(detailsResult.message || "Failed to sync account details");
 
@@ -132,7 +132,7 @@ const AdAnalyzer = () => {
       const adIds = ads.map(a => a.id);
 
       // 3. Force sync selected account daily insights trend
-      const insRes = await fetch(`http://localhost:5000/api/meta/insights/${accountId}?preset=lifetime&force=true`, { headers });
+      const insRes = await fetch(`/api/meta/insights/${accountId}?preset=lifetime&force=true`, { headers });
       const insResult = await insRes.json();
       if (!insResult.success) throw new Error(insResult.message || "Failed to sync account insights");
 
@@ -140,7 +140,7 @@ const AdAnalyzer = () => {
       if (adIds.length > 0) {
         await Promise.all(adIds.map(async (adId) => {
           try {
-            await fetch('http://localhost:5000/api/meta/leads/sync', {
+            await fetch('/api/meta/leads/sync', {
               method: 'POST',
               headers: {
                 ...headers,
@@ -250,7 +250,7 @@ Now analyze this META Ads Insights data:
 ${JSON.stringify(data)}`;
 
       const token = localStorage.getItem('token');
-      const response = await fetch("http://localhost:5000/api/ai/analyze", {
+      const response = await fetch("/api/ai/analyze", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,

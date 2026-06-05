@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
-import { 
+import {
   DollarSign, Eye, MousePointerClick, Target, TrendingUp, AlertCircle, ChevronRight, LayoutDashboard, Key, IndianRupee, Calendar
 } from 'lucide-react';
 
@@ -21,7 +21,7 @@ const MONTHS = [
   { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' }
 ];
 
-const YEARS = Array.from({length: 10}, (_, i) => new Date().getFullYear() - i);
+const YEARS = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
 
 const GoogleInsights = () => {
   const [timeRange, setTimeRange] = useState(TIME_RANGES.THIS_MONTH);
@@ -29,7 +29,7 @@ const GoogleInsights = () => {
   const [error, setError] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
-  
+
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
 
@@ -47,23 +47,23 @@ const GoogleInsights = () => {
 
   useEffect(() => {
     if (selectedAccount) {
-        fetchGoogleData(timeRange, selectedAccount, selectedYear, selectedMonth);
+      fetchGoogleData(timeRange, selectedAccount, selectedYear, selectedMonth);
     }
   }, [timeRange, selectedAccount, selectedYear, selectedMonth]);
 
   const fetchAccounts = async () => {
     try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`http://localhost:5000/api/google/accounts`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data.success && data.accounts.length > 0) {
-            setAccounts(data.accounts);
-            setSelectedAccount(data.accounts[0]);
-        }
-    } catch(e) {
-        console.error("Failed to fetch accounts", e);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/google/accounts`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success && data.accounts.length > 0) {
+        setAccounts(data.accounts);
+        setSelectedAccount(data.accounts[0]);
+      }
+    } catch (e) {
+      console.error("Failed to fetch accounts", e);
     }
   };
 
@@ -71,7 +71,7 @@ const GoogleInsights = () => {
     setLoading(true);
     setError(null);
     try {
-      const url = new URL('http://localhost:5000/api/google/dashboard');
+      const url = new URL('/api/google/dashboard');
       url.searchParams.append('range', range);
       if (customerId) url.searchParams.append('customerId', customerId);
       if (range === TIME_RANGES.CUSTOM) {
@@ -81,10 +81,10 @@ const GoogleInsights = () => {
 
       const token = localStorage.getItem('token');
       const response = await fetch(url, {
-          headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
-      
+
       if (!response.ok) throw new Error(data.message || "Failed to fetch Google Ads data.");
       setMetrics(data.metrics || { spend: 0, impressions: 0, clicks: 0, conversions: 0 });
       setGraphData(data.graphData || []);
@@ -122,27 +122,27 @@ const GoogleInsights = () => {
 
         <div className="flex flex-wrap items-center gap-3">
           {timeRange === TIME_RANGES.CUSTOM && (
-             <div className="flex items-center space-x-2 animate-in fade-in slide-in-from-right-4">
-               <select 
-                  value={selectedMonth} 
-                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                  className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold focus:outline-none text-slate-800 dark:text-slate-100 cursor-pointer"
-                >
-                  {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-               </select>
-               <select 
-                  value={selectedYear} 
-                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                  className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold focus:outline-none text-slate-800 dark:text-slate-100 cursor-pointer"
-                >
-                  {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-               </select>
-             </div>
+            <div className="flex items-center space-x-2 animate-in fade-in slide-in-from-right-4">
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold focus:outline-none text-slate-800 dark:text-slate-100 cursor-pointer"
+              >
+                {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </select>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold focus:outline-none text-slate-800 dark:text-slate-100 cursor-pointer"
+              >
+                {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
           )}
 
           {accounts.length > 0 && (
-            <select 
-              value={selectedAccount || ""} 
+            <select
+              value={selectedAccount || ""}
               onChange={(e) => setSelectedAccount(e.target.value)}
               className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-slate-100 cursor-pointer"
             >
@@ -225,14 +225,14 @@ const GoogleInsights = () => {
                     <AreaChart data={graphData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorGoogle" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-main)" />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(val) => val > 1000 ? (val/1000).toFixed(1)+'k' : val} />
-                      <RechartsTooltip 
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(val) => val > 1000 ? (val / 1000).toFixed(1) + 'k' : val} />
+                      <RechartsTooltip
                         contentStyle={{ backgroundColor: 'var(--bg-sidebar)', borderRadius: '12px', border: '1px solid var(--border-main)', fontSize: '12px' }}
                         itemStyle={{ fontWeight: 'bold' }}
                       />
@@ -262,8 +262,8 @@ const GoogleInsights = () => {
                     <BarChart data={graphData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-main)" />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(val) => '₹'+val} />
-                      <RechartsTooltip 
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(val) => '₹' + val} />
+                      <RechartsTooltip
                         cursor={{ fill: 'rgba(239, 68, 68, 0.05)' }}
                         contentStyle={{ backgroundColor: 'var(--bg-sidebar)', borderRadius: '12px', border: '1px solid var(--border-main)', fontSize: '12px' }}
                         itemStyle={{ color: '#ef4444', fontWeight: 'bold' }}

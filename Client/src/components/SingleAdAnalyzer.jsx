@@ -57,7 +57,7 @@ const SingleAdAnalyzer = () => {
       const headers = { 'Authorization': `Bearer ${token}` };
       if (configId) headers['X-Meta-Config-Id'] = configId;
 
-      const response = await fetch(`http://localhost:5000/api/meta/accounts`, { headers });
+      const response = await fetch(`/api/meta/accounts`, { headers });
       const result = await response.json();
       if (result.error) throw new Error(result.error.message);
       if (result.adaccounts && result.adaccounts.data) {
@@ -80,7 +80,7 @@ const SingleAdAnalyzer = () => {
       const headers = { 'Authorization': `Bearer ${token}` };
       if (configId) headers['X-Meta-Config-Id'] = configId;
 
-      const response = await fetch(`http://localhost:5000/api/meta/accounts/${accountId}`, { headers });
+      const response = await fetch(`/api/meta/accounts/${accountId}`, { headers });
       const result = await response.json();
       if (result.error) throw new Error(result.error.message);
       setAds(result.data?.ads?.data || []);
@@ -102,7 +102,7 @@ const SingleAdAnalyzer = () => {
       const headers = { 'Authorization': `Bearer ${token}` };
       if (configId) headers['X-Meta-Config-Id'] = configId;
 
-      const response = await fetch(`http://localhost:5000/api/meta/ads/${adId}/insights`, { headers });
+      const response = await fetch(`/api/meta/ads/${adId}/insights`, { headers });
       const result = await response.json();
       if (result.error) throw new Error(result.error.message);
       setInsights(result.data || []);

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  FileText, 
-  Search, 
-  RefreshCw, 
-  CheckCircle, 
-  Clock, 
+import {
+  FileText,
+  Search,
+  RefreshCw,
+  CheckCircle,
+  Clock,
   AlertTriangle,
   Globe,
   Tag,
@@ -36,7 +36,7 @@ const WATemplates = () => {
       const headers = { Authorization: `Bearer ${token}` };
       if (configId) headers['X-WhatsApp-Config-Id'] = configId;
 
-      const response = await axios.get('http://localhost:5000/api/whatsapp/templates', {
+      const response = await axios.get('/api/whatsapp/templates', {
         headers
       });
       if (response.data.success) {
@@ -58,7 +58,7 @@ const WATemplates = () => {
       const headers = { Authorization: `Bearer ${token}` };
       if (configId) headers['X-WhatsApp-Config-Id'] = configId;
 
-      const response = await axios.delete(`http://localhost:5000/api/whatsapp/templates/${name}`, {
+      const response = await axios.delete(`/api/whatsapp/templates/${name}`, {
         headers
       });
       if (response.data.success) {
@@ -74,7 +74,7 @@ const WATemplates = () => {
     navigate('/wa-templates/new', { state: { cloneTemplate: template } });
   };
 
-  const filteredTemplates = templates.filter(t => 
+  const filteredTemplates = templates.filter(t =>
     t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -103,30 +103,30 @@ const WATemplates = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-           <div className="relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-              <input 
-                type="text" 
-                placeholder="Search templates..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-11 pr-4 py-2 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-64 transition-all text-slate-800 dark:text-white"
-              />
-           </div>
-           
-           <button 
-             onClick={() => navigate('/wa-templates/new')}
-             className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold flex items-center shadow-lg shadow-blue-600/10 transition-all"
-           >
-             <Plus className="w-4 h-4 mr-1.5" /> Create Template
-           </button>
+          <div className="relative group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+            <input
+              type="text"
+              placeholder="Search templates..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-11 pr-4 py-2 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-64 transition-all text-slate-800 dark:text-white"
+            />
+          </div>
 
-           <button 
-             onClick={fetchTemplates}
-             className="p-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 transition-all"
-           >
-             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-           </button>
+          <button
+            onClick={() => navigate('/wa-templates/new')}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold flex items-center shadow-lg shadow-blue-600/10 transition-all"
+          >
+            <Plus className="w-4 h-4 mr-1.5" /> Create Template
+          </button>
+
+          <button
+            onClick={fetchTemplates}
+            className="p-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 transition-all"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
 
@@ -171,8 +171,8 @@ const WATemplates = () => {
                     </td>
                     <td className="px-8 py-5 text-center">
                       <div className="inline-flex items-center space-x-2">
-                         <Globe className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-                         <span className="text-xs font-bold font-mono text-slate-700 dark:text-slate-300">{template.language}</span>
+                        <Globe className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                        <span className="text-xs font-bold font-mono text-slate-700 dark:text-slate-300">{template.language}</span>
                       </div>
                     </td>
                     <td className="px-8 py-5 text-center">
@@ -181,20 +181,20 @@ const WATemplates = () => {
                       </span>
                     </td>
                     <td className="px-8 py-5 text-right space-x-2">
-                       <button 
-                         onClick={() => handleCloneTemplate(template)}
-                         title="Clone Template"
-                         className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-all inline-flex text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300"
-                       >
-                          <Copy className="w-4 h-4" />
-                       </button>
-                       <button 
-                         onClick={() => handleDeleteTemplate(template.name)}
-                         title="Delete Template"
-                         className="p-2 hover:bg-red-500/10 rounded-lg transition-all inline-flex text-red-500 dark:text-red-400"
-                       >
-                          <Trash2 className="w-4 h-4" />
-                       </button>
+                      <button
+                        onClick={() => handleCloneTemplate(template)}
+                        title="Clone Template"
+                        className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-all inline-flex text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTemplate(template.name)}
+                        title="Delete Template"
+                        className="p-2 hover:bg-red-500/10 rounded-lg transition-all inline-flex text-red-500 dark:text-red-400"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}

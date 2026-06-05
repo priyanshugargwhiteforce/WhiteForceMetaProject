@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   Target, AlertCircle, ChevronRight, Key, Search, Layers, IndianRupee, Eye, MousePointerClick, TrendingUp, Info
 } from 'lucide-react';
 
@@ -8,7 +8,7 @@ const GooglePerformance = () => {
   const [error, setError] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
-  
+
   const [ads, setAds] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -31,17 +31,17 @@ const GooglePerformance = () => {
 
   const fetchAccounts = async () => {
     try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`http://localhost:5000/api/google/accounts`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data.success && data.accounts.length > 0) {
-            setAccounts(data.accounts);
-            setSelectedAccount(data.accounts[0]);
-        }
-    } catch(e) {
-        console.error("Failed to fetch accounts", e);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/google/accounts`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success && data.accounts.length > 0) {
+        setAccounts(data.accounts);
+        setSelectedAccount(data.accounts[0]);
+      }
+    } catch (e) {
+      console.error("Failed to fetch accounts", e);
     }
   };
 
@@ -50,7 +50,7 @@ const GooglePerformance = () => {
     setError(null);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/google/ads?customerId=${customerId}`, {
+      const res = await fetch(`/api/google/ads?customerId=${customerId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -75,7 +75,7 @@ const GooglePerformance = () => {
   const filteredAds = React.useMemo(() => {
     if (!searchQuery.trim()) return ads;
     const query = searchQuery.toLowerCase();
-    return ads.filter(ad => 
+    return ads.filter(ad =>
       ad.ad_name.toLowerCase().includes(query) ||
       ad.campaign_name.toLowerCase().includes(query) ||
       ad.campaign_id.toString().includes(query)
@@ -116,8 +116,8 @@ const GooglePerformance = () => {
 
         <div className="flex items-center space-x-3">
           {accounts.length > 0 && (
-            <select 
-              value={selectedAccount || ""} 
+            <select
+              value={selectedAccount || ""}
               onChange={(e) => setSelectedAccount(e.target.value)}
               className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-slate-100 cursor-pointer"
             >
@@ -224,8 +224,8 @@ const GooglePerformance = () => {
                       const statusClass = statusColors[ad.ad_status] || 'bg-slate-500/10 text-slate-500 border-slate-500/20';
 
                       return (
-                        <tr 
-                          key={ad.ad_id || idx} 
+                        <tr
+                          key={ad.ad_id || idx}
                           onClick={() => {
                             setSelectedAd(ad);
                             setIsModalOpen(true);
@@ -293,7 +293,7 @@ const GooglePerformance = () => {
                   >
                     Previous
                   </button>
-                  
+
                   {Array.from({ length: totalPages }, (_, i) => i + 1)
                     .filter(page => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
                     .map((page, idx, arr) => {
@@ -303,11 +303,10 @@ const GooglePerformance = () => {
                           {showEllipsisBefore && <span className="text-slate-400 text-xs px-2">...</span>}
                           <button
                             onClick={() => setCurrentPage(page)}
-                            className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded-xl transition-all ${
-                              currentPage === page
+                            className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded-xl transition-all ${currentPage === page
                                 ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
                                 : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300'
-                            }`}
+                              }`}
                           >
                             {page}
                           </button>
@@ -345,7 +344,7 @@ const GooglePerformance = () => {
                   <p className="text-[10px] text-slate-400">Deep performance analysis</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setIsModalOpen(false)}
                 className="p-1.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all text-xs font-bold"
               >
@@ -369,11 +368,10 @@ const GooglePerformance = () => {
                   <div className="bg-slate-50 dark:bg-white/[0.02] p-4 rounded-2xl border border-slate-200 dark:border-white/5">
                     <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Status</p>
                     <div className="flex">
-                      <span className={`px-2 py-0.5 rounded-full text-[8px] font-extrabold uppercase border ${
-                        selectedAd.ad_status === 'ENABLED' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                        selectedAd.ad_status === 'PAUSED' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                        'bg-red-500/10 text-red-500 border-red-500/20'
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded-full text-[8px] font-extrabold uppercase border ${selectedAd.ad_status === 'ENABLED' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                          selectedAd.ad_status === 'PAUSED' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                            'bg-red-500/10 text-red-500 border-red-500/20'
+                        }`}>
                         {selectedAd.ad_status}
                       </span>
                     </div>
@@ -445,10 +443,10 @@ const GooglePerformance = () => {
                 <div className="p-5 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 dark:to-transparent border border-blue-500/10 rounded-2xl space-y-4">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-semibold text-slate-750">Enter proposed budget scaling (INR):</label>
-                    <input 
-                      type="number" 
-                      placeholder="e.g. 50000" 
-                      value={scaleSpend} 
+                    <input
+                      type="number"
+                      placeholder="e.g. 50000"
+                      value={scaleSpend}
                       onChange={(e) => setScaleSpend(e.target.value)}
                       className="w-32 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold focus:outline-none text-slate-800 dark:text-slate-100"
                     />
@@ -481,7 +479,7 @@ const GooglePerformance = () => {
 
             {/* Modal Footer */}
             <div className="px-8 py-5 border-t border-slate-100 dark:border-white/5 flex justify-end bg-slate-50 dark:bg-white/[0.01]">
-              <button 
+              <button
                 onClick={() => setIsModalOpen(false)}
                 className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-600/20"
               >

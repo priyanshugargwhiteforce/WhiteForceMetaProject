@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { 
-  Send, 
-  Users, 
-  FileText, 
-  AlertCircle, 
-  CheckCircle2, 
-  XCircle, 
-  Plus, 
+import {
+  Send,
+  Users,
+  FileText,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Plus,
   Trash2,
   Activity,
   MessageCircle,
@@ -36,20 +36,20 @@ const SYNONYMS = {
 const WACampaigns = () => {
   const { user } = useAuth();
   const [view, setView] = useState('list'); // 'list' | 'details' | 'new'
-  
+
   // Lists
   const [campaigns, setCampaigns] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [contactLists, setContactLists] = useState([]);
   const [whatsappConfigs, setWhatsappConfigs] = useState([]);
-  
+
   // Pagination & Search
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+
   // New Campaign Form State
   const [name, setName] = useState('');
   const [selectedConfigId, setSelectedConfigId] = useState('');
@@ -73,7 +73,7 @@ const WACampaigns = () => {
   const [saveMappingName, setSaveMappingName] = useState('');
   const [isSaveDefault, setIsSaveDefault] = useState(false);
   const [previewContacts, setPreviewContacts] = useState([]);
-  
+
   // Campaign Details State
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [recipientPage, setRecipientPage] = useState(1);
@@ -139,14 +139,14 @@ const WACampaigns = () => {
     setError(null);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/whatsapp/campaigns', {
+      const response = await axios.get('/api/whatsapp/campaigns', {
         params: { page, limit: 10, search },
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.data.success) {
         setCampaigns(response.data.campaigns || []);
         setTotalPages(response.data.pagination?.totalPages || 1);
-        
+
         // Calculate aggregate stats
         const list = response.data.campaigns || [];
         const total = list.length;
@@ -154,7 +154,7 @@ const WACampaigns = () => {
         const failed = list.reduce((acc, c) => acc + (c.failed_count || 0), 0);
         const delivered = list.reduce((acc, c) => acc + (c.delivered_count || 0), 0);
         const read = list.reduce((acc, c) => acc + (c.read_count || 0), 0);
-        
+
         const completedCampaigns = list.filter(c => c.delivery_rate !== null);
         const avgDeliveryRate = completedCampaigns.length > 0
           ? (completedCampaigns.reduce((acc, c) => acc + parseFloat(c.delivery_rate || 0), 0) / completedCampaigns.length).toFixed(1)
@@ -174,7 +174,7 @@ const WACampaigns = () => {
   const fetchContactLists = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/whatsapp/lists', {
+      const response = await axios.get('/api/whatsapp/lists', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.data.success) {
@@ -189,7 +189,7 @@ const WACampaigns = () => {
   const fetchConfigs = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/whatsapp/configs', {
+      const response = await axios.get('/api/whatsapp/configs', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.data.success) {
@@ -207,7 +207,7 @@ const WACampaigns = () => {
       if (selectedConfigId) {
         headers['X-WhatsApp-Config-Id'] = selectedConfigId;
       }
-      const response = await axios.get('http://localhost:5000/api/whatsapp/templates', { headers });
+      const response = await axios.get('/api/whatsapp/templates', { headers });
       if (response.data.success) {
         // Only allow approved templates for campaigns
         setTemplates(response.data.templates.filter(t => t.status === 'APPROVED'));
@@ -222,13 +222,13 @@ const WACampaigns = () => {
   const fetchTemplateVariables = async (tplId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:5000/api/whatsapp/templates/${tplId}/variables`, {
+      const response = await axios.get(`/api/whatsapp/templates/${tplId}/variables`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.data.success) {
         const vars = response.data.variables || [];
         setVariables(vars);
-        
+
         // Fetch saved profiles (which will either load default mapping or fallback to auto-matching)
         await fetchSavedProfiles(tplId, vars);
       }
@@ -242,13 +242,13 @@ const WACampaigns = () => {
   const fetchSavedProfiles = async (tplId, currentVars) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:5000/api/whatsapp/templates/${tplId}/mappings`, {
+      const response = await axios.get(`/api/whatsapp/templates/${tplId}/mappings`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.data.success) {
         const profiles = response.data.mappings || [];
         setSavedProfiles(profiles);
-        
+
         const defaultProfile = profiles.find(p => p.is_default);
         if (defaultProfile) {
           setSelectedProfileId(defaultProfile.id);
@@ -295,7 +295,7 @@ const WACampaigns = () => {
     if (!confirm('Are you sure you want to delete this mapping profile?')) return;
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.delete(`http://localhost:5000/api/whatsapp/templates/${templateId}/mappings/${profileId}`, {
+      const response = await axios.delete(`/api/whatsapp/templates/${templateId}/mappings/${profileId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.data.success) {
@@ -324,7 +324,7 @@ const WACampaigns = () => {
           break;
         }
       }
-      
+
       if (!matched) {
         const matchedAttr = customAttrs.find(attr => {
           const attrLower = attr.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -346,7 +346,7 @@ const WACampaigns = () => {
   const fetchAttributeKeys = async (listId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:5000/api/whatsapp/contacts/attribute-keys`, {
+      const response = await axios.get(`/api/whatsapp/contacts/attribute-keys`, {
         params: { listId },
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -361,7 +361,7 @@ const WACampaigns = () => {
   const fetchPreviewContacts = async (listId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/whatsapp/contacts', {
+      const response = await axios.get('/api/whatsapp/contacts', {
         params: { listId, limit: 3, page: 1 },
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -389,14 +389,14 @@ const WACampaigns = () => {
     if (parts.length !== 2) return email;
     const username = parts[0];
     const domain = parts[1];
-    
+
     let maskedUser = '';
     if (username.length <= 2) {
       maskedUser = username[0] + '*';
     } else {
       maskedUser = username.slice(0, 2) + '*'.repeat(username.length - 2);
     }
-    
+
     const domainParts = domain.split('.');
     let maskedDomain = domain;
     if (domainParts.length >= 2) {
@@ -418,7 +418,7 @@ const WACampaigns = () => {
     if (rule.source === 'static') {
       return { label: 'Static', class: 'text-slate-500 bg-slate-100 dark:bg-white/5' };
     }
-    
+
     const varLower = varName.toLowerCase().replace(/[^a-z0-9]/g, '');
     const mappedField = rule.value;
 
@@ -442,7 +442,7 @@ const WACampaigns = () => {
         return { label: 'Medium Confidence', class: 'text-amber-500 bg-amber-500/10 border border-amber-500/20' };
       }
     }
-    
+
     return { label: 'Manual Match', class: 'text-blue-500 bg-blue-500/10 border border-blue-500/20' };
   };
 
@@ -450,7 +450,7 @@ const WACampaigns = () => {
     const rule = mappings[varName];
     if (!rule) return '-';
     if (rule.source === 'static') return rule.value;
-    
+
     let rawVal = '';
     if (rule.value === 'name') rawVal = contact.name || '';
     else if (rule.value === 'email') rawVal = contact.email || '';
@@ -461,7 +461,7 @@ const WACampaigns = () => {
       const attrKey = rule.value.replace('attr:', '');
       rawVal = contact.attributes?.[attrKey] || '';
     }
-    
+
     if (rule.value === 'phone' || rule.value.toLowerCase().includes('phone') || rule.value.toLowerCase().includes('mobile')) {
       return maskPhone(rawVal);
     }
@@ -476,7 +476,7 @@ const WACampaigns = () => {
     setDetailsLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:5000/api/whatsapp/campaigns/${campaignId}`, {
+      const response = await axios.get(`/api/whatsapp/campaigns/${campaignId}`, {
         params: { recipientPage: rPage, recipientLimit: 20 },
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -497,7 +497,7 @@ const WACampaigns = () => {
     if (!confirm('Are you sure you want to clone this campaign?')) return;
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post(`http://localhost:5000/api/whatsapp/campaigns/${campaignId}/clone`, {}, {
+      const response = await axios.post(`/api/whatsapp/campaigns/${campaignId}/clone`, {}, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.data.success) {
@@ -536,7 +536,7 @@ const WACampaigns = () => {
       const token = localStorage.getItem('token');
 
       // 1. Fetch contacts for list
-      const contactsRes = await axios.get('http://localhost:5000/api/whatsapp/contacts', {
+      const contactsRes = await axios.get('/api/whatsapp/contacts', {
         params: { listId: contactListId, limit: 100000 },
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -586,7 +586,7 @@ const WACampaigns = () => {
         recipients: recipientsPayload
       };
 
-      const response = await axios.post('http://localhost:5000/api/whatsapp/campaigns', payload, {
+      const response = await axios.post('/api/whatsapp/campaigns', payload, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -595,7 +595,7 @@ const WACampaigns = () => {
         let targetMappingId = selectedProfileId;
         if (shouldSaveMapping && saveMappingName.trim()) {
           try {
-            const saveRes = await axios.post(`http://localhost:5000/api/whatsapp/templates/${templateId}/mappings`, {
+            const saveRes = await axios.post(`/api/whatsapp/templates/${templateId}/mappings`, {
               mappingName: saveMappingName.trim(),
               mappings: { version: 1, mappings: mappings },
               isDefault: isSaveDefault
@@ -614,7 +614,7 @@ const WACampaigns = () => {
         // Register usage of the mapping profile
         if (targetMappingId) {
           try {
-            await axios.post(`http://localhost:5000/api/whatsapp/templates/${templateId}/mappings/${targetMappingId}/use`, {}, {
+            await axios.post(`/api/whatsapp/templates/${templateId}/mappings/${targetMappingId}/use`, {}, {
               headers: { 'Authorization': `Bearer ${token}` }
             });
           } catch (useErr) {
@@ -673,7 +673,7 @@ const WACampaigns = () => {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
-      
+
       {/* Title Header */}
       <div className="flex items-center justify-between flex-wrap gap-4 bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-6 shadow-sm">
         <div className="flex items-center space-x-4">
@@ -737,8 +737,8 @@ const WACampaigns = () => {
                 />
                 <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               </div>
-              
-              <button 
+
+              <button
                 onClick={fetchCampaigns}
                 className="p-3 bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 hover:text-blue-500 transition-all"
               >
@@ -775,7 +775,7 @@ const WACampaigns = () => {
                       const total = c.total_count || 0;
                       const sent = c.sent_count || 0;
                       const progressPercent = total > 0 ? Math.round((sent / total) * 100) : 0;
-                      
+
                       return (
                         <tr key={c.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors">
                           <td className="py-4 pl-4">
@@ -807,7 +807,7 @@ const WACampaigns = () => {
                                 <span>{progressPercent}%</span>
                               </div>
                               <div className="w-full bg-slate-100 dark:bg-white/5 rounded-full h-1.5 overflow-hidden">
-                                <div 
+                                <div
                                   className={`h-full rounded-full ${c.status === 'failed' ? 'bg-red-500' : 'bg-blue-500'}`}
                                   style={{ width: `${progressPercent}%` }}
                                 ></div>
@@ -874,7 +874,7 @@ const WACampaigns = () => {
       {/* VIEW: DETAILS / RECIPIENTS VIEW */}
       {view === 'details' && selectedCampaign && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Left panel: Info & progress */}
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-6 shadow-sm space-y-6">
@@ -882,7 +882,7 @@ const WACampaigns = () => {
                 <Activity className="w-5 h-5 text-blue-500" />
                 Campaign Performance
               </h3>
-              
+
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Campaign Name</label>
                 <div className="text-base font-extrabold text-slate-900 dark:text-white mt-1">{selectedCampaign.name}</div>
@@ -971,13 +971,12 @@ const WACampaigns = () => {
                         <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01]">
                           <td className="py-3 pl-2 font-mono">{r.phone}</td>
                           <td className="py-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase border ${
-                              r.status === 'sent' ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20' :
-                              r.status === 'delivered' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                              r.status === 'read' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                              r.status === 'failed' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                              'bg-slate-500/10 text-slate-500 border-slate-500/20'
-                            }`}>
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase border ${r.status === 'sent' ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20' :
+                                r.status === 'delivered' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                  r.status === 'read' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                    r.status === 'failed' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                      'bg-slate-500/10 text-slate-500 border-slate-500/20'
+                              }`}>
                               {r.status}
                             </span>
                           </td>
@@ -1033,7 +1032,7 @@ const WACampaigns = () => {
       {/* VIEW: CREATE NEW CAMPAIGN */}
       {view === 'new' && (
         <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-6 md:p-8 shadow-sm transition-all duration-500 max-w-4xl mx-auto">
-          
+
           <h3 className="text-lg font-bold text-slate-900 dark:text-white pb-3 border-b border-slate-100 dark:border-white/5 mb-6">
             Configure New Campaign
           </h3>
@@ -1046,7 +1045,7 @@ const WACampaigns = () => {
           )}
 
           <div className="space-y-6">
-            
+
             {/* Name input */}
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
@@ -1154,7 +1153,7 @@ const WACampaigns = () => {
                       </div>
                       <p className="text-[11px] text-slate-400">Map each template variable to a contact column attribute or enter a static placeholder text.</p>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                         Load Profile:
@@ -1199,7 +1198,7 @@ const WACampaigns = () => {
                               {v.component_type}
                             </span>
                           </div>
-                          
+
                           <div>
                             <select
                               value={rule.source}
@@ -1267,7 +1266,7 @@ const WACampaigns = () => {
                         Save Mapping For Future Use
                       </label>
                     </div>
-                    
+
                     {shouldSaveMapping && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-7 animate-in slide-in-from-top-2 duration-200">
                         <div className="space-y-1">
@@ -1309,7 +1308,7 @@ const WACampaigns = () => {
                       </h4>
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">PII Masked</span>
                     </div>
-                    
+
                     <div className="overflow-x-auto border border-slate-200/45 dark:border-white/5 rounded-2xl">
                       <table className="w-full text-left border-collapse text-xs">
                         <thead>
@@ -1452,7 +1451,7 @@ const WACampaigns = () => {
               >
                 Save as Draft
               </button>
-              
+
               <button
                 type="button"
                 disabled={submitting}

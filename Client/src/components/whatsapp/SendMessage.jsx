@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { 
-  Send, 
-  Users, 
-  FileText, 
-  AlertCircle, 
-  CheckCircle2, 
-  XCircle, 
-  Plus, 
+import {
+  Send,
+  Users,
+  FileText,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Plus,
   Trash2,
   Activity,
   MessageSquare,
@@ -128,11 +128,11 @@ const SendMessage = () => {
     if (detectedHeaders.length > 0) {
       const selTmpl = templates.find(t => t.name === selectedTemplate);
       const reqVars = getTemplateVariableCount(selTmpl);
-      
+
       setVariableMappings(prev => {
         // If we already have the correct number of mappings, keep them
         if (prev.length === reqVars) return prev;
-        
+
         const newMappings = [];
         let mappedCount = 0;
         for (let i = 0; i < detectedHeaders.length; i++) {
@@ -164,7 +164,7 @@ const SendMessage = () => {
       if (phoneColIdx >= row.length) return;
       const phoneValRaw = row[phoneColIdx];
       if (phoneValRaw === undefined || phoneValRaw === null) return;
-      
+
       const phoneVal = String(phoneValRaw).replace(/[^0-9]/g, '');
       if (!phoneVal) return;
 
@@ -194,7 +194,7 @@ const SendMessage = () => {
   const fetchConfigs = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/whatsapp/configs', {
+      const response = await axios.get('/api/whatsapp/configs', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.data.success) {
@@ -217,7 +217,7 @@ const SendMessage = () => {
         headers['X-WhatsApp-Config-Id'] = selectedConfigId;
       }
 
-      const response = await axios.get('http://localhost:5000/api/whatsapp/templates', { headers });
+      const response = await axios.get('/api/whatsapp/templates', { headers });
       if (response.data.success) {
         // Filter only approved templates
         setTemplates(response.data.templates.filter(t => t.status === 'APPROVED'));
@@ -229,7 +229,7 @@ const SendMessage = () => {
   };
 
   const handleAddNumber = () => setPhoneNumbers([...phoneNumbers, ""]);
-  
+
   const handleRemoveNumber = (index) => {
     const newNumbers = phoneNumbers.filter((_, i) => i !== index);
     setPhoneNumbers(newNumbers.length ? newNumbers : [""]);
@@ -244,7 +244,7 @@ const SendMessage = () => {
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!selectedTemplate) return setError("Please select a template first.");
-    
+
     setError(null);
     setResults(null);
 
@@ -268,7 +268,7 @@ const SendMessage = () => {
       const headers = {};
       if (selectedConfigId) headers['X-WhatsApp-Config-Id'] = selectedConfigId;
 
-      const response = await axios.post('http://localhost:5000/api/whatsapp/send-template', payload, { headers });
+      const response = await axios.post('/api/whatsapp/send-template', payload, { headers });
 
       if (response.data.success) {
         setResults(response.data.results);
@@ -296,7 +296,7 @@ const SendMessage = () => {
       <div className="space-y-6">
         <form onSubmit={handleSendMessage} className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-6 md:p-8 shadow-sm transition-all duration-500">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
-            
+
             {/* Left Side: Config */}
             <div className="space-y-6">
               <h3 className="text-xs font-bold text-indigo-500 uppercase tracking-wider border-b border-slate-100 dark:border-white/5 pb-2">
@@ -309,7 +309,7 @@ const SendMessage = () => {
                   Select WhatsApp Sender Account
                 </label>
                 <div className="relative">
-                  <select 
+                  <select
                     value={selectedConfigId}
                     onChange={(e) => setSelectedConfigId(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 appearance-none transition-all cursor-pointer text-slate-800 dark:text-slate-100"
@@ -333,7 +333,7 @@ const SendMessage = () => {
                   Select Approved Template
                 </label>
                 <div className="relative">
-                  <select 
+                  <select
                     value={selectedTemplate}
                     onChange={(e) => setSelectedTemplate(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 appearance-none transition-all cursor-pointer text-slate-800 dark:text-slate-100"
@@ -392,7 +392,7 @@ const SendMessage = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Recipients List</span>
-                    <button 
+                    <button
                       type="button"
                       onClick={handleAddNumber}
                       className="text-[10px] font-bold text-indigo-500 hover:text-indigo-400 uppercase transition-colors flex items-center gap-1.5"
@@ -404,15 +404,15 @@ const SendMessage = () => {
                     {phoneNumbers.map((number, idx) => (
                       <div key={idx} className="flex items-center space-x-3 group">
                         <div className="flex-1 relative">
-                          <input 
-                            type="text" 
+                          <input
+                            type="text"
                             placeholder="e.g. 919876543210"
                             value={number}
                             onChange={(e) => handleNumberChange(idx, e.target.value)}
                             className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500/20 transition-all text-slate-800 dark:text-slate-100"
                           />
                         </div>
-                        <button 
+                        <button
                           type="button"
                           onClick={() => handleRemoveNumber(idx)}
                           className="p-4 text-slate-400 hover:text-red-500 dark:hover:text-red-400 bg-slate-50 hover:bg-red-500/5 dark:bg-white/5 dark:hover:bg-red-500/10 border border-slate-200 dark:border-white/10 rounded-2xl transition-all duration-300 shadow-sm"
@@ -432,11 +432,11 @@ const SendMessage = () => {
                       <UploadCloud className="w-10 h-10 text-indigo-500 mb-3 animate-pulse" />
                       <span className="text-sm font-bold text-slate-800 dark:text-white">Upload CSV or Excel file</span>
                       <span className="text-[10px] text-slate-400 mt-1 uppercase font-semibold">Supports .csv, .xlsx, .xls</span>
-                      <input 
-                        type="file" 
-                        accept=".csv, .xlsx, .xls" 
-                        onChange={handleFileUpload} 
-                        className="hidden" 
+                      <input
+                        type="file"
+                        accept=".csv, .xlsx, .xls"
+                        onChange={handleFileUpload}
+                        className="hidden"
                       />
                     </label>
                   ) : (
@@ -477,7 +477,7 @@ const SendMessage = () => {
                             <Database className="w-4 h-4 text-indigo-500" />
                             <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest">Column Mapping Setup</h4>
                           </div>
-                          
+
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {/* Phone Column Select */}
                             <div className="space-y-2">
@@ -608,25 +608,25 @@ const SendMessage = () => {
           </div>
 
           <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
-             {error && (
-               <div className="flex items-center text-red-500 text-xs font-bold animate-pulse">
-                 <AlertCircle className="w-4 h-4 mr-2" />
-                 {error}
-               </div>
-             )}
-             {!error && <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{recipientMode === 'manual' ? phoneNumbers.filter(n => n.trim()).length : parsedRecipients.length} Recipients Prepared</div>}
-             
-             <button 
-               disabled={loading}
-               type="submit"
-               className={`px-10 py-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-2xl font-bold text-sm shadow-xl shadow-indigo-600/20 flex items-center transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:grayscale cursor-pointer`}
-             >
-               {loading ? (
-                 <>Processing... <Activity className="w-4 h-4 ml-2 animate-spin" /></>
-               ) : (
-                 <>Blast Broadcast <Send className="w-4 h-4 ml-2" /></>
-               )}
-             </button>
+            {error && (
+              <div className="flex items-center text-red-500 text-xs font-bold animate-pulse">
+                <AlertCircle className="w-4 h-4 mr-2" />
+                {error}
+              </div>
+            )}
+            {!error && <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{recipientMode === 'manual' ? phoneNumbers.filter(n => n.trim()).length : parsedRecipients.length} Recipients Prepared</div>}
+
+            <button
+              disabled={loading}
+              type="submit"
+              className={`px-10 py-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-2xl font-bold text-sm shadow-xl shadow-indigo-600/20 flex items-center transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:grayscale cursor-pointer`}
+            >
+              {loading ? (
+                <>Processing... <Activity className="w-4 h-4 ml-2 animate-spin" /></>
+              ) : (
+                <>Blast Broadcast <Send className="w-4 h-4 ml-2" /></>
+              )}
+            </button>
           </div>
         </form>
 
@@ -634,35 +634,35 @@ const SendMessage = () => {
         {results && (
           <div className="bg-slate-900 rounded-[2.5rem] p-10 overflow-hidden relative group shadow-2xl animate-in zoom-in-95 duration-500">
             <div className="absolute top-0 right-0 p-10 opacity-5">
-               <Activity className="w-32 h-32 text-white" />
+              <Activity className="w-32 h-32 text-white" />
             </div>
             <h3 className="text-white text-lg font-bold mb-8 flex items-center">
               <CheckCircle2 className="w-5 h-5 mr-3 text-emerald-500" />
               Broadcast Status Results
             </h3>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {results.map((res, i) => (
                 <div key={i} className="bg-black/40 border border-white/5 p-5 rounded-2xl flex items-center justify-between">
-                   <div className="flex items-center space-x-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${res.success ? (res.status === 'queued' ? 'bg-indigo-500/10 text-indigo-500' : 'bg-emerald-500/10 text-emerald-500') : 'bg-red-500/10 text-red-500'}`}>
-                         {res.success ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${res.success ? (res.status === 'queued' ? 'bg-indigo-500/10 text-indigo-500' : 'bg-emerald-500/10 text-emerald-500') : 'bg-red-500/10 text-red-500'}`}>
+                      {res.success ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <p className="text-xs font-mono text-white">{res.number}</p>
+                      <p className={`text-[10px] font-bold uppercase ${res.success ? (res.status === 'queued' ? 'text-indigo-400' : 'text-emerald-500') : 'text-red-500'}`}>
+                        {res.success ? (res.status === 'queued' ? 'Enqueued' : 'Delivered') : 'Failed'}
+                      </p>
+                    </div>
+                  </div>
+                  {!res.success && (
+                    <div className="group relative">
+                      <AlertCircle className="w-4 h-4 text-slate-500 cursor-help" />
+                      <div className="absolute bottom-full right-0 mb-2 w-48 p-2 bg-red-600 text-[10px] text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                        {res.error}
                       </div>
-                      <div>
-                         <p className="text-xs font-mono text-white">{res.number}</p>
-                         <p className={`text-[10px] font-bold uppercase ${res.success ? (res.status === 'queued' ? 'text-indigo-400' : 'text-emerald-500') : 'text-red-500'}`}>
-                            {res.success ? (res.status === 'queued' ? 'Enqueued' : 'Delivered') : 'Failed'}
-                         </p>
-                      </div>
-                   </div>
-                   {!res.success && (
-                     <div className="group relative">
-                        <AlertCircle className="w-4 h-4 text-slate-500 cursor-help" />
-                        <div className="absolute bottom-full right-0 mb-2 w-48 p-2 bg-red-600 text-[10px] text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                           {res.error}
-                        </div>
-                     </div>
-                   )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

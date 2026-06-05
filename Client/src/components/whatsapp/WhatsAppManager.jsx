@@ -30,7 +30,7 @@ const WhatsAppManager = () => {
   const fetchConfigs = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/whatsapp/configs', {
+      const response = await axios.get('/api/whatsapp/configs', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.data.success) {
@@ -80,7 +80,7 @@ const WhatsAppManager = () => {
         headers['X-WhatsApp-Config-Id'] = configId;
       }
 
-      const response = await axios.get('http://localhost:5000/api/whatsapp/details', { headers });
+      const response = await axios.get('/api/whatsapp/details', { headers });
       if (response.data.success) {
         setData(response.data.data);
       }

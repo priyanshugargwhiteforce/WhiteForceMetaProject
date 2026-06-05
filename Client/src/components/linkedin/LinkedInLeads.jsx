@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Users, Search, RefreshCw, Calendar, 
-  Phone, Mail, Database, Filter, 
-  ChevronRight, Eye, CheckCircle, 
+import {
+  Users, Search, RefreshCw, Calendar,
+  Phone, Mail, Database, Filter,
+  ChevronRight, Eye, CheckCircle,
   AlertCircle, FileText, Download
 } from 'lucide-react';
 
@@ -10,22 +10,22 @@ const LinkedInLeads = () => {
   const [leads, setLeads] = useState([]);
   const [adAccounts, setAdAccounts] = useState([]);
   const [selectedAccountId, setSelectedAccountId] = useState('');
-  
+
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
-  
+
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [campaignFilter, setCampaignFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
-  
+
   // Modal for detail view
   const [selectedLead, setSelectedLead] = useState(null);
 
@@ -48,12 +48,12 @@ const LinkedInLeads = () => {
   const fetchAdAccounts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/linkedin/accounts`, {
+      const response = await fetch(`/api/linkedin/accounts`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || "Failed to fetch LinkedIn accounts");
-      
+
       if (result.adaccounts && result.adaccounts.data) {
         setAdAccounts(result.adaccounts.data);
         if (result.adaccounts.data.length > 0) {
@@ -77,7 +77,7 @@ const LinkedInLeads = () => {
     setError(null);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/linkedin/leads/${accountId}`, {
+      const res = await fetch(`/api/linkedin/leads/${accountId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -104,7 +104,7 @@ const LinkedInLeads = () => {
     setSuccessMsg(null);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/linkedin/sync', {
+      const response = await fetch('/api/linkedin/sync', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +117,7 @@ const LinkedInLeads = () => {
 
       // Reload fresh database records
       await fetchLeads(selectedAccountId);
-      
+
       setSuccessMsg(result.message);
       setTimeout(() => setSuccessMsg(null), 8000);
     } catch (err) {
@@ -131,7 +131,7 @@ const LinkedInLeads = () => {
   // Filter leads based on query, campaign, and date filters
   const filteredLeads = useMemo(() => {
     return leads.filter(l => {
-      const matchesSearch = 
+      const matchesSearch =
         (l.full_name && l.full_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (l.email && l.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (l.phone && l.phone.includes(searchQuery)) ||
@@ -185,13 +185,13 @@ const LinkedInLeads = () => {
       lead.campaign_name || '',
       lead.submitted_at ? new Date(lead.submitted_at).toLocaleString() : ''
     ]);
-    
+
     const csvString = [headers.join(','), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))].join('\n');
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `LinkedIn_Leads_Account_${selectedAccountId}_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute("download", `LinkedIn_Leads_Account_${selectedAccountId}_${new Date().toISOString().slice(0, 10)}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -220,10 +220,10 @@ const LinkedInLeads = () => {
             LinkedIn Leads Manager
           </h2>
         </div>
-        
+
         <div className="flex items-center space-x-3">
           {/* Sync Button */}
-          <button 
+          <button
             disabled={syncing || !selectedAccountId}
             onClick={handleSyncLeads}
             className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-500/10 transition-all hover:scale-105 disabled:opacity-50 disabled:pointer-events-none"
@@ -233,8 +233,8 @@ const LinkedInLeads = () => {
           </button>
 
           {/* LinkedIn Ad Account Selector */}
-          <select 
-            value={selectedAccountId} 
+          <select
+            value={selectedAccountId}
             onChange={(e) => setSelectedAccountId(e.target.value)}
             className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-white cursor-pointer"
           >
@@ -246,7 +246,7 @@ const LinkedInLeads = () => {
       </div>
 
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        
+
         {/* Success or Error Alerts */}
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 text-red-500 px-4 py-3 rounded-2xl flex items-center space-x-2 text-xs font-bold animate-in fade-in duration-300">
@@ -306,7 +306,7 @@ const LinkedInLeads = () => {
 
         {/* Filtering and Table Section */}
         <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-sm">
-          
+
           {/* Filter and search bar */}
           <div className="p-6 border-b border-slate-100 dark:border-white/5 space-y-4">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -343,7 +343,7 @@ const LinkedInLeads = () => {
                 <Calendar className="w-4 h-4 text-slate-400" />
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Date Filters:</span>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <span className="text-xs text-slate-400">From</span>
                 <input
@@ -411,7 +411,7 @@ const LinkedInLeads = () => {
                   </tr>
                 ) : (
                   currentLeads.map((lead) => (
-                    <tr 
+                    <tr
                       key={lead.id}
                       className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors"
                     >
@@ -472,7 +472,7 @@ const LinkedInLeads = () => {
                   </span> of{' '}
                   <span className="font-bold text-slate-800 dark:text-white">{totalRecords}</span> entries
                 </span>
-                
+
                 <div className="flex items-center space-x-2 bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-white/5">
                   <span className="text-[9px] text-slate-400 font-bold uppercase">Show:</span>
                   <select
@@ -497,7 +497,7 @@ const LinkedInLeads = () => {
                 >
                   Previous
                 </button>
-                
+
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                   .filter(page => {
                     return page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
@@ -509,11 +509,10 @@ const LinkedInLeads = () => {
                         {showEllipsisBefore && <span className="text-slate-400 text-xs px-2">...</span>}
                         <button
                           onClick={() => setCurrentPage(page)}
-                          className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded-xl transition-all ${
-                            currentPage === page
+                          className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded-xl transition-all ${currentPage === page
                               ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
                               : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300'
-                          }`}
+                            }`}
                         >
                           {page}
                         </button>
@@ -544,14 +543,14 @@ const LinkedInLeads = () => {
                 <h3 className="text-base font-bold">Inspect Lead Fields</h3>
                 <p className="text-[10px] opacity-75 mt-0.5">ID: {selectedLead.id}</p>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedLead(null)}
                 className="text-white hover:opacity-75 transition-opacity font-bold text-base p-1.5"
               >
                 ✕
               </button>
             </div>
-            
+
             <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/50 dark:border-white/5 rounded-2xl">
@@ -600,7 +599,7 @@ const LinkedInLeads = () => {
             </div>
 
             <div className="px-8 py-5 border-t border-slate-100 dark:border-white/5 flex justify-end">
-              <button 
+              <button
                 onClick={() => setSelectedLead(null)}
                 className="px-5 py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-2xl font-bold text-xs transition-all text-slate-700 dark:text-slate-300"
               >

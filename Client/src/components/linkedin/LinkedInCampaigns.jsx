@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
+import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie
 } from 'recharts';
-import { 
-  Search, SlidersHorizontal, Briefcase, Info, IndianRupee, Eye, 
+import {
+  Search, SlidersHorizontal, Briefcase, Info, IndianRupee, Eye,
   Activity, Target, ChevronRight, Database, RefreshCw, Filter, ArrowUpDown
 } from 'lucide-react';
 
@@ -14,7 +14,7 @@ const LinkedInCampaigns = () => {
   const [campaignGroups, setCampaignGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Table filters & controls
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -37,7 +37,7 @@ const LinkedInCampaigns = () => {
   const fetchCampaignGroups = async (accountId) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/linkedin/campaign-groups/${accountId}`, {
+      const res = await fetch(`/api/linkedin/campaign-groups/${accountId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await res.json();
@@ -52,12 +52,12 @@ const LinkedInCampaigns = () => {
   const fetchAdAccounts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/linkedin/accounts`, {
+      const response = await fetch(`/api/linkedin/accounts`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || "Failed to fetch LinkedIn accounts");
-      
+
       if (result.adaccounts && result.adaccounts.data) {
         setAdAccounts(result.adaccounts.data);
         if (result.adaccounts.data.length > 0) {
@@ -76,7 +76,7 @@ const LinkedInCampaigns = () => {
     setError(null);
     try {
       const token = localStorage.getItem('token');
-      const campRes = await fetch(`http://localhost:5000/api/linkedin/campaigns/${accountId}`, {
+      const campRes = await fetch(`/api/linkedin/campaigns/${accountId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const campResult = await campRes.json();
@@ -116,8 +116,8 @@ const LinkedInCampaigns = () => {
     // Search filter
     if (searchTerm.trim() !== "") {
       const term = searchTerm.toLowerCase();
-      list = list.filter(c => 
-        c.name.toLowerCase().includes(term) || 
+      list = list.filter(c =>
+        c.name.toLowerCase().includes(term) ||
         c.id.toLowerCase().includes(term)
       );
     }
@@ -204,9 +204,9 @@ const LinkedInCampaigns = () => {
           </div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">Campaign Performance</h2>
         </div>
-        
+
         <div className="flex items-center space-x-3">
-          <button 
+          <button
             onClick={() => selectedAccountId && fetchCampaigns(selectedAccountId)}
             className="p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 rounded-2xl transition-all"
             title="Refresh Campaigns"
@@ -215,8 +215,8 @@ const LinkedInCampaigns = () => {
           </button>
 
           {/* Account Selector */}
-          <select 
-            value={selectedAccountId} 
+          <select
+            value={selectedAccountId}
             onChange={(e) => setSelectedAccountId(e.target.value)}
             className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-white cursor-pointer"
           >
@@ -242,7 +242,7 @@ const LinkedInCampaigns = () => {
           </div>
         ) : (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            
+
             {/* Campaign Aggregated Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="rounded-[2rem] p-6 bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10">
@@ -294,8 +294,8 @@ const LinkedInCampaigns = () => {
                       <BarChart data={processedCampaigns} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-main)" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8' }} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(val) => '₹'+val} />
-                        <Tooltip 
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(val) => '₹' + val} />
+                        <Tooltip
                           cursor={{ fill: 'rgba(59, 130, 246, 0.05)' }}
                           contentStyle={{ backgroundColor: 'var(--bg-sidebar)', borderRadius: '12px', border: '1px solid var(--border-main)', fontSize: '12px' }}
                           itemStyle={{ color: '#3b82f6', fontWeight: 'bold' }}
@@ -339,7 +339,7 @@ const LinkedInCampaigns = () => {
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
-                        <Tooltip 
+                        <Tooltip
                           formatter={(value) => formatCurrency(value)}
                           contentStyle={{ backgroundColor: 'var(--bg-sidebar)', borderRadius: '12px', border: '1px solid var(--border-main)', fontSize: '11px' }}
                         />
@@ -374,8 +374,8 @@ const LinkedInCampaigns = () => {
                   {/* Search Bar */}
                   <div className="relative">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       placeholder="Search campaign ID or name..."
@@ -386,7 +386,7 @@ const LinkedInCampaigns = () => {
                   {/* Status filter */}
                   <div className="flex items-center space-x-1">
                     <Filter className="w-3.5 h-3.5 text-slate-400" />
-                    <select 
+                    <select
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value)}
                       className="bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-2xl px-3 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer focus:outline-none"
@@ -397,8 +397,8 @@ const LinkedInCampaigns = () => {
                     </select>
                   </div>
 
-                   {/* Format filter */}
-                  <select 
+                  {/* Format filter */}
+                  <select
                     value={typeFilter}
                     onChange={(e) => setTypeFilter(e.target.value)}
                     className="bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-2xl px-3 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer focus:outline-none"
@@ -410,7 +410,7 @@ const LinkedInCampaigns = () => {
                   </select>
 
                   {/* Campaign Group filter */}
-                  <select 
+                  <select
                     value={groupFilter}
                     onChange={(e) => setGroupFilter(e.target.value)}
                     className="bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-2xl px-3 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer focus:outline-none"
@@ -480,11 +480,10 @@ const LinkedInCampaigns = () => {
                             <div className="text-[9px] font-mono text-slate-400 mt-0.5">ID: {camp.id}</div>
                           </td>
                           <td className="px-6 py-3.5">
-                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider border ${
-                              camp.status === 'RUNNING' 
-                                ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' 
+                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider border ${camp.status === 'RUNNING'
+                                ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
                                 : 'text-amber-500 bg-amber-500/10 border-amber-500/20'
-                            }`}>
+                              }`}>
                               {camp.status}
                             </span>
                           </td>

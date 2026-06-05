@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { 
-  Calendar, 
-  Clock, 
-  Pause, 
-  Play, 
-  RefreshCw, 
+import {
+  Calendar,
+  Clock,
+  Pause,
+  Play,
+  RefreshCw,
   AlertCircle,
   Globe,
   CheckCircle2,
@@ -30,7 +30,7 @@ const WASchedules = () => {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/whatsapp/campaigns/schedules', {
+      const response = await axios.get('/api/whatsapp/campaigns/schedules', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.data.success) {
@@ -47,7 +47,7 @@ const WASchedules = () => {
   const handlePause = async (campaignId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post(`http://localhost:5000/api/whatsapp/campaigns/${campaignId}/pause`, {}, {
+      const response = await axios.post(`/api/whatsapp/campaigns/${campaignId}/pause`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.data.success) {
@@ -63,7 +63,7 @@ const WASchedules = () => {
   const handleResume = async (campaignId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post(`http://localhost:5000/api/whatsapp/campaigns/${campaignId}/resume`, {}, {
+      const response = await axios.post(`/api/whatsapp/campaigns/${campaignId}/resume`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.data.success) {
@@ -77,8 +77,8 @@ const WASchedules = () => {
   };
 
   const filteredSchedules = schedules.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          (item.template_name && item.template_name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.template_name && item.template_name.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesType = filterType === 'all' ? true : item.campaign_type === filterType;
     return matchesSearch && matchesType;
   });
@@ -115,7 +115,7 @@ const WASchedules = () => {
           </div>
         </div>
 
-        <button 
+        <button
           onClick={fetchSchedules}
           className="p-2.5 bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-slate-600 dark:text-slate-300 transition-all shadow-sm"
         >
@@ -171,18 +171,17 @@ const WASchedules = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
           {filteredSchedules.map((item) => (
-            <div 
-              key={item.id} 
+            <div
+              key={item.id}
               className="bg-white dark:bg-gradient-to-b dark:from-white/[0.04] dark:to-white/[0.01] border border-slate-200 dark:border-white/10 rounded-[2rem] p-6 shadow-md dark:shadow-xl flex flex-col justify-between hover:border-slate-300 dark:hover:border-white/20 hover:shadow-lg transition-all duration-300"
             >
               <div>
                 {/* Badge Header Row */}
                 <div className="flex justify-between items-start mb-4">
-                  <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-lg border ${
-                    item.campaign_type === 'recurring' 
-                      ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' 
+                  <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-lg border ${item.campaign_type === 'recurring'
+                      ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
                       : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
-                  }`}>
+                    }`}>
                     {item.campaign_type === 'recurring' ? 'RECURRING' : 'ONE-TIME'}
                   </span>
                   {getStatusBadge(item.status)}
@@ -190,7 +189,7 @@ const WASchedules = () => {
 
                 {/* Campaign Name */}
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1 truncate">{item.name}</h3>
-                
+
                 {/* Details */}
                 <div className="space-y-2 mt-4 text-xs text-slate-600 dark:text-slate-300">
                   <div className="flex items-center space-x-2">
@@ -245,11 +244,11 @@ const WASchedules = () => {
                       <span>Next execution:</span>
                     </div>
                     <span className="font-semibold text-slate-800 dark:text-slate-200">
-                      {new Date(item.nextRun).toLocaleString(undefined, { 
-                        month: 'short', 
-                        day: 'numeric', 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
+                      {new Date(item.nextRun).toLocaleString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
                       })}
                     </span>
                   </div>

@@ -1,21 +1,21 @@
 import { useState, useEffect } from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  AreaChart, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
   Area,
-  Cell 
+  Cell
 } from 'recharts';
-import { 
-  Activity, 
-  TrendingUp, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Activity,
+  TrendingUp,
+  CheckCircle,
+  XCircle,
   MessageSquare,
   RefreshCw,
   AlertCircle,
@@ -45,16 +45,16 @@ const WAAnalytics = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [activeTab, setActiveTab] = useState('overview');
-  
+
   const [whatsappConfigs, setWhatsappConfigs] = useState([]);
   const [selectedConfigId, setSelectedConfigId] = useState(localStorage.getItem('selectedWhatsAppConfigId') || '');
 
-  
+
   // Dashboard & KPIs
   const [kpis, setKpis] = useState(null);
   const [kpisLoading, setKpisLoading] = useState(true);
   const [kpisError, setKpisError] = useState(null);
-  
+
   // Trends
   const [trends, setTrends] = useState([]);
   const [trendInterval, setTrendInterval] = useState('daily');
@@ -90,7 +90,7 @@ const WAAnalytics = () => {
   const [showCompareDrawer, setShowCompareDrawer] = useState(false);
   const [compareError, setCompareError] = useState(null);
 
-  const API_BASE = 'http://localhost:5000/api/whatsapp';
+  const API_BASE = '/api/whatsapp';
 
   const getHeaders = () => {
     const token = localStorage.getItem('token');
@@ -103,7 +103,7 @@ const WAAnalytics = () => {
   const fetchConfigs = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/whatsapp/configs', {
+      const response = await axios.get('/api/whatsapp/configs', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.data.success) {
@@ -175,7 +175,7 @@ const WAAnalytics = () => {
       if (trendStartDate) params.startDate = trendStartDate;
       if (trendEndDate) params.endDate = trendEndDate;
 
-      const res = await axios.get(`${API_BASE}/analytics/trends`, { 
+      const res = await axios.get(`${API_BASE}/analytics/trends`, {
         headers: getHeaders(),
         params
       });
@@ -183,8 +183,8 @@ const WAAnalytics = () => {
         // Convert UTC date keys to user timezone representation
         const formattedTrends = res.data.trends.map(t => {
           const dateObj = new Date(t.date);
-          const formattedDate = dateObj.toLocaleDateString(undefined, { 
-            month: 'short', 
+          const formattedDate = dateObj.toLocaleDateString(undefined, {
+            month: 'short',
             day: 'numeric',
             year: trendInterval === 'monthly' ? 'numeric' : undefined
           });
@@ -321,7 +321,7 @@ const WAAnalytics = () => {
         responseType: 'blob',
         params
       });
-      
+
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -342,7 +342,7 @@ const WAAnalytics = () => {
         headers: getHeaders(),
         responseType: 'blob'
       });
-      
+
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -357,13 +357,13 @@ const WAAnalytics = () => {
   };
 
   // Filter campaigns locally by search string
-  const filteredCampaigns = campaigns.filter(c => 
+  const filteredCampaigns = campaigns.filter(c =>
     c.name.toLowerCase().includes(campaignSearch.toLowerCase())
   );
 
   return (
     <div className="p-8 space-y-8 bg-transparent text-slate-800 dark:text-slate-100 min-h-screen font-sans transition-colors duration-300">
-      
+
       {/* Header and Refresh Panel */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-white/5 pb-6">
         <div className="flex items-center space-x-4">
@@ -392,7 +392,7 @@ const WAAnalytics = () => {
             </select>
           </div>
 
-          <button 
+          <button
             onClick={() => {
               fetchExecutiveKPIs();
               fetchTrendsData();
@@ -428,11 +428,10 @@ const WAAnalytics = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 pb-4 font-semibold text-sm transition-all border-b-2 outline-none ${
-                isActive 
-                  ? 'border-indigo-500 text-indigo-500 dark:text-indigo-400' 
+              className={`flex items-center space-x-2 pb-4 font-semibold text-sm transition-all border-b-2 outline-none ${isActive
+                  ? 'border-indigo-500 text-indigo-500 dark:text-indigo-400'
                   : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
+                }`}
             >
               <Icon className="w-4 h-4" />
               <span>{tab.label}</span>
@@ -444,7 +443,7 @@ const WAAnalytics = () => {
       {/* MAIN CONTENT VIEW */}
       {activeTab === 'overview' && (
         <div className="space-y-8">
-          
+
           {/* Executive KPI Cards Row */}
           {kpisLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -459,40 +458,40 @@ const WAAnalytics = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <KPICard 
-                title="Total Campaigns" 
+              <KPICard
+                title="Total Campaigns"
                 value={kpis.totalCampaigns}
                 subtext="Created configurations"
-                icon={Layers} 
-                color="indigo" 
+                icon={Layers}
+                color="indigo"
               />
-              <KPICard 
-                title="Success (Delivery) Rate" 
+              <KPICard
+                title="Success (Delivery) Rate"
                 value={`${(kpis.successRate || 0).toFixed(1)}%`}
                 subtext={`${kpis.totalDelivered} of ${kpis.totalSent} delivered`}
-                icon={CheckCircle} 
-                color="emerald" 
+                icon={CheckCircle}
+                color="emerald"
               />
-              <KPICard 
-                title="Read Rate" 
+              <KPICard
+                title="Read Rate"
                 value={`${(kpis.readRate || 0).toFixed(1)}%`}
                 subtext={`${kpis.totalRead} messages opened`}
-                icon={TrendingUp} 
-                color="blue" 
+                icon={TrendingUp}
+                color="blue"
               />
-              <KPICard 
-                title="Failure Rate" 
+              <KPICard
+                title="Failure Rate"
                 value={`${(kpis.failureRate || 0).toFixed(1)}%`}
                 subtext={`${kpis.totalFailed} messages undelivered`}
-                icon={XCircle} 
-                color="red" 
+                icon={XCircle}
+                color="red"
               />
             </div>
           )}
 
           {/* Visual Funnel and Queue Health Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
+
             {/* Visual Funnel Panel */}
             <div className="lg:col-span-8 bg-white dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-md dark:shadow-xl flex flex-col justify-between">
               <div>
@@ -507,32 +506,32 @@ const WAAnalytics = () => {
               ) : kpis ? (
                 <div className="space-y-6 py-4">
                   {/* Step 1: Sent */}
-                  <FunnelBar 
-                    label="Sent Volume" 
-                    value={kpis.totalSent} 
-                    percentage={100} 
-                    color="bg-indigo-500" 
+                  <FunnelBar
+                    label="Sent Volume"
+                    value={kpis.totalSent}
+                    percentage={100}
+                    color="bg-indigo-500"
                   />
                   {/* Step 2: Delivered */}
-                  <FunnelBar 
-                    label="Delivered (Success)" 
-                    value={kpis.totalDelivered} 
-                    percentage={kpis.totalSent > 0 ? (kpis.totalDelivered / kpis.totalSent) * 100 : 0} 
-                    color="bg-emerald-500" 
+                  <FunnelBar
+                    label="Delivered (Success)"
+                    value={kpis.totalDelivered}
+                    percentage={kpis.totalSent > 0 ? (kpis.totalDelivered / kpis.totalSent) * 100 : 0}
+                    color="bg-emerald-500"
                   />
                   {/* Step 3: Read */}
-                  <FunnelBar 
-                    label="Opened (Read)" 
-                    value={kpis.totalRead} 
-                    percentage={kpis.totalSent > 0 ? (kpis.totalRead / kpis.totalSent) * 100 : 0} 
-                    color="bg-blue-500" 
+                  <FunnelBar
+                    label="Opened (Read)"
+                    value={kpis.totalRead}
+                    percentage={kpis.totalSent > 0 ? (kpis.totalRead / kpis.totalSent) * 100 : 0}
+                    color="bg-blue-500"
                   />
                   {/* Step 4: Failed */}
-                  <FunnelBar 
-                    label="Failed / Rejected" 
-                    value={kpis.totalFailed} 
-                    percentage={kpis.totalSent + kpis.totalFailed > 0 ? (kpis.totalFailed / (kpis.totalSent + kpis.totalFailed)) * 100 : 0} 
-                    color="bg-red-500" 
+                  <FunnelBar
+                    label="Failed / Rejected"
+                    value={kpis.totalFailed}
+                    percentage={kpis.totalSent + kpis.totalFailed > 0 ? (kpis.totalFailed / (kpis.totalSent + kpis.totalFailed)) * 100 : 0}
+                    color="bg-red-500"
                   />
                 </div>
               ) : (
@@ -555,11 +554,10 @@ const WAAnalytics = () => {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/5 pb-2">
                     <span className="text-xs text-slate-400 font-semibold uppercase">Redis Connection</span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      queueHealth.redisConnected === 'ready' 
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${queueHealth.redisConnected === 'ready'
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                         : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                    }`}>
+                      }`}>
                       {String(queueHealth.redisConnected).toUpperCase()}
                     </span>
                   </div>
@@ -602,11 +600,10 @@ const WAAnalytics = () => {
                     <button
                       key={i}
                       onClick={() => setTrendInterval(i)}
-                      className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                        trendInterval === i 
-                          ? 'bg-indigo-600 text-white shadow-sm' 
+                      className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${trendInterval === i
+                          ? 'bg-indigo-600 text-white shadow-sm'
                           : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                      }`}
+                        }`}
                     >
                       {i.charAt(0).toUpperCase() + i.slice(1)}
                     </button>
@@ -643,25 +640,25 @@ const WAAnalytics = () => {
                   <AreaChart data={trends}>
                     <defs>
                       <linearGradient id="colorSent" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="colorDelivered" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#ffffff05" : "#e2e8f0"} />
                     <XAxis dataKey="date" stroke={isDark ? "#64748b" : "#475569"} fontSize={11} fontWeight={500} />
                     <YAxis stroke={isDark ? "#64748b" : "#475569"} fontSize={11} fontWeight={500} />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: isDark ? '#1e293b' : '#ffffff', 
-                        border: isDark ? '1px solid #334155' : '1px solid #e2e8f0', 
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                        border: isDark ? '1px solid #334155' : '1px solid #e2e8f0',
                         borderRadius: '12px',
                         color: isDark ? '#f8fafc' : '#0f172a',
                         fontSize: '12px'
-                      }} 
+                      }}
                     />
                     <Area type="monotone" dataKey="sent_count" name="Sent" stroke="#6366f1" strokeWidth={2.5} fillOpacity={1} fill="url(#colorSent)" />
                     <Area type="monotone" dataKey="delivered_count" name="Delivered" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorDelivered)" />
@@ -681,10 +678,10 @@ const WAAnalytics = () => {
 
       {activeTab === 'campaigns' && (
         <div className="space-y-8">
-          
+
           {/* Actions & Filters Header */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900/40 p-5 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm dark:shadow-md">
-            
+
             <div className="flex flex-wrap items-center gap-3 flex-1">
               {/* Search Bar */}
               <div className="relative flex-1 min-w-[200px] max-w-[320px]">
@@ -750,7 +747,7 @@ const WAAnalytics = () => {
               </div>
 
               {/* Trigger local load */}
-              <button 
+              <button
                 onClick={fetchCampaignsPerformance}
                 className="p-2.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 rounded-xl transition-all border border-indigo-500/20"
               >
@@ -763,11 +760,10 @@ const WAAnalytics = () => {
               <button
                 onClick={fetchComparison}
                 disabled={compareIds.length < 2 || compareLoading}
-                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl border text-xs font-semibold shadow-sm dark:shadow-md transition-all ${
-                  compareIds.length >= 2 
-                    ? 'bg-blue-600/25 hover:bg-blue-600/35 text-blue-600 dark:text-blue-400 border-blue-500/30 font-bold' 
+                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl border text-xs font-semibold shadow-sm dark:shadow-md transition-all ${compareIds.length >= 2
+                    ? 'bg-blue-600/25 hover:bg-blue-600/35 text-blue-600 dark:text-blue-400 border-blue-500/30 font-bold'
                     : 'bg-slate-100 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-white/5 cursor-not-allowed'
-                }`}
+                  }`}
               >
                 <Columns className="w-4 h-4" />
                 <span>Compare ({compareIds.length})</span>
@@ -815,10 +811,10 @@ const WAAnalytics = () => {
                         <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.01] transition-all">
                           <td className="py-4 px-6 text-center">
                             <input
-                               type="checkbox"
-                               checked={isSelected}
-                               onChange={() => handleToggleCompare(c.id)}
-                               className="w-4 h-4 rounded border-slate-300 dark:border-white/10 bg-white dark:bg-slate-950 text-indigo-600 focus:ring-indigo-500"
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleCompare(c.id)}
+                              className="w-4 h-4 rounded border-slate-300 dark:border-white/10 bg-white dark:bg-slate-950 text-indigo-600 focus:ring-indigo-500"
                             />
                           </td>
                           <td className="py-4 px-6">
@@ -829,17 +825,16 @@ const WAAnalytics = () => {
                             {c.campaign_type}
                           </td>
                           <td className="py-4 px-6">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              c.status === 'completed' 
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${c.status === 'completed'
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                                 : c.status === 'running'
-                                ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 animate-pulse'
-                                : c.status === 'failed'
-                                ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                                : c.status === 'paused'
-                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                : 'bg-slate-800 text-slate-400 border border-white/5'
-                            }`}>
+                                  ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 animate-pulse'
+                                  : c.status === 'failed'
+                                    ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                    : c.status === 'paused'
+                                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                      : 'bg-slate-800 text-slate-400 border border-white/5'
+                              }`}>
                               {c.status.toUpperCase()}
                             </span>
                           </td>
@@ -871,14 +866,14 @@ const WAAnalytics = () => {
 
       {activeTab === 'templates' && (
         <div className="space-y-8">
-          
+
           {/* Templates Performance Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900/40 p-5 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm dark:shadow-md">
             <div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Templates Analytics</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Aggregate conversion stats grouped by Meta template structures</p>
             </div>
-            
+
             <button
               onClick={handleExportTemplates}
               className="flex items-center space-x-2 px-4 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-semibold shadow-sm dark:shadow-md transition-all"
@@ -889,7 +884,7 @@ const WAAnalytics = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
+
             {/* Visual Breakdown Bar Chart */}
             <div className="lg:col-span-2 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-md dark:shadow-xl flex flex-col justify-between">
               <div>
@@ -907,14 +902,14 @@ const WAAnalytics = () => {
                       <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#ffffff05" : "#e2e8f0"} />
                       <XAxis dataKey="template_name" stroke={isDark ? "#94a3b8" : "#475569"} fontSize={10} />
                       <YAxis stroke={isDark ? "#94a3b8" : "#475569"} fontSize={10} />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: isDark ? '#1e293b' : '#ffffff', 
-                          border: isDark ? '1px solid #334155' : '1px solid #e2e8f0', 
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                          border: isDark ? '1px solid #334155' : '1px solid #e2e8f0',
                           borderRadius: '12px',
                           color: isDark ? '#f8fafc' : '#0f172a',
                           fontSize: '11px'
-                        }} 
+                        }}
                       />
                       <Bar dataKey="sent_count" name="Sent" fill="#4f46e5" radius={[6, 6, 0, 0]} />
                       <Bar dataKey="read_count" name="Opened" fill="#06b6d4" radius={[6, 6, 0, 0]} />
@@ -948,13 +943,12 @@ const WAAnalytics = () => {
                     .map((t, idx) => (
                       <div key={t.template_name} className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-white/5 rounded-2xl hover:border-indigo-500/20 transition-all">
                         <div className="flex items-center space-x-3">
-                          <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-extrabold text-[10px] ${
-                            idx === 0 
-                              ? 'bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30' 
-                              : idx === 1 
-                              ? 'bg-slate-300/20 text-slate-650 dark:text-slate-300 border border-slate-300/30'
-                              : 'bg-orange-500/20 text-orange-500 dark:text-orange-400 border border-orange-500/30'
-                          }`}>
+                          <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-extrabold text-[10px] ${idx === 0
+                              ? 'bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30'
+                              : idx === 1
+                                ? 'bg-slate-300/20 text-slate-650 dark:text-slate-300 border border-slate-300/30'
+                                : 'bg-orange-500/20 text-orange-500 dark:text-orange-400 border border-orange-500/30'
+                            }`}>
                             #{idx + 1}
                           </div>
                           <div>
@@ -1033,7 +1027,7 @@ const WAAnalytics = () => {
 
 
         <div className="space-y-8">
-          
+
           <div className="bg-white dark:bg-slate-900/40 p-5 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm dark:shadow-md">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Recurring Schedules Telemetry</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Aggregated execution history and metrics for repeating configurations</p>
@@ -1070,11 +1064,10 @@ const WAAnalytics = () => {
                         <td className="py-4 px-6 font-mono text-[11px] text-indigo-600 dark:text-indigo-300">{s.cron_expression}</td>
                         <td className="py-4 px-6 text-slate-500 dark:text-slate-400">{s.timezone}</td>
                         <td className="py-4 px-6">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            s.status === 'paused' 
-                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' 
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${s.status === 'paused'
+                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                               : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          }`}>
+                            }`}>
                             {s.status.toUpperCase()}
                           </span>
                         </td>
@@ -1102,13 +1095,13 @@ const WAAnalytics = () => {
       {showCompareDrawer && comparisonData && (
         <div className="fixed inset-0 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end transition-opacity duration-300">
           <div className="w-full max-w-4xl bg-white dark:bg-[#0f172a] border-l border-slate-200 dark:border-white/10 h-full overflow-y-auto p-8 shadow-2xl space-y-8 animate-in slide-in-from-right duration-300">
-            
+
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/5 pb-4">
               <div>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">Campaign Side-by-Side Comparison</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Comparing performance details of selected runs (Limit: 5)</p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowCompareDrawer(false)}
                 className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/5 rounded-lg text-xs font-semibold transition-all"
               >

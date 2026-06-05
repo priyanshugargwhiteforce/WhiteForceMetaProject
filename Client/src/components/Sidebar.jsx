@@ -50,7 +50,7 @@ const Sidebar = () => {
     if (!user) return;
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/tasks/pending-count', {
+      const res = await axios.get('/api/tasks/pending-count', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {

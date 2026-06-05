@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { 
-  User, 
-  Calendar, 
-  Save, 
-  Database, 
-  Activity, 
-  CheckCircle2, 
-  AlertCircle, 
+import {
+  User,
+  Calendar,
+  Save,
+  Database,
+  Activity,
+  CheckCircle2,
+  AlertCircle,
   ChevronDown,
   Clock
 } from 'lucide-react';
@@ -53,7 +53,7 @@ const AdOwner = () => {
 
   const fetchConfigs = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/meta/configs', {
+      const response = await axios.get('/api/meta/configs', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.data.success) {
@@ -71,7 +71,7 @@ const AdOwner = () => {
 
   const fetchTeamMembers = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/meta/team', {
+      const response = await axios.get('/api/meta/team', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.data.success) {
@@ -87,7 +87,7 @@ const AdOwner = () => {
       const headers = { Authorization: `Bearer ${token}` };
       if (selectedConfigId) headers['X-Meta-Config-Id'] = selectedConfigId;
 
-      const response = await axios.get('http://localhost:5000/api/meta/accounts', { headers });
+      const response = await axios.get('/api/meta/accounts', { headers });
       if (response.data.success) {
         const accounts = response.data.adaccounts?.data || [];
         setAdAccounts(accounts);
@@ -111,10 +111,10 @@ const AdOwner = () => {
       const headers = { Authorization: `Bearer ${token}` };
       if (selectedConfigId) headers['X-Meta-Config-Id'] = selectedConfigId;
 
-      const response = await axios.get(`http://localhost:5000/api/meta/accounts/${selectedAccountId}`, { headers });
+      const response = await axios.get(`/api/meta/accounts/${selectedAccountId}`, { headers });
       if (response.data.success) {
         const fetchedAds = response.data.data?.ads?.data || [];
-        
+
         // Sort ads: newest ads at the top (using created_time or adset start_time)
         const sortedAds = fetchedAds.sort((a, b) => {
           const dateA = new Date(a.created_time || a.adset?.start_time || 0);
@@ -157,22 +157,22 @@ const AdOwner = () => {
     const adEdits = edits[adId] || {};
     try {
       setSaveStatus(prev => ({ ...prev, [adId]: { loading: true } }));
-      
+
       const headers = { Authorization: `Bearer ${token}` };
       if (selectedConfigId) headers['X-Meta-Config-Id'] = selectedConfigId;
 
-      const response = await axios.post('http://localhost:5000/api/meta/ads/owner', {
+      const response = await axios.post('/api/meta/ads/owner', {
         adId,
         ownerName: adEdits.ownerName,
         launchDate: adEdits.launchDate
       }, { headers });
 
       if (response.data.success) {
-        setSaveStatus(prev => ({ 
-          ...prev, 
-          [adId]: { success: true, message: 'Saved!' } 
+        setSaveStatus(prev => ({
+          ...prev,
+          [adId]: { success: true, message: 'Saved!' }
         }));
-        
+
         // Update local state to reflect update time and saved info
         setAds(prevAds => prevAds.map(ad => {
           if (ad.id === adId) {
@@ -192,9 +192,9 @@ const AdOwner = () => {
       }
     } catch (err) {
       console.error(err);
-      setSaveStatus(prev => ({ 
-        ...prev, 
-        [adId]: { error: true, message: err.response?.data?.message || 'Failed to save' } 
+      setSaveStatus(prev => ({
+        ...prev,
+        [adId]: { error: true, message: err.response?.data?.message || 'Failed to save' }
       }));
       setTimeout(() => {
         setSaveStatus(prev => ({ ...prev, [adId]: null }));
@@ -205,9 +205,9 @@ const AdOwner = () => {
   const formatDate = (isoString) => {
     if (!isoString) return 'Never';
     const date = new Date(isoString);
-    return date.toLocaleDateString(undefined, { 
-      month: 'short', 
-      day: 'numeric', 
+    return date.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -285,7 +285,7 @@ const AdOwner = () => {
             </div>
             <h3 className="text-base font-bold mb-1">Failed to Load Ads</h3>
             <p className="text-slate-500 max-w-sm text-xs mb-4">{error}</p>
-            <button 
+            <button
               onClick={fetchAds}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold text-xs transition-all"
             >
@@ -335,11 +335,10 @@ const AdOwner = () => {
 
                       {/* Status */}
                       <td className="px-4 py-2.5 text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-widest ${
-                          ad.status === 'ACTIVE' 
-                            ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-widest ${ad.status === 'ACTIVE'
+                            ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
                             : 'bg-slate-500/10 text-slate-500 border border-slate-500/20'
-                        }`}>
+                          }`}>
                           {ad.status}
                         </span>
                       </td>
@@ -388,13 +387,12 @@ const AdOwner = () => {
                         <button
                           onClick={() => handleSave(ad.id)}
                           disabled={statusInfo.loading}
-                          className={`inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 shadow-sm border ${
-                            statusInfo.success
+                          className={`inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 shadow-sm border ${statusInfo.success
                               ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                               : statusInfo.error
-                              ? 'bg-red-500/10 text-red-500 border-red-500/20'
-                              : 'bg-blue-600 hover:bg-blue-500 text-white border-transparent hover:scale-[1.02] active:scale-95'
-                          }`}
+                                ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                                : 'bg-blue-600 hover:bg-blue-500 text-white border-transparent hover:scale-[1.02] active:scale-95'
+                            }`}
                         >
                           {statusInfo.loading ? (
                             <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -406,13 +404,13 @@ const AdOwner = () => {
                             <Save className="w-3 h-3" />
                           )}
                           <span>
-                            {statusInfo.loading 
-                              ? 'Saving...' 
-                              : statusInfo.success 
-                              ? 'Saved' 
-                              : statusInfo.error 
-                              ? 'Failed' 
-                              : 'Save'}
+                            {statusInfo.loading
+                              ? 'Saving...'
+                              : statusInfo.success
+                                ? 'Saved'
+                                : statusInfo.error
+                                  ? 'Failed'
+                                  : 'Save'}
                           </span>
                         </button>
                       </td>

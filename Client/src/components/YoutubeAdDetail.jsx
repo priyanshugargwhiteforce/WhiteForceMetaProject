@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
 } from 'recharts';
-import { 
+import {
   ArrowLeft, Play, Video, Target, AlertCircle, ChevronRight,
   Calendar, DollarSign, RefreshCw, Eye, MousePointerClick,
   ThumbsUp, MessageSquare, TrendingUp, HelpCircle,
@@ -13,13 +13,13 @@ import {
 const YoutubeAdDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   const [ad, setAd] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState(null);
-  
+
   const [activeTab, setActiveTab] = useState('spend'); // 'spend', 'views', 'impressions', 'clicks'
 
   useEffect(() => {
@@ -33,14 +33,14 @@ const YoutubeAdDetail = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const url = `http://localhost:5000/api/youtube-ads/${id}${isSyncTriggered ? '?forceSync=true' : ''}`;
+      const url = `/api/youtube-ads/${id}${isSyncTriggered ? '?forceSync=true' : ''}`;
       const res = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       const data = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(data.message || "Failed to fetch YouTube Ad details.");
       }
@@ -51,7 +51,7 @@ const YoutubeAdDetail = () => {
       } else {
         setError(data.message || 'Failed to fetch details');
       }
-    } catch(e) {
+    } catch (e) {
       console.error("Failed to fetch ad details", e);
       setError(e.message || "Network error fetching ad details.");
     } finally {
@@ -74,7 +74,7 @@ const YoutubeAdDetail = () => {
 
   const getStatusColor = (status) => {
     const label = getStatusLabel(status);
-    switch(label) {
+    switch (label) {
       case 'ENABLED': return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
       case 'PAUSED': return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
       case 'REMOVED': return 'text-red-500 bg-red-500/10 border-red-500/20';
@@ -109,7 +109,7 @@ const YoutubeAdDetail = () => {
   }, { spend: 0, impressions: 0, views: 0, clicks: 0, likes: 0, comments: 0 });
 
   const getChartConfig = () => {
-    switch(activeTab) {
+    switch (activeTab) {
       case 'views':
         return {
           dataKey: 'views',
@@ -157,7 +157,7 @@ const YoutubeAdDetail = () => {
       {/* Title & Controls Row */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center space-x-4">
-          <button 
+          <button
             onClick={() => navigate('/youtube-ads')}
             className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-all"
           >
@@ -177,14 +177,14 @@ const YoutubeAdDetail = () => {
             </h2>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-3">
           {ad && (
             <span className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${getStatusColor(ad.status)}`}>
               {getStatusLabel(ad.status)}
             </span>
           )}
-          <button 
+          <button
             disabled={loading || syncing || !ad}
             onClick={handleSync}
             className="flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white rounded-2xl font-bold text-sm shadow-lg shadow-red-500/20 transition-all hover:scale-105 disabled:opacity-50 disabled:pointer-events-none"
@@ -243,7 +243,7 @@ const YoutubeAdDetail = () => {
                   )}
                 </div>
               </div>
-              
+
               <div className="flex flex-row md:flex-col items-start md:items-end justify-between md:justify-center shrink-0 bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 rounded-3xl p-4 md:min-w-[200px]">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center">
                   <Calendar className="w-3.5 h-3.5 mr-1 text-slate-400" /> Date Range
@@ -398,7 +398,7 @@ const YoutubeAdDetail = () => {
                 </h3>
                 <p className="text-xs text-slate-400 mb-4">Actual video active in the YouTube campaign</p>
               </div>
-              
+
               {videoId ? (
                 <div className="aspect-video w-full rounded-[1.5rem] overflow-hidden border border-slate-200 dark:border-white/10 bg-black shadow-lg shadow-black/20">
                   <iframe
@@ -436,10 +436,10 @@ const YoutubeAdDetail = () => {
 
               <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs text-slate-400">
                 <span className="font-semibold text-slate-500">Video Destination:</span>
-                <a 
-                  href={ad.video_url || '#'} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
+                <a
+                  href={ad.video_url || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-bold truncate max-w-[250px] transition-colors"
                 >
                   {ad.video_url || 'N/A'}
@@ -494,35 +494,35 @@ const YoutubeAdDetail = () => {
                     <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorMetric" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={chartConfig.color} stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor={chartConfig.color} stopOpacity={0.0}/>
+                          <stop offset="5%" stopColor={chartConfig.color} stopOpacity={0.4} />
+                          <stop offset="95%" stopColor={chartConfig.color} stopOpacity={0.0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255, 255, 255, 0.05)" />
-                      <XAxis 
-                        dataKey="formattedDate" 
-                        stroke="#94a3b8" 
-                        fontSize={10} 
-                        tickLine={false} 
+                      <XAxis
+                        dataKey="formattedDate"
+                        stroke="#94a3b8"
+                        fontSize={10}
+                        tickLine={false}
                         axisLine={false}
                         dy={10}
                       />
-                      <YAxis 
-                        stroke="#94a3b8" 
-                        fontSize={10} 
-                        tickLine={false} 
+                      <YAxis
+                        stroke="#94a3b8"
+                        fontSize={10}
+                        tickLine={false}
                         axisLine={false}
                         dx={-10}
                         tickFormatter={(value) => {
-                          if (value >= 1000000) return `${(value/1000000).toFixed(1)}M`;
-                          if (value >= 1000) return `${(value/1000).toFixed(1)}k`;
+                          if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+                          if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
                           return value;
                         }}
                       />
-                      <RechartsTooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'rgba(15, 23, 42, 0.9)', 
-                          border: '1px solid rgba(255, 255, 255, 0.1)', 
+                      <RechartsTooltip
+                        contentStyle={{
+                          backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
                           borderRadius: '16px',
                           fontFamily: 'Outfit',
                           fontSize: '12px'
@@ -530,14 +530,14 @@ const YoutubeAdDetail = () => {
                         labelStyle={{ color: '#fff', fontWeight: 'bold' }}
                         itemStyle={{ color: chartConfig.color }}
                       />
-                      <Area 
-                        type="monotone" 
-                        dataKey={chartConfig.dataKey} 
+                      <Area
+                        type="monotone"
+                        dataKey={chartConfig.dataKey}
                         name={chartConfig.name}
-                        stroke={chartConfig.color} 
+                        stroke={chartConfig.color}
                         strokeWidth={3}
-                        fillOpacity={1} 
-                        fill="url(#colorMetric)" 
+                        fillOpacity={1}
+                        fill="url(#colorMetric)"
                       />
                     </AreaChart>
                   </ResponsiveContainer>

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { 
-  CreditCard, 
-  Activity, 
-  Eye, 
+import {
+  CreditCard,
+  Activity,
+  Eye,
   TrendingUp,
   Globe,
   Camera,
@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Overview = () => {
   const navigate = useNavigate();
-  
+
   const [adAccounts, setAdAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,8 +25,8 @@ const Overview = () => {
         const headers = { 'Authorization': `Bearer ${token}` };
         if (configId) headers['X-Meta-Config-Id'] = configId;
 
-        const response = await fetch(`http://localhost:5000/api/meta/accounts`, {
-            headers
+        const response = await fetch(`/api/meta/accounts`, {
+          headers
         });
         const data = await response.json();
         if (data.adaccounts && data.adaccounts.data) {
@@ -47,7 +47,7 @@ const Overview = () => {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0
-    }).format(amount / 100); 
+    }).format(amount / 100);
   };
 
   const totalSpend = adAccounts.reduce((sum, acc) => sum + parseInt(acc.amount_spent || 0), 0);
@@ -65,9 +65,9 @@ const Overview = () => {
     return (
       <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-6 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 transition-all duration-300">
         <div className={`absolute -right-6 -top-6 w-24 h-24 opacity-[0.03] group-hover:scale-110 transition-transform duration-500 bg-gradient-to-br ${colorMap[color].split(' ')[0]} rounded-full blur-xl`}></div>
-        
+
         <div className="flex justify-between items-start mb-6 relative z-10">
-          <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${colorMap[color].split(' ').slice(0,2).join(' ')} flex items-center justify-center shadow-lg ${colorMap[color].split(' ')[2]}`}>
+          <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${colorMap[color].split(' ').slice(0, 2).join(' ')} flex items-center justify-center shadow-lg ${colorMap[color].split(' ')[2]}`}>
             <Icon className="w-6 h-6 text-white" />
           </div>
           {trend && (
@@ -76,7 +76,7 @@ const Overview = () => {
             </span>
           )}
         </div>
-        
+
         <div className="relative z-10">
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">{title}</p>
           <h3 className="text-3xl font-bold text-slate-900 dark:text-white group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-slate-800 group-hover:to-slate-500 dark:group-hover:from-white dark:group-hover:to-slate-400 transition-all">
@@ -94,7 +94,7 @@ const Overview = () => {
           <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">Platform Overview</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">High-level executive summary of your Meta Ads ecosystem.</p>
         </div>
-        <button 
+        <button
           onClick={() => navigate('/insights')}
           className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 transition-all flex items-center group"
         >
@@ -113,31 +113,31 @@ const Overview = () => {
         <div className="fade-in space-y-8">
           {/* Top Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            <StatCard 
-              title="Total Ad Spend (Lifetime)" 
-              value={formatCurrency(totalSpend)} 
-              icon={CreditCard} 
-              color="blue" 
-              trend="+12.5%" 
+            <StatCard
+              title="Total Ad Spend (Lifetime)"
+              value={formatCurrency(totalSpend)}
+              icon={CreditCard}
+              color="blue"
+              trend="+12.5%"
             />
-            <StatCard 
-              title="Active Ad Accounts" 
-              value={activeAccounts} 
-              icon={Activity} 
-              color="emerald" 
+            <StatCard
+              title="Active Ad Accounts"
+              value={activeAccounts}
+              icon={Activity}
+              color="emerald"
             />
-            <StatCard 
-              title="Total Impressions" 
-              value={totalImpressions.toLocaleString('en-IN')} 
-              icon={Eye} 
-              color="purple" 
+            <StatCard
+              title="Total Impressions"
+              value={totalImpressions.toLocaleString('en-IN')}
+              icon={Eye}
+              color="purple"
             />
-            <StatCard 
-              title="Avg ROAS (Stub)" 
-              value="3.4x" 
-              icon={TrendingUp} 
-              color="amber" 
-              trend="+0.2" 
+            <StatCard
+              title="Avg ROAS (Stub)"
+              value="3.4x"
+              icon={TrendingUp}
+              color="amber"
+              trend="+0.2"
             />
           </div>
 
@@ -207,7 +207,7 @@ const Overview = () => {
                 <h4 className="text-xl font-bold text-white mt-2 mb-4">Minimize Overlapping Audiences</h4>
                 <p className="text-slate-400 text-sm leading-relaxed">Having multiple active ad sets targeting similar custom audiences increases bidding costs and fatigues users quickly. Keep them distinct.</p>
               </div>
-              <button 
+              <button
                 onClick={() => navigate('/ad-accounts')}
                 className="mt-8 w-full py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-sm font-semibold transition-all border border-white/10"
               >

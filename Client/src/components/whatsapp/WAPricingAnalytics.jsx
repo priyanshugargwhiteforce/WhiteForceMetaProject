@@ -92,7 +92,7 @@ const WAPricingAnalytics = ({ selectedConfigId }) => {
         endDate = dates.endDate;
       }
 
-      const res = await axios.get('http://localhost:5000/api/whatsapp/analytics/pricing', {
+      const res = await axios.get('/api/whatsapp/analytics/pricing', {
         headers: getHeaders(),
         params: { startDate, endDate }
       });
@@ -130,7 +130,7 @@ const WAPricingAnalytics = ({ selectedConfigId }) => {
       }
 
       console.log(`Triggering Meta pricing sync for ${startDate} to ${endDate}...`);
-      const res = await axios.post('http://localhost:5000/api/whatsapp/analytics/pricing/sync', null, {
+      const res = await axios.post('/api/whatsapp/analytics/pricing/sync', null, {
         headers: getHeaders(),
         params: { startDate, endDate }
       });
@@ -150,7 +150,7 @@ const WAPricingAnalytics = ({ selectedConfigId }) => {
   // Fetch currency code dynamically from active WhatsApp details
   const fetchWabaCurrency = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/whatsapp/details', {
+      const res = await axios.get('/api/whatsapp/details', {
         headers: getHeaders()
       });
       if (res.data.success && res.data.data?.waba?.currency) {

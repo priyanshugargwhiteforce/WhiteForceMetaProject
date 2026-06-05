@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { 
+import {
   TrendingUp, Activity, Target, Sliders, IndianRupee, ShieldAlert,
   ChevronRight, RefreshCw, BarChart2, PieChart, Sparkles, AlertCircle,
   Calendar, Search, Download
@@ -40,12 +40,12 @@ const LinkedInAnalytics = () => {
   const fetchAdAccounts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/linkedin/accounts`, {
+      const response = await fetch(`/api/linkedin/accounts`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || "Failed to fetch LinkedIn accounts");
-      
+
       if (result.adaccounts && result.adaccounts.data) {
         setAdAccounts(result.adaccounts.data);
         if (result.adaccounts.data.length > 0) {
@@ -64,7 +64,7 @@ const LinkedInAnalytics = () => {
     setError(null);
     try {
       const token = localStorage.getItem('token');
-      const insRes = await fetch(`http://localhost:5000/api/linkedin/insights/${accountId}`, {
+      const insRes = await fetch(`/api/linkedin/insights/${accountId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const insResult = await insRes.json();
@@ -112,7 +112,7 @@ const LinkedInAnalytics = () => {
       const year = dateObj.getFullYear();
       const month = String(dateObj.getMonth() + 1).padStart(2, '0');
       const key = `${year}-${month}`; // e.g. "2026-05"
-      
+
       if (!monthlyMap[key]) {
         monthlyMap[key] = {
           monthKey: key,
@@ -210,17 +210,17 @@ const LinkedInAnalytics = () => {
       row.cpm || 0,
       row.conversions || 0
     ]);
-    
+
     const csvContent = [
       headers.join(','),
       ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
     ].join('\n');
-    
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `LinkedIn_Daily_Insights_${selectedAccountId || 'all'}_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute("download", `LinkedIn_Daily_Insights_${selectedAccountId || 'all'}_${new Date().toISOString().slice(0, 10)}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -246,9 +246,9 @@ const LinkedInAnalytics = () => {
           </div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">LinkedIn Insights & ROI</h2>
         </div>
-        
+
         <div className="flex items-center space-x-3">
-          <button 
+          <button
             onClick={() => selectedAccountId && fetchInsights(selectedAccountId)}
             className="p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 rounded-2xl transition-all"
             title="Refresh Baseline Analytics"
@@ -257,8 +257,8 @@ const LinkedInAnalytics = () => {
           </button>
 
           {/* Account Selector */}
-          <select 
-            value={selectedAccountId} 
+          <select
+            value={selectedAccountId}
             onChange={(e) => setSelectedAccountId(e.target.value)}
             className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-white cursor-pointer"
           >
@@ -284,7 +284,7 @@ const LinkedInAnalytics = () => {
           </div>
         ) : (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            
+
             {/* Database Baseline Metrics Summary */}
             <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-8 shadow-sm">
               <div className="mb-6">
@@ -339,18 +339,18 @@ const LinkedInAnalytics = () => {
                       <AreaChart data={actualTrendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                         <defs>
                           <linearGradient id="colorActualSpend" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
-                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                           </linearGradient>
                           <linearGradient id="colorActualLeads" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-main)" />
                         <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-                        <Tooltip 
+                        <Tooltip
                           contentStyle={{ backgroundColor: 'var(--bg-sidebar)', borderRadius: '12px', border: '1px solid var(--border-main)', fontSize: '11px' }}
                           itemStyle={{ fontWeight: 'bold' }}
                         />
@@ -373,7 +373,7 @@ const LinkedInAnalytics = () => {
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">Aggregated actual monthly metrics from campaign delivery data</p>
                 </div>
-                
+
                 <div className="flex-1 overflow-y-auto space-y-4 max-h-[300px] pr-1">
                   {monthWiseData.length === 0 ? (
                     <div className="text-center py-12 text-slate-400 text-xs">No monthly records found.</div>
@@ -381,14 +381,14 @@ const LinkedInAnalytics = () => {
                     monthWiseData.map((m) => {
                       const dateParts = m.monthKey.split('-');
                       const formattedMonth = new Date(dateParts[0], dateParts[1] - 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
-                      
+
                       return (
                         <div key={m.monthKey} className="p-4 bg-slate-50/50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-2xl space-y-3 hover:border-blue-500/20 transition-all duration-300">
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200">{formattedMonth}</span>
                             <span className="px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-500 border border-blue-500/20">Synced</span>
                           </div>
-                          
+
                           <div className="grid grid-cols-2 gap-3 text-[10px]">
                             <div>
                               <span className="text-slate-400 block">Total Spend</span>
@@ -428,7 +428,7 @@ const LinkedInAnalytics = () => {
                     Precise daily delivery metrics retrieved and synchronized from LinkedIn Marketing API
                   </p>
                 </div>
-                
+
                 <button
                   onClick={handleExportCSV}
                   disabled={filteredTrendData.length === 0}
@@ -522,7 +522,7 @@ const LinkedInAnalytics = () => {
                         const formattedDate = dateObj ? dateObj.toLocaleDateString('en-US', {
                           year: 'numeric', month: 'short', day: 'numeric'
                         }) : 'N/A';
-                        
+
                         return (
                           <tr key={row.id || index} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors">
                             <td className="px-6 py-3.5 font-bold text-slate-800 dark:text-slate-100">
@@ -568,7 +568,7 @@ const LinkedInAnalytics = () => {
                       </span> of{' '}
                       <span className="font-bold text-slate-800 dark:text-white">{totalRecords}</span> days
                     </span>
-                    
+
                     <div className="flex items-center space-x-2 bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-white/5">
                       <span className="text-[9px] text-slate-400 font-bold uppercase">Show:</span>
                       <select
@@ -592,7 +592,7 @@ const LinkedInAnalytics = () => {
                     >
                       Previous
                     </button>
-                    
+
                     {Array.from({ length: totalPages }, (_, i) => i + 1)
                       .filter(page => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
                       .map((page, idx, arr) => {
@@ -602,11 +602,10 @@ const LinkedInAnalytics = () => {
                             {showEllipsisBefore && <span className="text-slate-400 text-xs px-2">...</span>}
                             <button
                               onClick={() => setCurrentPage(page)}
-                              className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded-xl transition-all ${
-                                currentPage === page
+                              className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded-xl transition-all ${currentPage === page
                                   ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
                                   : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300'
-                              }`}
+                                }`}
                             >
                               {page}
                             </button>

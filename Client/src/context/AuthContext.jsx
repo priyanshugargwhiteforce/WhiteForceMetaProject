@@ -12,7 +12,7 @@ export const AuthProvider = ({ children }) => {
 
     const fetchUser = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/auth/me');
+            const res = await axios.get('/api/auth/me');
             setUser(res.data.user);
         } catch (err) {
             logout();

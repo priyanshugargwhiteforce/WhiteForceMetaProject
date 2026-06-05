@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   Target, AlertCircle, ChevronRight, LayoutDashboard, Key, Search, Layers, IndianRupee, Eye, MousePointerClick
 } from 'lucide-react';
 
@@ -8,7 +8,7 @@ const GoogleCampaigns = () => {
   const [error, setError] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
-  
+
   const [campaigns, setCampaigns] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -26,17 +26,17 @@ const GoogleCampaigns = () => {
 
   const fetchAccounts = async () => {
     try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`http://localhost:5000/api/google/accounts`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data.success && data.accounts.length > 0) {
-            setAccounts(data.accounts);
-            setSelectedAccount(data.accounts[0]);
-        }
-    } catch(e) {
-        console.error("Failed to fetch accounts", e);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/google/accounts`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success && data.accounts.length > 0) {
+        setAccounts(data.accounts);
+        setSelectedAccount(data.accounts[0]);
+      }
+    } catch (e) {
+      console.error("Failed to fetch accounts", e);
     }
   };
 
@@ -45,7 +45,7 @@ const GoogleCampaigns = () => {
     setError(null);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/google/campaigns?customerId=${customerId}`, {
+      const res = await fetch(`/api/google/campaigns?customerId=${customerId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -70,7 +70,7 @@ const GoogleCampaigns = () => {
   const filteredCampaigns = React.useMemo(() => {
     if (!searchQuery.trim()) return campaigns;
     const query = searchQuery.toLowerCase();
-    return campaigns.filter(c => 
+    return campaigns.filter(c =>
       c.name.toLowerCase().includes(query) ||
       c.id.toString().includes(query) ||
       c.channel_type.toLowerCase().includes(query)
@@ -112,8 +112,8 @@ const GoogleCampaigns = () => {
 
         <div className="flex items-center space-x-3">
           {accounts.length > 0 && (
-            <select 
-              value={selectedAccount || ""} 
+            <select
+              value={selectedAccount || ""}
               onChange={(e) => setSelectedAccount(e.target.value)}
               className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-slate-100 cursor-pointer"
             >
@@ -278,7 +278,7 @@ const GoogleCampaigns = () => {
                   >
                     Previous
                   </button>
-                  
+
                   {Array.from({ length: totalPages }, (_, i) => i + 1)
                     .filter(page => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
                     .map((page, idx, arr) => {
@@ -288,11 +288,10 @@ const GoogleCampaigns = () => {
                           {showEllipsisBefore && <span className="text-slate-400 text-xs px-2">...</span>}
                           <button
                             onClick={() => setCurrentPage(page)}
-                            className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded-xl transition-all ${
-                              currentPage === page
+                            className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded-xl transition-all ${currentPage === page
                                 ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
                                 : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300'
-                            }`}
+                              }`}
                           >
                             {page}
                           </button>

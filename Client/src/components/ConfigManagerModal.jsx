@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { 
-  X, 
-  Plus, 
-  Settings, 
-  Key, 
-  Phone, 
-  Globe, 
+import {
+  X,
+  Plus,
+  Settings,
+  Key,
+  Phone,
+  Globe,
   FileText,
   AlertCircle,
   CheckCircle2
@@ -23,7 +23,7 @@ const ConfigManagerModal = ({ isOpen, onClose, type = 'meta', onConfigChange }) 
   const [wabaId, setWabaId] = useState('');
 
   const token = localStorage.getItem('token');
-  const apiBase = 'http://localhost:5000/api';
+  const apiBase = '/api';
 
   const handleAddConfig = async (e) => {
     e.preventDefault();
@@ -41,8 +41,8 @@ const ConfigManagerModal = ({ isOpen, onClose, type = 'meta', onConfigChange }) 
 
     try {
       const endpoint = type === 'meta' ? `${apiBase}/meta/configs` : `${apiBase}/whatsapp/configs`;
-      const payload = type === 'meta' 
-        ? { name, accessToken } 
+      const payload = type === 'meta'
+        ? { name, accessToken }
         : { name, phoneId, wabaId, accessToken };
 
       const res = await axios.post(endpoint, payload, {
@@ -84,7 +84,7 @@ const ConfigManagerModal = ({ isOpen, onClose, type = 'meta', onConfigChange }) 
               <p className="text-xs text-slate-400">Configure new API access credentials</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 hover:bg-white/5 rounded-xl transition-all text-slate-400 hover:text-white"
           >

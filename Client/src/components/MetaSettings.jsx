@@ -29,7 +29,7 @@ const MetaSettings = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get('http://localhost:5000/api/meta/configs', {
+      const response = await axios.get('/api/meta/configs', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setConfigs(response.data.configs || []);
@@ -44,7 +44,7 @@ const MetaSettings = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this configuration? This will clear its local cache.')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/meta/configs/${id}`, {
+      await axios.delete(`/api/meta/configs/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchConfigs();

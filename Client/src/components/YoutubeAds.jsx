@@ -32,7 +32,7 @@ const YoutubeAds = () => {
   const fetchAccounts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/google/accounts`, {
+      const res = await fetch(`/api/google/accounts`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -63,7 +63,7 @@ const YoutubeAds = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/youtube-ads?customerId=${customerId}`, {
+      const res = await fetch(`/api/youtube-ads?customerId=${customerId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -204,7 +204,7 @@ const YoutubeAds = () => {
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
-          
+
           {/* Search box */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -326,17 +326,16 @@ const YoutubeAds = () => {
               >
                 Previous
               </button>
-              
+
               {Array.from({ length: totalPages }, (_, i) => i + 1)
                 .map((page) => (
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded-xl transition-all ${
-                      currentPage === page
+                    className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded-xl transition-all ${currentPage === page
                         ? 'bg-red-500 text-white shadow-md shadow-red-500/25'
                         : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300'
-                    }`}
+                      }`}
                   >
                     {page}
                   </button>
