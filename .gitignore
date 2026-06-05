@@ -11,6 +11,7 @@ lerna-debug.log*
 node_modules/
 Client/node_modules/
 Server/node_modules/
+md_folder/
 
 # Build & Output directories
 dist/
