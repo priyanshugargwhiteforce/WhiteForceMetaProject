@@ -22,7 +22,8 @@ import {
   TrendingUp,
   Briefcase,
   Calendar,
-  ClipboardList
+  ClipboardList,
+  MessageSquare
 } from 'lucide-react';
 import logo from "../assets/white-forcelogo.png";
 
@@ -34,7 +35,7 @@ const Sidebar = () => {
 
   const metaPaths = ['/ad-accounts', '/ad-analyzer', '/single-ad-analyzer', '/insights', '/all-leads', '/ad-owners'];
   const googlePaths = ['/google-dashboard', '/google-campaigns', '/google-performance', '/google-insights', '/youtube-ads'];
-  const waPaths = ['/whatsapp-manager', '/wa-channels', '/wa-templates', '/wa-templates/new', '/send-message', '/wa-analytics', '/wa-contacts', '/wa-campaigns', '/wa-schedules'];
+  const waPaths = ['/whatsapp-manager', '/wa-channels', '/wa-templates', '/wa-templates/new', '/send-message', '/wa-analytics', '/wa-contacts', '/wa-campaigns', '/wa-schedules', '/wa-chats'];
   const linkedInPaths = ['/linkedin-manager', '/linkedin-campaigns', '/linkedin-analytics', '/linkedin-leads'];
   const settingsPaths = ['/users', '/settings/meta', '/settings/whatsapp'];
 
@@ -258,6 +259,13 @@ const Sidebar = () => {
               isSubItem={true}
             />
             <NavItem
+              icon={MessageSquare}
+              label="Messages"
+              active={isActive('/wa-chats')}
+              onClick={() => navigate('/wa-chats')}
+              isSubItem={true}
+            />
+            <NavItem
               icon={PieChart}
               label="Analytics"
               active={isActive('/wa-analytics')}
@@ -265,6 +273,7 @@ const Sidebar = () => {
               isSubItem={true}
             />
           </NavDropdown>
+
         )}
 
         {(user?.role === 'admin' || !!user?.linkedin_access) && (

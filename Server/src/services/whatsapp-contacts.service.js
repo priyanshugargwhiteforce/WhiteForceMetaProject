@@ -283,7 +283,7 @@ const getAttributeKeys = async (listId = null) => {
     } else {
         query += ' WHERE attributes IS NOT NULL';
     }
-    
+
     const [rows] = await pool.query(query, params);
     const keys = new Set();
     rows.forEach(row => {
@@ -295,11 +295,94 @@ const getAttributeKeys = async (listId = null) => {
     return Array.from(keys);
 };
 
+const getChatThreads = async () => {
+    const query = `
+        SELECT c.id, c.phone, c.name, c.last_message_at, c.status, c.engagement_score,
+               a.event_type, a.metadata, a.event_timestamp
+        FROM whatsapp_contacts c
+        LEFT JOIN (
+            SELECT ca.*
+            FROM whatsapp_contact_activity ca
+            INNER JOIN (
+                SELECT contact_id, MAX(id) as max_id
+                FROM whatsapp_contact_activity
+                GROUP BY contact_id
+            ) latest ON latest.max_id = ca.id
+        ) a ON a.contact_id = c.id
+        WHERE c.last_message_at IS NOT NULL
+        ORDER BY c.last_message_at DESC
+    `;
+    const [rows] = await pool.query(query);
+    return rows.map(r => ({
+        ...r,
+        metadata: typeof r.metadata === 'string' ? JSON.parse(r.metadata) : (r.metadata || {})
+    }));
+};
+
+const getChatMessages = async (contactId) => {
+    const query = `
+        SELECT id, campaign_id, message_id, event_type, metadata, event_timestamp
+        FROM whatsapp_contact_activity
+        WHERE contact_id = ?
+        ORDER BY event_timestamp ASC, id ASC
+    `;
+    const [rows] = await pool.query(query, [contactId]);
+
+    const messages = [];
+    const messageMap = {};
+
+    for (const act of rows) {
+        const metadata = typeof act.metadata === 'string' ? JSON.parse(act.metadata) : (act.metadata || {});
+        const msgId = act.message_id;
+
+        if (msgId) {
+            if (messageMap[msgId]) {
+                const msg = messageMap[msgId];
+                msg.status = act.event_type;
+                msg.timestamp = act.event_timestamp;
+                if (metadata.error) msg.error = metadata.error;
+            } else {
+                const isOutgoing = act.event_type !== 'replied';
+                const msg = {
+                    id: act.id,
+                    message_id: msgId,
+                    campaign_id: act.campaign_id,
+                    type: metadata.type || (isOutgoing ? 'template' : 'text'),
+                    body: metadata.body || (isOutgoing ? `Template: ${metadata.template_name || 'Campaign Template'}` : ''),
+                    status: act.event_type,
+                    isOutgoing,
+                    timestamp: act.event_timestamp,
+                    template_name: metadata.template_name || null
+                };
+                messageMap[msgId] = msg;
+                messages.push(msg);
+            }
+        } else {
+            const isOutgoing = act.event_type !== 'replied';
+            messages.push({
+                id: act.id,
+                message_id: null,
+                campaign_id: act.campaign_id,
+                type: act.event_type === 'unsubscribed' ? 'system' : 'text',
+                body: act.event_type === 'unsubscribed' ? 'User unsubscribed' : (metadata.body || `Event: ${act.event_type}`),
+                status: act.event_type,
+                isOutgoing,
+                timestamp: act.event_timestamp
+            });
+        }
+    }
+
+    return messages;
+};
+
 module.exports = {
     importContacts,
     getContacts,
     createContactList,
     getContactLists,
     deleteContactList,
-    getAttributeKeys
+    getAttributeKeys,
+    getChatThreads,
+    getChatMessages
 };
+

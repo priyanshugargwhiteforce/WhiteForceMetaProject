@@ -12,5 +12,8 @@ export default defineConfig({
         secure: false,
       },
     },
+    // allowedHosts: [
+    //   '*.ngrok-free.app' // Allow any subdomain of ngrok-free.app
+    // ]
   },
 })

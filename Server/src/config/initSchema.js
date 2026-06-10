@@ -856,7 +856,7 @@ const initSchema = async () => {
             CREATE TABLE IF NOT EXISTS whatsapp_contact_activity (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 contact_id INT NOT NULL,
-                campaign_id INT NOT NULL,
+                campaign_id INT NULL,
                 message_id VARCHAR(255),
                 event_type ENUM('sent','delivered','read','failed','replied','unsubscribed') NOT NULL,
                 metadata JSON,
@@ -867,6 +867,11 @@ const initSchema = async () => {
             )
         `);
         console.log(' - whatsapp_contact_activity table created/verified');
+
+        try {
+            await pool.query("ALTER TABLE whatsapp_contact_activity MODIFY campaign_id INT NULL");
+        } catch (e) { /* Migration might fail safely */ }
+
 
         // Indexes for whatsapp_contact_activity
         try {

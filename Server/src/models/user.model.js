@@ -34,10 +34,17 @@ const User = {
         try { await pool.query("ALTER TABLE users ADD COLUMN linkedin_access TINYINT(1) DEFAULT 0"); } catch (e) {}
         try { await pool.query("ALTER TABLE users ADD COLUMN manager_id INT NULL DEFAULT NULL"); } catch (e) {}
         try { await pool.query("ALTER TABLE users ADD CONSTRAINT fk_user_manager FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE SET NULL"); } catch (e) {}
+        try { await pool.query("ALTER TABLE users ADD COLUMN reset_token VARCHAR(255) NULL"); } catch (e) {}
+        try { await pool.query("ALTER TABLE users ADD COLUMN reset_token_expiry DATETIME NULL"); } catch (e) {}
     },
 
     async findByEmail(email) {
         const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+        return rows[0];
+    },
+
+    async findByResetToken(token) {
+        const [rows] = await pool.query('SELECT * FROM users WHERE reset_token = ? AND reset_token_expiry > ?', [token, new Date()]);
         return rows[0];
     },
 

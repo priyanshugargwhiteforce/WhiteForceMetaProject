@@ -96,6 +96,8 @@ exports.getTemplates = async (req, res) => {
         const forceSync = req.query.force === 'true';
         const configId = req.headers['x-whatsapp-config-id'] || req.query.configId;
         const templates = await whatsappService.getTemplates(forceSync, configId);
+        console.log("Templates:", templates);
+
 
         res.json({
             success: true,

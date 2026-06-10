@@ -480,5 +480,6 @@ async function updateCampaignStatsAndCheckCompletion(campaignId) {
 
 module.exports = {
   whatsappQueue,
-  whatsappWorker
+  whatsappWorker,
+  updateCampaignStatsAndCheckCompletion
 };

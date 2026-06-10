@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/Login';
 import Register from './components/Register';
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
 import Dashboard from './components/Dashboard';
 import AdAccountDetail from './components/AdAccountDetail';
 import AdAnalyzer from './components/AdAnalyzer';
@@ -23,6 +25,8 @@ import WATemplateBuilder from './components/whatsapp/WATemplateBuilder';
 import WAAnalytics from './components/whatsapp/WAAnalytics';
 import WACampaigns from './components/whatsapp/WACampaigns';
 import WASchedules from './components/whatsapp/WASchedules';
+import WAChatWindow from './components/whatsapp/WAChatWindow';
+
 import UserManagement from './components/UserManagement';
 import AllLeads from './components/AllLeads';
 import LinkedInManager from './components/linkedin/LinkedInManager';
@@ -285,6 +289,17 @@ function App() {
                             } 
                         />
                         <Route 
+                            path="/wa-chats" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="whatsapp_access">
+                                        <WAChatWindow />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+
+                        <Route 
                             path="/wa-campaigns" 
                             element={
                                 <ProtectedRoute>
@@ -404,6 +419,8 @@ function App() {
                         />
                         <Route path="/login" element={<Login />} />
                         <Route path="/register" element={<Register />} />
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route path="/reset-password/:token" element={<ResetPassword />} />
                     </Routes>
                 </Router>
             </AuthProvider>

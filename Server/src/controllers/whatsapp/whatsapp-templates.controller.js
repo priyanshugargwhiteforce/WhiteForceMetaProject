@@ -91,7 +91,7 @@ exports.getAnalytics = async (req, res) => {
  */
 exports.verifyWebhook = (req, res) => {
     try {
-        const verifyToken = process.env.WEBHOOK_VERIFY_TOKEN || 'whiteforce_whatsapp_token';
+        const verifyToken = process.env.WEBHOOK_VERIFY_TOKEN || 'WhiteForceWhatsAppAPIWebhookToken@09062026byPriyanshu';
         const mode = req.query['hub.mode'];
         const token = req.query['hub.verify_token'];
         const challenge = req.query['hub.challenge'];
@@ -99,6 +99,7 @@ exports.verifyWebhook = (req, res) => {
         if (mode && token) {
             if (mode === 'subscribe' && token === verifyToken) {
                 console.log('WhatsApp Webhook verified successfully.');
+                // console.log("line102 check here: ", mode, token, challenge);
                 return res.status(200).send(challenge);
             } else {
                 return res.sendStatus(403);
@@ -149,6 +150,48 @@ exports.receiveWebhook = async (req, res) => {
                 }
             }
 
+            // 3. Check for incoming customer messages/replies
+            if (value?.messages && Array.isArray(value.messages)) {
+                for (const msg of value.messages) {
+                    const fromPhone = msg.from; // Sender phone number
+                    const messageId = msg.id; // Unique WhatsApp message ID
+                    const timestamp = msg.timestamp; // Epoch timestamp
+                    const type = msg.type; // text, interactive, button, etc.
+
+                    let body = '';
+                    if (type === 'text' && msg.text?.body) {
+                        body = msg.text.body;
+                    } else if (type === 'interactive') {
+                        body = msg.interactive?.button_reply?.title || msg.interactive?.list_reply?.title || '[Interactive Reply]';
+                    } else if (type === 'button') {
+                        body = msg.button?.text || '[Button Click]';
+                    } else {
+                        body = `[${type} message]`;
+                    }
+
+                    // Sender profile name if present
+                    let senderName = null;
+                    if (value.contacts && Array.isArray(value.contacts)) {
+                        const contactObj = value.contacts.find(c => c.wa_id === fromPhone);
+                        if (contactObj?.profile?.name) {
+                            senderName = contactObj.profile.name;
+                        }
+                    }
+
+                    console.log(`Webhook Trigger: Incoming message from ${fromPhone} (Name: ${senderName}): "${body}"`);
+
+                    await whatsappTemplatesService.handleIncomingMessage({
+                        fromPhone,
+                        messageId,
+                        timestamp,
+                        type,
+                        body,
+                        senderName,
+                        phoneId: value.metadata?.phone_number_id
+                    });
+                }
+            }
+
             return res.status(200).send('EVENT_RECEIVED');
         }
 
@@ -191,7 +234,7 @@ exports.saveTemplateMappings = async (req, res) => {
     try {
         const { templateId } = req.params;
         const { mappingName, mappings, isDefault } = req.body;
-        
+
         if (!templateId) {
             return res.status(400).json({ success: false, message: 'Template ID is required.' });
         }

@@ -87,6 +87,7 @@ const deleteMetaTemplate = async (name, configId = null) => {
  */
 const updateMessageStatus = async (messageId, status, errorMessage = null) => {
     try {
+        // 1. Update the message status in the main logs table
         await pool.query(
             `UPDATE whatsapp_message_logs 
              SET status = ?, error_message = COALESCE(?, error_message)
@@ -94,6 +95,64 @@ const updateMessageStatus = async (messageId, status, errorMessage = null) => {
             [status, errorMessage, messageId]
         );
         console.log(`Updated WhatsApp message ID ${messageId} status to: ${status}`);
+
+        // 2. Query whatsapp_campaign_recipients to see if this message belongs to a campaign
+        const [[recipient]] = await pool.query(
+            'SELECT id, campaign_id, phone FROM whatsapp_campaign_recipients WHERE message_id = ?',
+            [messageId]
+        );
+
+        if (recipient) {
+            const { campaign_id: campaignId, phone } = recipient;
+
+            // 3. Update the campaign recipient status
+            await pool.query(
+                `UPDATE whatsapp_campaign_recipients 
+                 SET status = ?, error_message = COALESCE(?, error_message)
+                 WHERE message_id = ?`,
+                [status, errorMessage, messageId]
+            );
+            console.log(`Updated recipient status in Campaign ID ${campaignId} to: ${status}`);
+
+            // 4. Update the campaign stats and recalculate completion
+            const { updateCampaignStatsAndCheckCompletion } = require('./whatsapp-queue.service');
+            await updateCampaignStatsAndCheckCompletion(campaignId);
+
+            // 5. Check if contact exists to log activity and recalculate engagement score
+            const normalizedPhone = String(phone).replace(/[^0-9]/g, '');
+            const [[contact]] = await pool.query(
+                'SELECT id FROM whatsapp_contacts WHERE phone = ?',
+                [normalizedPhone]
+            );
+
+            if (contact) {
+                const contactId = contact.id;
+
+                // Log the status activity (delivered, read, failed, etc.)
+                let eventType = 'sent';
+                if (status === 'delivered') eventType = 'delivered';
+                else if (status === 'read') eventType = 'read';
+                else if (status === 'failed') eventType = 'failed';
+
+                // Insert into contact activity
+                await pool.query(
+                    `INSERT INTO whatsapp_contact_activity (contact_id, campaign_id, message_id, event_type, metadata, event_timestamp)
+                     VALUES (?, ?, ?, ?, ?, NOW())`,
+                    [
+                        contactId,
+                        campaignId,
+                        messageId,
+                        eventType,
+                        JSON.stringify({ status, error: errorMessage })
+                    ]
+                );
+
+                // Recalculate engagement score
+                const { recalculateContactEngagement } = require('./whatsapp-contacts-intelligence.service');
+                await recalculateContactEngagement(contactId);
+                console.log(`[Webhook Status] Updated contact ID ${contactId} engagement score due to status event: ${status}`);
+            }
+        }
     } catch (error) {
         console.error('Error updating WhatsApp message log status:', error.message);
     }
@@ -265,6 +324,93 @@ const useTemplateMapping = async (templateId, mappingId) => {
     return { success: true, affectedRows: result.affectedRows };
 };
 
+const handleIncomingMessage = async (msgData) => {
+    const { fromPhone, messageId, timestamp, type, body, senderName, phoneId } = msgData;
+
+    try {
+        // 1. Normalize the phone number
+        const normalized = String(fromPhone).replace(/[^0-9]/g, '');
+        if (!normalized || normalized.length < 10) {
+            console.warn(`[Webhook] Invalid phone number received: ${fromPhone}`);
+            return;
+        }
+
+        // 2. Find or create the contact in whatsapp_contacts
+        let contactId;
+        const [[contact]] = await pool.query(
+            'SELECT id FROM whatsapp_contacts WHERE phone = ?',
+            [normalized]
+        );
+
+        if (contact) {
+            contactId = contact.id;
+            // Update last_message_at and ensure opt_in_status is true if they messaged us
+            await pool.query(
+                `UPDATE whatsapp_contacts 
+                 SET last_message_at = NOW(), 
+                     opt_in_status = TRUE, 
+                     status = 'active',
+                     opt_in_date = COALESCE(opt_in_date, NOW())
+                 WHERE id = ?`,
+                [contactId]
+            );
+        } else {
+            // Create a new contact
+            const [insertRes] = await pool.query(
+                `INSERT INTO whatsapp_contacts (phone, name, opt_in_status, opt_in_date, last_message_at, status)
+                 VALUES (?, ?, TRUE, NOW(), NOW(), 'active')`,
+                [normalized, senderName || `WhatsApp User ${normalized.slice(-4)}`]
+            );
+            contactId = insertRes.insertId;
+            console.log(`[Webhook] Created new contact ID ${contactId} for phone ${normalized}`);
+        }
+
+        // 3. Find the most recent campaign sent to this contact to associate this reply (if any)
+        const [[lastCampaign]] = await pool.query(
+            `SELECT campaign_id FROM whatsapp_campaign_recipients
+             WHERE phone = ? AND status IN ('sent', 'delivered', 'read')
+             ORDER BY sent_at DESC LIMIT 1`,
+            [normalized]
+        );
+        const campaignId = lastCampaign ? lastCampaign.campaign_id : null;
+
+        // 4. Log the reply in whatsapp_contact_activity
+        const eventTimestamp = timestamp
+            ? new Date(timestamp * 1000).toISOString().slice(0, 19).replace('T', ' ')
+            : new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+        await pool.query(
+            `INSERT INTO whatsapp_contact_activity (contact_id, campaign_id, message_id, event_type, metadata, event_timestamp)
+             VALUES (?, ?, ?, 'replied', ?, ?)`,
+            [
+                contactId,
+                campaignId,
+                messageId,
+                JSON.stringify({ body, type, raw_phone: fromPhone, waba_phone_id: phoneId }),
+                eventTimestamp
+            ]
+        );
+
+        // 5. If there is a campaign associated, update its recipient record to 'replied'
+        if (campaignId) {
+            await pool.query(
+                `UPDATE whatsapp_campaign_recipients 
+                 SET status = 'replied' 
+                 WHERE campaign_id = ? AND phone = ?`,
+                [campaignId, normalized]
+            );
+        }
+
+        // 6. Recalculate engagement score for the contact
+        const whatsappContactsIntelligenceService = require('./whatsapp-contacts-intelligence.service');
+        await whatsappContactsIntelligenceService.recalculateContactEngagement(contactId);
+
+        console.log(`[Webhook] Successfully processed incoming message from ${normalized} for contact ID ${contactId}`);
+    } catch (error) {
+        console.error('[Webhook] Error handling incoming message:', error.message);
+    }
+};
+
 module.exports = {
     createMetaTemplate,
     deleteMetaTemplate,
@@ -275,5 +421,7 @@ module.exports = {
     getTemplateMappings,
     saveTemplateMappings,
     deleteTemplateMapping,
-    useTemplateMapping
+    useTemplateMapping,
+    handleIncomingMessage
 };
+

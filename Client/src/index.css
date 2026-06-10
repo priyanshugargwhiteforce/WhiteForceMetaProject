@@ -272,3 +272,115 @@ input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 4px var(--primary-glow);
 }
+
+/* Float animation for brand symbols */
+@keyframes float {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(1deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+.animate-float {
+  animation: float 5s ease-in-out infinite;
+}
+
+/* Custom premium SVG animations */
+@keyframes drawLine {
+  to { stroke-dashoffset: 0; }
+}
+.animate-draw-line {
+  animation: drawLine 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.animate-draw-line-delay {
+  animation: drawLine 2s cubic-bezier(0.4, 0, 0.2, 1) 0.5s forwards;
+}
+
+@keyframes growBar {
+  from { transform: scaleY(0); transform-origin: bottom; }
+  to { transform: scaleY(1); transform-origin: bottom; }
+}
+.animate-grow-bar-1 { animation: growBar 0.8s ease-out forwards; }
+.animate-grow-bar-2 { animation: growBar 1s ease-out forwards; }
+.animate-grow-bar-3 { animation: growBar 1.2s ease-out forwards; }
+.animate-grow-bar-4 { animation: growBar 1.4s ease-out forwards; }
+.animate-grow-bar-5 { animation: growBar 1.6s ease-out forwards; }
+
+@keyframes nodePulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 1; filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.8)); }
+}
+.animate-node-pulse {
+  animation: nodePulse 3s infinite ease-in-out;
+  transform-origin: center;
+}
+.animate-node-pulse-delay {
+  animation: nodePulse 3s infinite ease-in-out 1.5s;
+  transform-origin: center;
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spinSlow 20s linear infinite;
+  transform-origin: center;
+}
+.animate-spin-reverse {
+  animation: spinSlow 15s linear infinite reverse;
+  transform-origin: center;
+}
+
+@keyframes radar {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 0.3; }
+  100% { transform: scale(0.9); opacity: 0.8; }
+}
+.animate-radar-1 {
+  animation: radar 4s infinite ease-in-out;
+  transform-origin: center;
+}
+.animate-radar-2 {
+  animation: radar 4s infinite ease-in-out 2s;
+  transform-origin: center;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+.animate-dash {
+  animation: dash 1s linear infinite;
+}
+
+@keyframes pingSlow {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+.animate-ping-slow {
+  animation: pingSlow 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+  transform-origin: center;
+}
+
+@keyframes shackleOpen {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px) rotate(-10deg); }
+}
+.animate-shackle-open {
+  animation: shackleOpen 4s ease-in-out infinite;
+  transform-origin: 185px 130px;
+}
+
+/* Glassmorphism improvements */
+.auth-card-glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(25px) saturate(180%);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  border: 1px solid var(--border-main);
+  border-radius: 24px;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.08);
+}
+.dark .auth-card-glass {
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.4);
+}

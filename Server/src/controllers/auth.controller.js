@@ -1,6 +1,8 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/user.model');
+const sendEmail = require('../services/mail.service');
 
 const generateToken = (id) => {
     if (!process.env.JWT_SECRET) {
@@ -73,6 +75,100 @@ exports.getMe = async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
         res.status(200).json({ success: true, user });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'Please provide an email address' });
+        }
+
+        const user = await User.findByEmail(email);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'No account found with this email' });
+        }
+
+        // Specific condition: admin cannot reset password via email
+        if (user.role === 'admin') {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Password reset via email is disabled for Admin accounts.' 
+            });
+        }
+
+        // Generate token
+        const resetToken = crypto.randomBytes(20).toString('hex');
+        const tokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+
+        // Update user
+        await User.update(user.id, {
+            reset_token: resetToken,
+            reset_token_expiry: tokenExpiry
+        });
+
+        // Construct reset URL
+        const frontendUrl = process.env.CLIENT_URL || req.headers.origin || 'http://localhost:5173';
+        const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+
+        // Send email
+        const mailResult = await sendEmail({
+            email: user.email,
+            subject: 'Password Reset Request',
+            resetUrl,
+            username: user.username
+        });
+
+        const responseObj = {
+            success: true,
+            message: 'Password reset email sent successfully.'
+        };
+
+        // If in development mode and SMTP not configured, return reset token in response to make testing easier!
+        if (process.env.NODE_ENV === 'development' && mailResult.loggedToConsole) {
+            responseObj.testResetUrl = resetUrl;
+            responseObj.debug = 'SMTP not configured, reset URL printed to server console and sent in this response.';
+        }
+
+        res.status(200).json(responseObj);
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.resetPassword = async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { password } = req.body;
+
+        if (!password) {
+            return res.status(400).json({ success: false, message: 'Please provide a new password' });
+        }
+
+        // Find user by token
+        const user = await User.findByResetToken(token);
+        if (!user) {
+            return res.status(400).json({ success: false, message: 'Invalid or expired password reset token' });
+        }
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Update user password and clear token fields
+        await User.update(user.id, {
+            password: hashedPassword,
+            reset_token: null,
+            reset_token_expiry: null
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Password has been reset successfully. You can now log in.'
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

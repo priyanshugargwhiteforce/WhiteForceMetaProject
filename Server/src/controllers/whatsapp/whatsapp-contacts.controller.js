@@ -1,5 +1,9 @@
 const contactsService = require('../../services/whatsapp-contacts.service');
 const intelligenceService = require('../../services/whatsapp-contacts-intelligence.service');
+const { pool } = require('../../config/db');
+const axios = require('axios');
+const whatsappService = require('../../services/whatsapp.service');
+
 
 exports.importContacts = async (req, res) => {
     try {
@@ -100,7 +104,7 @@ exports.getContactProfile = async (req, res) => {
     } catch (error) {
         console.error('Get contact profile error:', error.message);
         res.status(error.message.includes('not found') ? 404 : 500)
-           .json({ success: false, message: error.message });
+            .json({ success: false, message: error.message });
     }
 };
 
@@ -123,7 +127,7 @@ exports.toggleOptIn = async (req, res) => {
     } catch (error) {
         console.error('Toggle opt-in error:', error.message);
         res.status(error.message.includes('not found') ? 404 : 500)
-           .json({ success: false, message: error.message });
+            .json({ success: false, message: error.message });
     }
 };
 
@@ -135,7 +139,7 @@ exports.archiveContact = async (req, res) => {
     } catch (error) {
         console.error('Archive contact error:', error.message);
         res.status(error.message.includes('not found') ? 404 : 400)
-           .json({ success: false, message: error.message });
+            .json({ success: false, message: error.message });
     }
 };
 
@@ -147,7 +151,113 @@ exports.restoreContact = async (req, res) => {
     } catch (error) {
         console.error('Restore contact error:', error.message);
         res.status(error.message.includes('not found') ? 404 : 400)
-           .json({ success: false, message: error.message });
+            .json({ success: false, message: error.message });
     }
 };
+
+exports.getChatThreads = async (req, res) => {
+    try {
+        const threads = await contactsService.getChatThreads();
+        res.status(200).json({ success: true, threads });
+    } catch (error) {
+        console.error('Get chat threads error:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.getChatMessages = async (req, res) => {
+    try {
+        const { contactId } = req.params;
+        const messages = await contactsService.getChatMessages(parseInt(contactId));
+        res.status(200).json({ success: true, messages });
+    } catch (error) {
+        console.error('Get chat messages error:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.sendFreeTextChat = async (req, res) => {
+    try {
+        const { contactId } = req.params;
+        const { message } = req.body;
+        const configId = req.headers['x-whatsapp-config-id'] || req.query.configId;
+
+        if (!message || message.trim() === '') {
+            return res.status(400).json({ success: false, message: 'Message body cannot be empty.' });
+        }
+
+        // 1. Resolve contact details (phone number)
+        const [[contact]] = await pool.query('SELECT phone FROM whatsapp_contacts WHERE id = ?', [parseInt(contactId)]);
+        if (!contact) {
+            return res.status(404).json({ success: false, message: `Contact with ID ${contactId} not found.` });
+        }
+        const recipient = contact.phone;
+
+        // 2. Resolve credentials using whatsappService
+        const { token, phoneId } = await whatsappService.resolveWhatsAppConfig(configId);
+        if (!token || !phoneId) {
+            return res.status(400).json({ success: false, message: 'Missing WhatsApp credentials configuration.' });
+        }
+
+        // 3. Send Free-Text message to Meta Cloud API
+        const url = `https://graph.facebook.com/v24.0/${phoneId}/messages`;
+        const payload = {
+            messaging_product: "whatsapp",
+            recipient_type: "individual",
+            to: recipient.trim(),
+            type: "text",
+            text: {
+                body: message
+            }
+        };
+
+        const response = await axios.post(url, payload, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const messageId = response.data.messages?.[0]?.id;
+
+        // 4. Log the sent message
+        await pool.query(
+            `INSERT INTO whatsapp_message_logs (phone_number_id, recipient_number, template_name, status, message_id)
+             VALUES (?, ?, ?, ?, ?)`,
+            [phoneId, recipient.trim(), 'Free-Text Chat', 'sent', messageId]
+        );
+
+        // Update contact last_message_at
+        await pool.query(
+            `UPDATE whatsapp_contacts SET last_message_at = NOW() WHERE id = ?`,
+            [parseInt(contactId)]
+        );
+
+        // Log the activity event 'sent' in whatsapp_contact_activity
+        await pool.query(
+            `INSERT INTO whatsapp_contact_activity (contact_id, campaign_id, message_id, event_type, metadata, event_timestamp)
+             VALUES (?, NULL, ?, 'sent', ?, NOW())`,
+            [
+                parseInt(contactId),
+                messageId,
+                JSON.stringify({ body: message, type: 'text', freeText: true })
+            ]
+        );
+
+        // 5. Recalculate engagement score
+        const { recalculateContactEngagement } = require('../../services/whatsapp-contacts-intelligence.service');
+        await recalculateContactEngagement(parseInt(contactId));
+
+        res.status(200).json({
+            success: true,
+            messageId,
+            status: 'sent'
+        });
+    } catch (error) {
+        console.error('Send free-text chat error:', error.response?.data || error.message);
+        const errDetails = error.response?.data?.error?.message || error.message;
+        res.status(500).json({ success: false, message: errDetails });
+    }
+};
+
 

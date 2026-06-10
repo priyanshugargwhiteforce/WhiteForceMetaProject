@@ -48,6 +48,12 @@ router.delete('/channels/updates/:updateId', whatsappChannelsController.deleteDa
 router.get('/contacts', whatsappContactsController.getContacts);
 router.get('/contacts/attribute-keys', whatsappContactsController.getAttributeKeys);
 
+
+// Chat / Message Window Routes
+router.get('/chats', whatsappContactsController.getChatThreads);
+router.get('/chats/:contactId/messages', whatsappContactsController.getChatMessages);
+router.post('/chats/:contactId/send', whatsappContactsController.sendFreeTextChat);
+
 // Sprint 9: Contact Intelligence Routes — MUST be before /:id param routes
 router.get('/contacts/segments', whatsappContactsController.getEngagementSegments);
 

@@ -21,6 +21,50 @@ const resolveWhatsAppConfig = async (configId) => {
             };
         }
     }
+
+    // Fallback: If no configId is provided or not found, check if process.env has credentials.
+    // If process.env is missing META_ACCESS_TOKEN, fall back to the matching DB config or the first configuration in the database.
+    if (!process.env.META_ACCESS_TOKEN || process.env.META_ACCESS_TOKEN.trim() === '') {
+        if (process.env.WABA_ID) {
+            const [[matchedConfig]] = await pool.query(
+                'SELECT id, phone_number_id, waba_id, access_token FROM whatsapp_configs WHERE waba_id = ?',
+                [process.env.WABA_ID]
+            );
+            if (matchedConfig) {
+                return {
+                    token: matchedConfig.access_token,
+                    phoneId: matchedConfig.phone_number_id,
+                    wabaId: matchedConfig.waba_id,
+                    configId: matchedConfig.id
+                };
+            }
+        }
+
+        const [[firstConfig]] = await pool.query('SELECT id, phone_number_id, waba_id, access_token FROM whatsapp_configs ORDER BY id ASC LIMIT 1');
+        if (firstConfig) {
+            return {
+                token: firstConfig.access_token,
+                phoneId: firstConfig.phone_number_id,
+                wabaId: firstConfig.waba_id,
+                configId: firstConfig.id
+            };
+        }
+    }
+
+    // // Fallback: If no configId is provided or not found, check if process.env has credentials.
+    // // If process.env is missing META_ACCESS_TOKEN, fall back to the first configuration in the database.
+    // if (!process.env.META_ACCESS_TOKEN || process.env.META_ACCESS_TOKEN.trim() === '') {
+    //     const [[firstConfig]] = await pool.query('SELECT id, phone_number_id, waba_id, access_token FROM whatsapp_configs ORDER BY id ASC LIMIT 1');
+    //     if (firstConfig) {
+    //         return {
+    //             token: firstConfig.access_token,
+    //             phoneId: firstConfig.phone_number_id,
+    //             wabaId: firstConfig.waba_id,
+    //             configId: firstConfig.id
+    //         };
+    //     }
+    // }
+
     return {
         token: process.env.META_ACCESS_TOKEN,
         phoneId: process.env.PHONE_NUMBER_ID,
@@ -28,6 +72,7 @@ const resolveWhatsAppConfig = async (configId) => {
         configId: 0
     };
 };
+
 
 // Fetch WhatsApp Business Phone details and cache in DB
 const syncWabaDetails = async (configId = null) => {
