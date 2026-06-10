@@ -234,7 +234,7 @@ exports.sendFreeTextChat = async (req, res) => {
         );
 
         // Log the activity event 'sent' in whatsapp_contact_activity
-        await pool.query(
+        const [activityRes] = await pool.query(
             `INSERT INTO whatsapp_contact_activity (contact_id, campaign_id, message_id, event_type, metadata, event_timestamp)
              VALUES (?, NULL, ?, 'sent', ?, NOW())`,
             [
@@ -243,10 +243,31 @@ exports.sendFreeTextChat = async (req, res) => {
                 JSON.stringify({ body: message, type: 'text', freeText: true })
             ]
         );
+        const activityId = activityRes.insertId;
 
         // 5. Recalculate engagement score
         const { recalculateContactEngagement } = require('../../services/whatsapp-contacts-intelligence.service');
         await recalculateContactEngagement(parseInt(contactId));
+
+        // Broadcast the outgoing message via SSE
+        try {
+            const eventsService = require('../../services/whatsapp-events.service');
+            eventsService.broadcast('message', {
+                contactId: parseInt(contactId),
+                message: {
+                    id: activityId,
+                    message_id: messageId,
+                    campaign_id: null,
+                    type: 'text',
+                    body: message,
+                    status: 'sent',
+                    isOutgoing: true,
+                    timestamp: new Date().toISOString()
+                }
+            });
+        } catch (sseErr) {
+            console.error('[SSE] Failed to broadcast outgoing message:', sseErr.message);
+        }
 
         res.status(200).json({
             success: true,
@@ -258,6 +279,11 @@ exports.sendFreeTextChat = async (req, res) => {
         const errDetails = error.response?.data?.error?.message || error.message;
         res.status(500).json({ success: false, message: errDetails });
     }
+};
+
+exports.getChatEvents = (req, res) => {
+    const eventsService = require('../../services/whatsapp-events.service');
+    eventsService.addClient(req, res);
 };
 
 

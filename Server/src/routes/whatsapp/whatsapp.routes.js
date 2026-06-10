@@ -50,6 +50,7 @@ router.get('/contacts/attribute-keys', whatsappContactsController.getAttributeKe
 
 
 // Chat / Message Window Routes
+router.get('/chats/events', whatsappContactsController.getChatEvents);
 router.get('/chats', whatsappContactsController.getChatThreads);
 router.get('/chats/:contactId/messages', whatsappContactsController.getChatMessages);
 router.post('/chats/:contactId/send', whatsappContactsController.sendFreeTextChat);

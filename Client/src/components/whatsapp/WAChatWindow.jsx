@@ -36,6 +36,11 @@ const WAChatWindow = () => {
   const [selectedConfigId, setSelectedConfigId] = useState(localStorage.getItem('selectedWhatsAppConfigId') || '');
 
   const messagesEndRef = useRef(null);
+  const selectedThreadRef = useRef(selectedThread);
+
+  useEffect(() => {
+    selectedThreadRef.current = selectedThread;
+  }, [selectedThread]);
 
   useEffect(() => {
     fetchConfigs();
@@ -50,6 +55,82 @@ const WAChatWindow = () => {
     };
     window.addEventListener('config-changed', handleConfigChanged);
     return () => window.removeEventListener('config-changed', handleConfigChanged);
+  }, []);
+
+  // Establish Server-Sent Events (SSE) connection for real-time chat updates
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const eventSource = new EventSource(`/api/whatsapp/chats/events?token=${token}`);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === 'ping') return;
+
+        console.log('[SSE] Received real-time update:', payload);
+
+        if (payload.type === 'message') {
+          const { contactId, message } = payload.data;
+          const currentSelected = selectedThreadRef.current;
+
+          // 1. If currently viewing this contact, append the message
+          if (currentSelected && currentSelected.id === contactId) {
+            setMessages(prev => {
+              const alreadyExists = prev.some(m => 
+                (message.message_id && m.message_id === message.message_id) || 
+                m.id === message.id
+              );
+              if (alreadyExists) return prev;
+              return [...prev, message];
+            });
+          }
+
+          // 2. Refresh threads list to update sidebar message preview & sort order
+          fetchThreads();
+        }
+
+        if (payload.type === 'status') {
+          const { contactId, messageId, status, error } = payload.data;
+          const currentSelected = selectedThreadRef.current;
+
+          // 1. If currently viewing this contact, update status checkmarks
+          if (currentSelected && currentSelected.id === contactId) {
+            setMessages(prev =>
+              prev.map(m => {
+                if (m.message_id === messageId) {
+                  return { ...m, status, error: error || m.error };
+                }
+                return m;
+              })
+            );
+          }
+
+          // 2. Update status ticks in the threads list sidebar inline
+          setThreads(prev =>
+            prev.map(t => {
+              if (t.id === contactId) {
+                return { ...t, event_type: status };
+              }
+              return t;
+            })
+          );
+        }
+      } catch (err) {
+        console.error('[SSE] Error processing SSE payload:', err);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error('[SSE] EventSource connection encountered error. Reconnecting...', err);
+      eventSource.close();
+    };
+
+    return () => {
+      console.log('[SSE] Closing EventSource connection.');
+      eventSource.close();
+    };
   }, []);
 
   useEffect(() => {

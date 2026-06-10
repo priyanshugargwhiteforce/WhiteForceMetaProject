@@ -151,6 +151,95 @@ const updateMessageStatus = async (messageId, status, errorMessage = null) => {
                 const { recalculateContactEngagement } = require('./whatsapp-contacts-intelligence.service');
                 await recalculateContactEngagement(contactId);
                 console.log(`[Webhook Status] Updated contact ID ${contactId} engagement score due to status event: ${status}`);
+
+                // Broadcast status update via SSE
+                try {
+                    const eventService = require('./whatsapp-events.service');
+                    eventService.broadcast('status', {
+                        contactId,
+                        messageId,
+                        status: eventType,
+                        error: errorMessage
+                    });
+                } catch (sseErr) {
+                    console.error('[SSE] Failed to broadcast status update:', sseErr.message);
+                }
+            }
+        } else {
+            // Message is not from a campaign recipient. It could be a direct chat message.
+            // 1. Search whatsapp_contact_activity for the sent event of this messageId to get contactId.
+            const [[activityRecord]] = await pool.query(
+                'SELECT contact_id, campaign_id FROM whatsapp_contact_activity WHERE message_id = ? LIMIT 1',
+                [messageId]
+            );
+
+            let contactId = null;
+            let campaignId = null;
+
+            if (activityRecord) {
+                contactId = activityRecord.contact_id;
+                campaignId = activityRecord.campaign_id;
+            } else {
+                // Fallback: search whatsapp_message_logs to find recipient_number
+                const [[messageLog]] = await pool.query(
+                    'SELECT recipient_number FROM whatsapp_message_logs WHERE message_id = ? LIMIT 1',
+                    [messageId]
+                );
+                if (messageLog) {
+                    const normalizedPhone = String(messageLog.recipient_number).replace(/[^0-9]/g, '');
+                    const [[contact]] = await pool.query(
+                        'SELECT id FROM whatsapp_contacts WHERE phone = ?',
+                        [normalizedPhone]
+                    );
+                    if (contact) {
+                        contactId = contact.id;
+                    }
+                }
+            }
+
+            if (contactId) {
+                let eventType = 'sent';
+                if (status === 'delivered') eventType = 'delivered';
+                else if (status === 'read') eventType = 'read';
+                else if (status === 'failed') eventType = 'failed';
+
+                // Check if this status event is already logged to prevent duplicates
+                const [[alreadyLogged]] = await pool.query(
+                    'SELECT id FROM whatsapp_contact_activity WHERE message_id = ? AND event_type = ?',
+                    [messageId, eventType]
+                );
+
+                if (!alreadyLogged) {
+                    await pool.query(
+                        `INSERT INTO whatsapp_contact_activity (contact_id, campaign_id, message_id, event_type, metadata, event_timestamp)
+                         VALUES (?, ?, ?, ?, ?, NOW())`,
+                        [
+                            contactId,
+                            campaignId, // will be null for direct chats
+                            messageId,
+                            eventType,
+                            JSON.stringify({ status, error: errorMessage })
+                        ]
+                    );
+
+                    // Recalculate engagement score
+                    const { recalculateContactEngagement } = require('./whatsapp-contacts-intelligence.service');
+                    await recalculateContactEngagement(contactId);
+                    console.log(`[Webhook Status] Updated direct contact ID ${contactId} engagement score due to status event: ${status}`);
+
+                    // Broadcast the status update via SSE
+                    try {
+                        const eventService = require('./whatsapp-events.service');
+                        eventService.broadcast('status', {
+                            contactId,
+                            messageId,
+                            status: eventType,
+                            error: errorMessage
+                        });
+                    } catch (sseErr) {
+                        console.error('[SSE] Failed to broadcast status update:', sseErr.message);
+                    }
+                }
             }
         }
     } catch (error) {
@@ -379,7 +468,7 @@ const handleIncomingMessage = async (msgData) => {
             ? new Date(timestamp * 1000).toISOString().slice(0, 19).replace('T', ' ')
             : new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-        await pool.query(
+        const [insertRes] = await pool.query(
             `INSERT INTO whatsapp_contact_activity (contact_id, campaign_id, message_id, event_type, metadata, event_timestamp)
              VALUES (?, ?, ?, 'replied', ?, ?)`,
             [
@@ -390,6 +479,7 @@ const handleIncomingMessage = async (msgData) => {
                 eventTimestamp
             ]
         );
+        const activityId = insertRes.insertId;
 
         // 5. If there is a campaign associated, update its recipient record to 'replied'
         if (campaignId) {
@@ -399,6 +489,26 @@ const handleIncomingMessage = async (msgData) => {
                  WHERE campaign_id = ? AND phone = ?`,
                 [campaignId, normalized]
             );
+        }
+
+        // Broadcast the incoming message via SSE
+        try {
+            const eventService = require('./whatsapp-events.service');
+            eventService.broadcast('message', {
+                contactId,
+                message: {
+                    id: activityId,
+                    message_id: messageId,
+                    campaign_id: campaignId,
+                    type: type || 'text',
+                    body: body,
+                    status: 'replied',
+                    isOutgoing: false,
+                    timestamp: new Date().toISOString()
+                }
+            });
+        } catch (sseErr) {
+            console.error('[SSE] Failed to broadcast incoming message:', sseErr.message);
         }
 
         // 6. Recalculate engagement score for the contact

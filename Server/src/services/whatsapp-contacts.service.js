@@ -339,7 +339,6 @@ const getChatMessages = async (contactId) => {
             if (messageMap[msgId]) {
                 const msg = messageMap[msgId];
                 msg.status = act.event_type;
-                msg.timestamp = act.event_timestamp;
                 if (metadata.error) msg.error = metadata.error;
             } else {
                 const isOutgoing = act.event_type !== 'replied';
