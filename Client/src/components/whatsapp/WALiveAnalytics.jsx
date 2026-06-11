@@ -147,12 +147,12 @@ const WALiveAnalytics = ({ selectedConfigId }) => {
   const aggregateDeliveryRate = totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Date Range Selector Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900/40 p-5 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm dark:shadow-md">
-        <div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Live Account Analytics</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Real-time daily message sent & delivered metrics directly from Meta Graph API</p>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900/40 p-4 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm dark:shadow-md">
+        <div className="flex flex-col items-start leading-none">
+          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">Live Account Analytics</h3>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold mt-1">Real-time daily message sent & delivered metrics directly from Meta Graph API</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -169,7 +169,7 @@ const WALiveAnalytics = ({ selectedConfigId }) => {
                 key={r.id}
                 onClick={() => setDateRange(r.id)}
                 className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${dateRange === r.id
-                  ? 'bg-indigo-600 dark:bg-indigo-500 text-white shadow-sm'
+                  ? 'bg-emerald-600 dark:bg-emerald-500 text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
 
 
@@ -184,7 +184,7 @@ const WALiveAnalytics = ({ selectedConfigId }) => {
           <button
             onClick={fetchLiveAnalytics}
             disabled={loading}
-            className="p-2.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 rounded-xl transition-all border border-indigo-500/20 disabled:opacity-50"
+            className="p-2.5 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 rounded-xl transition-all border border-emerald-500/20 disabled:opacity-50"
 
 
             title="Refresh Live Data"
@@ -228,7 +228,7 @@ const WALiveAnalytics = ({ selectedConfigId }) => {
           <button
             type="submit"
             disabled={loading}
-            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/10"
+            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/10"
           >
             Apply Range
           </button>
@@ -360,7 +360,7 @@ const WALiveAnalytics = ({ selectedConfigId }) => {
                           <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${dp.deliveryRate >= 90
                             ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                             : dp.deliveryRate >= 75
-                              ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                               : dp.deliveryRate > 0
                                 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                                 : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
@@ -387,9 +387,9 @@ const WALiveAnalytics = ({ selectedConfigId }) => {
 
 const LiveKPICard = ({ title, value, subtext, icon: Icon, color }) => {
   const colorMap = {
-    indigo: 'from-indigo-500/10 to-indigo-500/5 text-indigo-400 border-indigo-500/10',
+    indigo: 'from-emerald-500/10 to-emerald-500/5 text-emerald-400 border-emerald-500/10',
     emerald: 'from-emerald-500/10 to-emerald-500/5 text-emerald-400 border-emerald-500/10',
-    blue: 'from-blue-500/10 to-blue-500/5 text-blue-400 border-blue-500/10',
+    blue: 'from-emerald-500/10 to-emerald-500/5 text-emerald-400 border-emerald-500/10',
   };
 
   return (

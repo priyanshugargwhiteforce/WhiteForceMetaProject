@@ -208,6 +208,7 @@ const Sidebar = () => {
             label="WhatsApp Manager"
             open={openWhatsApp}
             onToggle={() => setOpenWhatsApp(!openWhatsApp)}
+            colorScheme="whatsapp"
           >
             <NavItem
               icon={Globe}
@@ -215,6 +216,7 @@ const Sidebar = () => {
               active={isActive('/whatsapp-manager')}
               onClick={() => navigate('/whatsapp-manager')}
               isSubItem={true}
+              colorScheme="whatsapp"
             />
             <NavItem
               icon={TrendingUp}
@@ -222,6 +224,7 @@ const Sidebar = () => {
               active={isActive('/wa-channels')}
               onClick={() => navigate('/wa-channels')}
               isSubItem={true}
+              colorScheme="whatsapp"
             />
             <NavItem
               icon={FileText}
@@ -229,6 +232,7 @@ const Sidebar = () => {
               active={isActive('/wa-templates')}
               onClick={() => navigate('/wa-templates')}
               isSubItem={true}
+              colorScheme="whatsapp"
             />
             <NavItem
               icon={Target}
@@ -236,6 +240,7 @@ const Sidebar = () => {
               active={isActive('/wa-campaigns')}
               onClick={() => navigate('/wa-campaigns')}
               isSubItem={true}
+              colorScheme="whatsapp"
             />
             <NavItem
               icon={Calendar}
@@ -243,6 +248,7 @@ const Sidebar = () => {
               active={isActive('/wa-schedules')}
               onClick={() => navigate('/wa-schedules')}
               isSubItem={true}
+              colorScheme="whatsapp"
             />
             <NavItem
               icon={Send}
@@ -250,6 +256,7 @@ const Sidebar = () => {
               active={isActive('/send-message')}
               onClick={() => navigate('/send-message')}
               isSubItem={true}
+              colorScheme="whatsapp"
             />
             <NavItem
               icon={Users}
@@ -257,6 +264,7 @@ const Sidebar = () => {
               active={isActive('/wa-contacts')}
               onClick={() => navigate('/wa-contacts')}
               isSubItem={true}
+              colorScheme="whatsapp"
             />
             <NavItem
               icon={MessageSquare}
@@ -264,6 +272,7 @@ const Sidebar = () => {
               active={isActive('/wa-chats')}
               onClick={() => navigate('/wa-chats')}
               isSubItem={true}
+              colorScheme="whatsapp"
             />
             <NavItem
               icon={PieChart}
@@ -271,6 +280,7 @@ const Sidebar = () => {
               active={isActive('/wa-analytics')}
               onClick={() => navigate('/wa-analytics')}
               isSubItem={true}
+              colorScheme="whatsapp"
             />
           </NavDropdown>
 
@@ -348,6 +358,7 @@ const Sidebar = () => {
                     active={isActive('/settings/whatsapp')}
                     onClick={() => navigate('/settings/whatsapp')}
                     isSubItem={true}
+                    colorScheme="whatsapp"
                   />
                 </>
               )}
@@ -376,7 +387,7 @@ const Sidebar = () => {
   );
 };
 
-const NavDropdown = ({ icon: Icon, label, open, onToggle, children }) => (
+const NavDropdown = ({ icon: Icon, label, open, onToggle, colorScheme = 'blue', children }) => (
   <div className="mb-1">
     <button
       onClick={onToggle}
@@ -384,10 +395,10 @@ const NavDropdown = ({ icon: Icon, label, open, onToggle, children }) => (
         }`}
     >
       <div className="flex items-center">
-        <Icon className={`w-5 h-5 mr-3 transition-colors ${open ? 'text-blue-500' : 'group-hover:text-blue-500'}`} />
+        <Icon className={`w-5 h-5 mr-3 transition-colors ${open ? (colorScheme === 'whatsapp' ? 'text-emerald-500' : 'text-blue-500') : (colorScheme === 'whatsapp' ? 'group-hover:text-emerald-500' : 'group-hover:text-blue-500')}`} />
         <span className="font-semibold text-sm">{label}</span>
       </div>
-      <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${open ? 'rotate-180 text-blue-500' : ''}`} />
+      <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${open ? (colorScheme === 'whatsapp' ? 'rotate-180 text-emerald-500' : 'rotate-180 text-blue-500') : ''}`} />
     </button>
     <div className={`overflow-hidden transition-all duration-300 ease-in-out ${open ? 'max-h-[500px] opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
       <div className="pl-4 pr-2 py-1 space-y-1 border-l-2 border-slate-100 dark:border-white/5 ml-6">
@@ -397,25 +408,29 @@ const NavDropdown = ({ icon: Icon, label, open, onToggle, children }) => (
   </div>
 );
 
-const NavItem = ({ icon: Icon, label, active = false, onClick, isSubItem = false, badge = null }) => (
+const NavItem = ({ icon: Icon, label, active = false, onClick, isSubItem = false, badge = null, colorScheme = 'blue' }) => (
   <button
     onClick={onClick}
     className={`flex items-center w-full transition-all duration-300 group relative ${isSubItem ? 'px-3 py-2.5 rounded-xl' : 'px-4 py-3 rounded-2xl'
       } ${active
-        ? 'bg-gradient-to-r from-blue-600/20 to-indigo-600/10 text-blue-600 dark:text-white border border-blue-500/20'
-        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-blue-600 dark:hover:text-white border border-transparent'
+        ? (colorScheme === 'whatsapp'
+          ? 'bg-gradient-to-r from-emerald-600/20 to-teal-600/10 text-emerald-600 dark:text-white border border-emerald-500/20'
+          : 'bg-gradient-to-r from-blue-600/20 to-indigo-600/10 text-blue-600 dark:text-white border border-blue-500/20')
+        : (colorScheme === 'whatsapp'
+          ? 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-emerald-600 dark:hover:text-white border border-transparent'
+          : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-blue-600 dark:hover:text-white border border-transparent')
       }`}
   >
-    {active && !isSubItem && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-500 rounded-r-full shadow-[0_0_12px_rgba(59,130,246,0.5)]"></div>}
-    {active && isSubItem && <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-[0_0_12px_rgba(59,130,246,0.5)]"></div>}
-    <Icon className={`transition-colors ${isSubItem ? 'w-4 h-4 mr-3' : 'w-5 h-5 mr-3'} ${active ? 'text-blue-500 dark:text-blue-400' : 'group-hover:text-blue-500 dark:group-hover:text-blue-400'}`} />
+    {active && !isSubItem && <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full shadow-[0_0_12px_rgba(16,185,129,0.5)] ${colorScheme === 'whatsapp' ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>}
+    {active && isSubItem && <div className={`absolute -left-4 top-1/2 -translate-y-1/2 w-1 h-4 rounded-r-full shadow-[0_0_12px_rgba(16,185,129,0.5)] ${colorScheme === 'whatsapp' ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>}
+    <Icon className={`transition-colors ${isSubItem ? 'w-4 h-4 mr-3' : 'w-5 h-5 mr-3'} ${active ? (colorScheme === 'whatsapp' ? 'text-emerald-500 dark:text-emerald-400' : 'text-blue-500 dark:text-blue-400') : (colorScheme === 'whatsapp' ? 'group-hover:text-emerald-500 dark:group-hover:text-emerald-400' : 'group-hover:text-blue-500 dark:group-hover:text-blue-400')}`} />
     <span className={`font-semibold ${isSubItem ? 'text-xs' : 'text-sm'}`}>{label}</span>
     {badge !== null && badge > 0 && (
       <span className="ml-auto bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.4)] animate-pulse">
         {badge}
       </span>
     )}
-    {active && !isSubItem && badge === null && <ChevronRight className="w-4 h-4 ml-auto text-blue-500 dark:text-blue-400" />}
+    {active && !isSubItem && badge === null && <ChevronRight className={`w-4 h-4 ml-auto ${colorScheme === 'whatsapp' ? 'text-emerald-500 dark:text-emerald-400' : 'text-blue-500 dark:text-blue-400'}`} />}
   </button>
 );
 

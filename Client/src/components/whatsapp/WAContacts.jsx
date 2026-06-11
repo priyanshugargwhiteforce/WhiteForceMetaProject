@@ -40,7 +40,7 @@ const ScoreRing = ({ score = 0, size = 48 }) => {
 const SEGMENT_CONFIG = {
   all: { label: 'All Contacts', icon: Users, color: 'text-slate-400', bg: 'bg-slate-500/10', border: 'border-slate-500/20' },
   champions: { label: 'Champions', icon: Trophy, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
-  engaged: { label: 'Engaged', icon: Zap, color: 'text-indigo-400', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20' },
+  engaged: { label: 'Engaged', icon: Zap, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
   at_risk: { label: 'At Risk', icon: TrendingDown, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
   never_opened: { label: 'Never Opened', icon: EyeOff, color: 'text-slate-400', bg: 'bg-slate-500/10', border: 'border-slate-500/20' },
   unsubscribed: { label: 'Unsubscribed', icon: UserX, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' },
@@ -50,8 +50,8 @@ const SEGMENT_CONFIG = {
 // ─── Event Type Badge ────────────────────────────────────────────────────────
 const EventBadge = ({ type }) => {
   const map = {
-    sent: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    delivered: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+    sent: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    delivered: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     read: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     failed: 'bg-red-500/10 text-red-400 border-red-500/20',
     replied: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
@@ -357,12 +357,12 @@ const WAContacts = () => {
       <aside className="w-64 shrink-0 border-r border-slate-200 dark:border-white/[0.06] flex flex-col overflow-y-auto bg-white dark:bg-[#0a0f1e]/40">
         <div className="p-5 border-b border-slate-200 dark:border-white/[0.06]">
           <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+            <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               <Users className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Contacts</h2>
-              <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Intelligence Layer</p>
+            <div className="flex flex-col items-start leading-none">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Contacts</h2>
+              <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Intelligence Layer</p>
             </div>
           </div>
         </div>
@@ -371,9 +371,9 @@ const WAContacts = () => {
         <div className="p-4 border-b border-slate-200 dark:border-white/[0.06]">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
-              <Activity className="w-3 h-3 text-indigo-600 dark:text-indigo-400" /> Smart Segments
+              <Activity className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> Smart Segments
             </span>
-            <button onClick={fetchSegments} className="text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+            <button onClick={fetchSegments} className="text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
               <RefreshCw className={`w-3 h-3 ${segmentsLoading ? 'animate-spin' : ''}`} />
             </button>
           </div>
@@ -417,9 +417,9 @@ const WAContacts = () => {
         <div className="p-4 flex-1">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
-              <ListFilter className="w-3 h-3 text-indigo-400" /> Lists
+              <ListFilter className="w-3 h-3 text-emerald-400" /> Lists
             </span>
-            <button onClick={() => setShowCreateListModal(true)} className="text-slate-500 hover:text-indigo-400 transition-colors">
+            <button onClick={() => setShowCreateListModal(true)} className="text-slate-500 hover:text-emerald-400 transition-colors">
               <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -427,7 +427,7 @@ const WAContacts = () => {
             {lists.map(list => {
               const isActive = selectedListId === String(list.id);
               return (
-                <div key={list.id} className={`w-full rounded-xl text-xs font-semibold transition-all flex items-center group ${isActive ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.04]'}`}>
+                <div key={list.id} className={`w-full rounded-xl text-xs font-semibold transition-all flex items-center group ${isActive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.04]'}`}>
                   <button onClick={() => handleListClick(String(list.id))} className="flex-1 text-left px-3 py-2.5 truncate">
                     {list.name}
                   </button>
@@ -447,7 +447,7 @@ const WAContacts = () => {
         <div className="p-4 border-t border-slate-200 dark:border-white/[0.06]">
           <button
             onClick={() => { setImportFile(null); setDetectedHeaders([]); setImportResult(null); setImportError(null); setImportTargetListId(''); setImportTargetListName(''); setShowImportModal(true); }}
-            className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 hover:scale-[1.02] active:scale-95"
+            className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-600/20 hover:scale-[1.02] active:scale-95"
           >
             <UserPlus className="w-4 h-4" /> Import Contacts
           </button>
@@ -478,7 +478,7 @@ const WAContacts = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
               <input ref={searchRef} type="text" placeholder="Search name, phone, email…"
                 value={search} onChange={e => setSearch(e.target.value)}
-                className="bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 w-64 transition-all" />
+                className="bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 w-64 transition-all" />
             </div>
             <button type="submit" className="px-4 py-2 bg-slate-100 dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/[0.08] transition-all">Search</button>
           </form>
@@ -488,7 +488,7 @@ const WAContacts = () => {
         <div className="flex-1 overflow-auto p-6">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-64">
-              <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-3" />
+              <Loader2 className="w-10 h-10 text-emerald-500 animate-spin mb-3" />
               <p className="text-xs text-slate-500 font-bold uppercase tracking-widest animate-pulse">Loading contacts…</p>
             </div>
           ) : error ? (
@@ -518,7 +518,7 @@ const WAContacts = () => {
                 <tbody className="divide-y divide-slate-100 dark:divide-white/[0.04]">
                   {contacts.map(contact => {
                     const score = parseFloat(contact.engagement_score || 0);
-                    const scoreColor = score >= 80 ? 'text-emerald-400' : score >= 50 ? 'text-indigo-400' : score > 0 ? 'text-amber-400' : 'text-slate-600';
+                    const scoreColor = score >= 80 ? 'text-emerald-400' : score >= 50 ? 'text-emerald-400' : score > 0 ? 'text-amber-400' : 'text-slate-600';
                     const isToggling = togglingOptIn === contact.id;
                     const isArchiving = archivingId === contact.id;
                     return (
@@ -526,8 +526,8 @@ const WAContacts = () => {
                         onClick={() => openDrawer(contact)}>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/20 flex items-center justify-center shrink-0">
-                              <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500/20 to-purple-500/20 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
                                 {(contact.name || contact.phone || '?').charAt(0).toUpperCase()}
                               </span>
                             </div>
@@ -541,7 +541,7 @@ const WAContacts = () => {
                         <td className="px-5 py-4" onClick={e => e.stopPropagation()}>
                           <div className="flex items-center gap-2">
                             <div className="relative w-20 h-1.5 bg-slate-100 dark:bg-white/[0.06] rounded-full overflow-hidden">
-                              <div className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${score >= 80 ? 'bg-emerald-500' : score >= 50 ? 'bg-indigo-500' : score > 0 ? 'bg-amber-500' : 'bg-slate-700'}`}
+                              <div className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${score >= 80 ? 'bg-emerald-500' : score >= 50 ? 'bg-emerald-500' : score > 0 ? 'bg-amber-500' : 'bg-slate-700'}`}
                                 style={{ width: `${score}%` }} />
                             </div>
                             <span className={`font-bold text-[10px] ${scoreColor}`}>{Math.round(score)}</span>
@@ -549,7 +549,7 @@ const WAContacts = () => {
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3 text-[10px] text-slate-500">
-                            <span title="Sent" className="flex items-center gap-1"><Globe className="w-3 h-3 text-blue-400" />{contact.total_sent || 0}</span>
+                            <span title="Sent" className="flex items-center gap-1"><Globe className="w-3 h-3 text-emerald-400" />{contact.total_sent || 0}</span>
                             <span title="Read" className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-400" />{contact.total_read || 0}</span>
                           </div>
                         </td>
@@ -581,7 +581,7 @@ const WAContacts = () => {
                               </button>
                             )}
                             <button onClick={() => openDrawer(contact)}
-                              className="p-1.5 hover:bg-indigo-500/10 rounded-lg text-slate-500 hover:text-indigo-400 transition-all" title="View profile">
+                              className="p-1.5 hover:bg-emerald-500/10 rounded-lg text-slate-500 hover:text-emerald-400 transition-all" title="View profile">
                               <ChevronRightIcon className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -620,22 +620,22 @@ const WAContacts = () => {
             {/* Drawer Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/[0.07]">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-600/20 border border-indigo-500/20 flex items-center justify-center">
-                  <span className="text-base font-bold text-indigo-600 dark:text-indigo-400">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-purple-600/20 border border-emerald-500/20 flex items-center justify-center">
+                  <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">
                     {(drawerContact.name || drawerContact.phone || '?').charAt(0).toUpperCase()}
                   </span>
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">{drawerContact.name || 'Unknown Contact'}</h3>
                   <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${drawerContact.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                      drawerContact.status === 'unsubscribed' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                        'bg-gray-500/10 text-gray-400 border-gray-500/20'
+                    drawerContact.status === 'unsubscribed' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                      'bg-gray-500/10 text-gray-400 border-gray-500/20'
                     }`}>{drawerContact.status || 'active'}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 {!editMode ? (
-                  <button onClick={startEdit} className="p-2 hover:bg-white/5 rounded-xl text-slate-500 hover:text-indigo-400 transition-all" title="Edit">
+                  <button onClick={startEdit} className="p-2 hover:bg-white/5 rounded-xl text-slate-500 hover:text-emerald-400 transition-all" title="Edit">
                     <Edit3 className="w-4 h-4" />
                   </button>
                 ) : (
@@ -653,12 +653,12 @@ const WAContacts = () => {
             <div className="flex-1 overflow-y-auto">
               {drawerLoading ? (
                 <div className="flex flex-col items-center justify-center h-40">
-                  <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+                  <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
                 </div>
               ) : (
                 <>
                   {/* Engagement Score Card */}
-                  <div className="mx-6 mt-5 bg-gradient-to-br from-indigo-500/[0.05] to-purple-600/[0.03] dark:from-indigo-500/[0.08] dark:to-purple-600/[0.06] border border-indigo-500/20 rounded-2xl p-5">
+                  <div className="mx-6 mt-5 bg-gradient-to-br from-emerald-500/[0.05] to-purple-600/[0.03] dark:from-emerald-500/[0.08] dark:to-purple-600/[0.06] border border-emerald-500/20 rounded-2xl p-5">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Engagement Score</p>
@@ -673,8 +673,8 @@ const WAContacts = () => {
                     </div>
                     <div className="grid grid-cols-3 gap-3 mt-5">
                       {[
-                        { label: 'Sent', val: drawerContact.total_sent || 0, color: 'text-blue-600 dark:text-blue-400' },
-                        { label: 'Delivered', val: drawerContact.total_delivered || 0, color: 'text-indigo-600 dark:text-indigo-400' },
+                        { label: 'Sent', val: drawerContact.total_sent || 0, color: 'text-emerald-600 dark:text-emerald-400' },
+                        { label: 'Delivered', val: drawerContact.total_delivered || 0, color: 'text-emerald-600 dark:text-emerald-400' },
                         { label: 'Read', val: drawerContact.total_read || 0, color: 'text-emerald-600 dark:text-emerald-400' },
                       ].map(m => (
                         <div key={m.label} className="bg-slate-100 dark:bg-white/[0.04] rounded-xl p-3 text-center">
@@ -701,7 +701,7 @@ const WAContacts = () => {
                               value={editFields[key] || ''}
                               onChange={e => setEditFields(f => ({ ...f, [key]: e.target.value }))}
                               placeholder={label}
-                              className="flex-1 bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-indigo-500/50"
+                              className="flex-1 bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-emerald-500/50"
                             />
                           </div>
                         ))}
@@ -735,7 +735,7 @@ const WAContacts = () => {
                           <span key={t} className="px-2 py-0.5 bg-green-500/10 text-green-400 border border-green-500/10 rounded-lg text-[9px] font-bold">#{t}</span>
                         ))}
                         {drawerContact.lists?.map(l => (
-                          <span key={l} className="px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/10 rounded-lg text-[9px] font-bold">📋 {l}</span>
+                          <span key={l} className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/10 rounded-lg text-[9px] font-bold">📋 {l}</span>
                         ))}
                       </div>
                     </div>
@@ -772,10 +772,10 @@ const WAContacts = () => {
                   {/* Activity Timeline */}
                   <div className="mx-6 mt-4 mb-6">
                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-1">
-                      <Activity className="w-3 h-3 text-indigo-400" /> Campaign Timeline
+                      <Activity className="w-3 h-3 text-emerald-400" /> Campaign Timeline
                     </p>
                     {drawerActivityLoading ? (
-                      <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 text-indigo-400 animate-spin" /></div>
+                      <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 text-emerald-400 animate-spin" /></div>
                     ) : drawerActivity.length === 0 ? (
                       <div className="text-center py-8 text-xs text-slate-500 dark:text-slate-600 border border-dashed border-slate-200 dark:border-white/5 rounded-2xl">
                         No campaign activity yet
@@ -817,17 +817,17 @@ const WAContacts = () => {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <form onSubmit={handleCreateList} className="bg-white dark:bg-[#0d1325] border border-slate-200 dark:border-white/10 rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-white/5">
-              <FolderPlus className="w-5 h-5 text-indigo-500" />
+              <FolderPlus className="w-5 h-5 text-emerald-500" />
               <h4 className="font-bold text-sm text-slate-900 dark:text-white uppercase tracking-widest">Create Contact List</h4>
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">List Name</label>
               <input type="text" placeholder="e.g. June Campaigns" value={newListName} onChange={e => setNewListName(e.target.value)} required
-                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-indigo-500/50" />
+                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-emerald-500/50" />
             </div>
             <div className="flex items-center justify-end gap-3 pt-2">
               <button type="button" onClick={() => setShowCreateListModal(false)} className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 uppercase tracking-wider">Cancel</button>
-              <button type="submit" className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/20">Create</button>
+              <button type="submit" className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/20">Create</button>
             </div>
           </form>
         </div>
@@ -839,7 +839,7 @@ const WAContacts = () => {
           <div className="bg-white dark:bg-[#0d1325] border border-slate-200 dark:border-white/10 rounded-[2rem] p-6 md:p-8 w-full max-w-2xl space-y-6 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/5">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                   <UserPlus className="w-5 h-5" />
                 </div>
                 <div>
@@ -851,8 +851,8 @@ const WAContacts = () => {
             </div>
 
             {!importFile ? (
-              <label className="border-2 border-dashed border-slate-200 dark:border-white/10 hover:border-indigo-500/50 rounded-[2rem] p-12 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-indigo-500/[0.02]">
-                <UploadCloud className="w-12 h-12 text-indigo-500 dark:text-indigo-400 mb-4 animate-pulse" />
+              <label className="border-2 border-dashed border-slate-200 dark:border-white/10 hover:border-emerald-500/50 rounded-[2rem] p-12 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-emerald-500/[0.02]">
+                <UploadCloud className="w-12 h-12 text-emerald-500 dark:text-emerald-400 mb-4 animate-pulse" />
                 <span className="text-sm font-bold text-slate-800 dark:text-white">Click to upload spreadsheet</span>
                 <span className="text-[10px] text-slate-500 mt-1 uppercase font-semibold">Supports .csv, .xlsx, .xls</span>
                 <input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} className="hidden" />
@@ -867,7 +867,7 @@ const WAContacts = () => {
                   <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-semibold">Engagement scores will update after next campaign completion</p>
                 </div>
                 <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto bg-slate-50 dark:bg-white/[0.02] p-5 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm">
-                  {[['Total', importResult.processed, 'text-slate-700 dark:text-slate-300'], ['New', `+${importResult.inserted}`, 'text-emerald-500 dark:text-emerald-400'], ['Updated', `~${importResult.updated}`, 'text-indigo-600 dark:text-indigo-400']].map(([l, v, c]) => (
+                  {[['Total', importResult.processed, 'text-slate-700 dark:text-slate-300'], ['New', `+${importResult.inserted}`, 'text-emerald-500 dark:text-emerald-400'], ['Updated', `~${importResult.updated}`, 'text-emerald-600 dark:text-emerald-400']].map(([l, v, c]) => (
                     <div key={l}>
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{l}</p>
                       <p className={`text-lg font-black mt-1 font-mono ${c}`}>{v}</p>
@@ -878,8 +878,8 @@ const WAContacts = () => {
               </div>
             ) : (
               <div className="space-y-5">
-                <div className="flex items-center gap-3 bg-indigo-500/5 p-4 border border-indigo-500/10 rounded-2xl">
-                  <div className="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400"><FileSpreadsheet className="w-5 h-5" /></div>
+                <div className="flex items-center gap-3 bg-emerald-500/5 p-4 border border-emerald-500/10 rounded-2xl">
+                  <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-600 dark:text-emerald-400"><FileSpreadsheet className="w-5 h-5" /></div>
                   <div className="min-w-0">
                     <h5 className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[200px]">{importFile.name}</h5>
                     <p className="text-[9.5px] font-bold text-slate-500 uppercase mt-0.5">{(importFile.size / 1024).toFixed(1)} KB · {rawRows.length - 1} rows</p>
@@ -906,7 +906,7 @@ const WAContacts = () => {
 
                 <div className="space-y-4 bg-slate-50 dark:bg-white/[0.02] p-5 rounded-3xl border border-slate-200 dark:border-white/[0.06]">
                   <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-white/5">
-                    <Database className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <Database className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <h5 className="text-[10px] font-bold text-slate-900 dark:text-white uppercase tracking-widest">Column Mapping</h5>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -927,8 +927,8 @@ const WAContacts = () => {
                       </div>
                     ))}
                   </div>
-                  <div className="flex items-start gap-2 p-3 bg-indigo-500/5 border border-indigo-500/10 rounded-xl text-[9.5px] text-indigo-400 leading-relaxed">
-                    <Info className="w-4 h-4 shrink-0 mt-0.5 text-indigo-400" />
+                  <div className="flex items-start gap-2 p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-[9.5px] text-emerald-400 leading-relaxed">
+                    <Info className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
                     <span>Unmapped columns will be saved as <strong>Custom Attributes</strong> on the contact profile.</span>
                   </div>
                 </div>
@@ -940,7 +940,7 @@ const WAContacts = () => {
                 )}
 
                 <button onClick={executeImport} disabled={importLoading}
-                  className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-900 text-white rounded-2xl font-bold text-xs shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2">
+                  className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-900 text-white rounded-2xl font-bold text-xs shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2">
                   {importLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Importing…</> : <><UploadCloud className="w-4 h-4" /> Start Import</>}
                 </button>
               </div>

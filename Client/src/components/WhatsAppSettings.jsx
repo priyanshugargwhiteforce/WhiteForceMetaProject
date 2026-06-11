@@ -129,7 +129,7 @@ const WhatsAppSettings = () => {
                     <span className="font-mono font-medium text-[var(--text-primary)]">{config.phone_number_id}</span>
                   </div>
                   <div className="flex items-center text-xs text-[var(--text-secondary)]">
-                    <Globe className="w-4 h-4 mr-2 text-blue-500/70" />
+                    <Globe className="w-4 h-4 mr-2 text-emerald-500/70" />
                     <span className="font-semibold mr-1.5 uppercase text-[9px] tracking-wider w-24">WABA ID:</span>
                     <span className="font-mono font-medium text-[var(--text-primary)]">{config.waba_id}</span>
                   </div>

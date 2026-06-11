@@ -204,23 +204,23 @@ const WATemplateBuilder = () => {
   };
 
   return (
-    <div className="p-8 space-y-8 min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-800 dark:text-slate-100 transition-colors duration-300">
+    <div className="p-4 md:p-5 space-y-4 min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-800 dark:text-slate-100 transition-colors duration-300">
 
       {/* Title block */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3">
           <button
             onClick={() => navigate('/wa-templates')}
-            className="p-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 rounded-2xl transition-all shadow-sm"
+            className="p-2 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 rounded-xl transition-all shadow-sm"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4" />
           </button>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center">
+          <div className="flex flex-col items-start leading-none">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center mb-1">
               Template Builder
-              <Sparkles className="w-5 h-5 ml-2 text-indigo-500 dark:text-indigo-400" />
+              <Sparkles className="w-4.5 h-4.5 ml-2 text-emerald-500 dark:text-emerald-400" />
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-widest">Create & Submit New Meta Templates</p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mt-1">Create & Submit New Meta Templates</p>
           </div>
         </div>
       </div>
@@ -239,7 +239,7 @@ const WATemplateBuilder = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800 dark:text-white font-mono"
+                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-800 dark:text-white font-mono"
               />
             </div>
             <div>
@@ -247,7 +247,7 @@ const WATemplateBuilder = () => {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800 dark:text-white cursor-pointer"
+                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-800 dark:text-white cursor-pointer"
               >
                 <option value="MARKETING" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">Marketing</option>
                 <option value="UTILITY" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">Utility</option>
@@ -258,7 +258,7 @@ const WATemplateBuilder = () => {
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800 dark:text-white cursor-pointer"
+                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-800 dark:text-white cursor-pointer"
               >
                 <option value="en" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">English</option>
                 <option value="hi" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">Hindi</option>
@@ -270,7 +270,7 @@ const WATemplateBuilder = () => {
           {/* Header configuration */}
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-2">
-              <label className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center">
+              <label className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center">
                 <Type className="w-4 h-4 mr-2" /> Header Section
               </label>
               <div className="flex space-x-1 bg-slate-100 dark:bg-white/5 p-1 rounded-xl">
@@ -279,7 +279,7 @@ const WATemplateBuilder = () => {
                     key={type}
                     type="button"
                     onClick={() => setHeaderType(type)}
-                    className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${headerType === type ? 'bg-white dark:bg-white/10 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                    className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${headerType === type ? 'bg-white dark:bg-white/10 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
                   >
                     {type}
                   </button>
@@ -294,13 +294,13 @@ const WATemplateBuilder = () => {
                 maxLength={60}
                 value={headerText}
                 onChange={(e) => setHeaderText(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800 dark:text-white"
+                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-800 dark:text-white"
               />
             )}
 
             {(headerType === 'IMAGE' || headerType === 'DOCUMENT') && (
               <div className="p-6 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 border-dashed rounded-xl flex flex-col items-center justify-center text-center">
-                <ImageIcon className="w-8 h-8 text-indigo-500 dark:text-indigo-400 mb-2" />
+                <ImageIcon className="w-8 h-8 text-emerald-500 dark:text-emerald-400 mb-2" />
                 <p className="text-xs font-medium text-slate-700 dark:text-slate-300">Media Header Type: {headerType}</p>
                 <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 max-w-sm">Users will attach individual image URLs or PDF files during template broadcasting.</p>
               </div>
@@ -310,13 +310,13 @@ const WATemplateBuilder = () => {
           {/* Body Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-2">
-              <label className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center">
+              <label className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center">
                 <MessageSquare className="w-4 h-4 mr-2" /> Body Section (Required)
               </label>
               <button
                 type="button"
                 onClick={() => setBodyText(prev => prev + ` {{${(prev.match(/\{\{(\d+)\}\}/g) || []).length + 1}}}`)}
-                className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors flex items-center"
+                className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 transition-colors flex items-center"
               >
                 <Plus className="w-3.5 h-3.5 mr-1" /> Add Variable Tag
               </button>
@@ -328,13 +328,13 @@ const WATemplateBuilder = () => {
               value={bodyText}
               onChange={(e) => setBodyText(e.target.value)}
               required
-              className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800 dark:text-white leading-relaxed resize-none transition-all"
+              className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-800 dark:text-white leading-relaxed resize-none transition-all"
             />
           </div>
 
           {/* Footer configuration */}
           <div className="space-y-4">
-            <label className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block border-b border-slate-100 dark:border-white/5 pb-2">
+            <label className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block border-b border-slate-100 dark:border-white/5 pb-2">
               Footer Section (Optional)
             </label>
             <input
@@ -342,35 +342,35 @@ const WATemplateBuilder = () => {
               placeholder="Enter template footer text (e.g. Reply STOP to opt-out)"
               value={footerText}
               onChange={(e) => setFooterText(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800 dark:text-white"
+              className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-800 dark:text-white"
             />
           </div>
 
           {/* Buttons Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-2">
-              <label className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+              <label className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
                 Interactive Buttons (Max 3)
               </label>
               <div className="flex space-x-1.5">
                 <button
                   type="button"
                   onClick={() => handleAddButton('QUICK_REPLY')}
-                  className="px-2.5 py-1 text-[9px] font-bold bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-md hover:bg-slate-200 dark:hover:bg-white/10 text-indigo-600 dark:text-indigo-400 transition-all"
+                  className="px-2.5 py-1 text-[9px] font-bold bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-md hover:bg-slate-200 dark:hover:bg-white/10 text-emerald-600 dark:text-emerald-400 transition-all"
                 >
                   + Quick Reply
                 </button>
                 <button
                   type="button"
                   onClick={() => handleAddButton('URL')}
-                  className="px-2.5 py-1 text-[9px] font-bold bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-md hover:bg-slate-200 dark:hover:bg-white/10 text-indigo-600 dark:text-indigo-400 transition-all"
+                  className="px-2.5 py-1 text-[9px] font-bold bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-md hover:bg-slate-200 dark:hover:bg-white/10 text-emerald-600 dark:text-emerald-400 transition-all"
                 >
                   + Web Link
                 </button>
                 <button
                   type="button"
                   onClick={() => handleAddButton('PHONE')}
-                  className="px-2.5 py-1 text-[9px] font-bold bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-md hover:bg-slate-200 dark:hover:bg-white/10 text-indigo-600 dark:text-indigo-400 transition-all"
+                  className="px-2.5 py-1 text-[9px] font-bold bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-md hover:bg-slate-200 dark:hover:bg-white/10 text-emerald-600 dark:text-emerald-400 transition-all"
                 >
                   + Phone Call
                 </button>
@@ -380,7 +380,7 @@ const WATemplateBuilder = () => {
             <div className="space-y-3">
               {buttons.map((btn, index) => (
                 <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 p-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl">
-                  <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-black/20 border border-slate-200 dark:border-white/5 px-2.5 py-1 rounded-md">{btn.type}</span>
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-white dark:bg-black/20 border border-slate-200 dark:border-white/5 px-2.5 py-1 rounded-md">{btn.type}</span>
 
                   <input
                     type="text"
@@ -435,7 +435,7 @@ const WATemplateBuilder = () => {
             <button
               type="submit"
               disabled={loading}
-              className="px-8 py-3.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-xl font-bold text-sm shadow-md hover:scale-[1.02] active:scale-95 transition-all flex items-center disabled:opacity-50 disabled:grayscale"
+              className="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-sm shadow-md hover:scale-[1.02] active:scale-95 transition-all flex items-center disabled:opacity-50 disabled:grayscale"
             >
               {loading ? 'Submitting...' : 'Submit to Meta'}
               <Send className="w-4 h-4 ml-2" />
@@ -446,7 +446,7 @@ const WATemplateBuilder = () => {
         {/* Right Side: Smartphone Real-time Mock Simulator */}
         <div className="lg:col-span-5 flex flex-col items-center">
           <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6 flex items-center">
-            <Eye className="w-4 h-4 mr-2 text-indigo-500 dark:text-indigo-400" /> WhatsApp Live Mockup
+            <Eye className="w-4 h-4 mr-2 text-emerald-500 dark:text-emerald-400" /> WhatsApp Live Mockup
           </h3>
 
           {/* Phone body */}
@@ -479,7 +479,7 @@ const WATemplateBuilder = () => {
             </div>
 
             {/* Message list area (Simulating WhatsApp pattern doodle background) */}
-            <div className="flex-1 bg-[#efeae2] dark:bg-[#0b141a] p-4 flex flex-col justify-between relative transition-colors duration-300">
+            <div className="flex-1 whatsapp-chat-bg p-4 flex flex-col justify-between relative transition-colors duration-300">
 
               {/* Message display zone */}
               <div className="flex-1 flex flex-col justify-end space-y-3 pb-2 overflow-y-auto">

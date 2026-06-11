@@ -89,34 +89,34 @@ const WATemplates = () => {
   };
 
   return (
-    <div className="p-8 space-y-8 bg-slate-50 dark:bg-[#0f172a] min-h-screen text-slate-800 dark:text-slate-100 transition-colors duration-300">
+    <div className="p-4 md:p-5 space-y-4 bg-slate-50 dark:bg-[#0f172a] min-h-screen text-slate-800 dark:text-slate-100 transition-colors duration-300">
       {/* Title & Controls Row */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center space-x-4">
-          <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500 border border-blue-500/20">
-            <FileText className="w-6 h-6" />
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500 border border-emerald-500/20">
+            <FileText className="w-5 h-5" />
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">WhatsApp Templates</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-widest">Manage Message Templates</p>
+          <div className="flex flex-col items-start leading-none">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">WhatsApp Templates</h2>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mt-1">Manage Message Templates</p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
             <input
               type="text"
               placeholder="Search templates..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-11 pr-4 py-2 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-64 transition-all text-slate-800 dark:text-white"
+              className="pl-11 pr-4 py-2 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 w-64 transition-all text-slate-800 dark:text-white"
             />
           </div>
 
           <button
             onClick={() => navigate('/wa-templates/new')}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold flex items-center shadow-lg shadow-blue-600/10 transition-all"
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-bold flex items-center shadow-lg shadow-emerald-600/10 transition-all"
           >
             <Plus className="w-4 h-4 mr-1.5" /> Create Template
           </button>
@@ -133,7 +133,7 @@ const WATemplates = () => {
       <div>
         {loading ? (
           <div className="flex flex-col items-center justify-center h-[50vh]">
-            <div className="w-16 h-16 border-4 border-blue-500/10 border-t-blue-500 rounded-full animate-spin"></div>
+            <div className="w-16 h-16 border-4 border-emerald-500/10 border-t-emerald-500 rounded-full animate-spin"></div>
             <p className="mt-4 text-slate-400 font-medium animate-pulse tracking-wide">Syncing Library Templates...</p>
           </div>
         ) : error ? (
@@ -155,11 +155,11 @@ const WATemplates = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05]">
                 {filteredTemplates.map((template) => (
-                  <tr key={template.id} className="hover:bg-blue-500/[0.01] dark:hover:bg-blue-500/[0.02] transition-colors group">
+                  <tr key={template.id} className="hover:bg-emerald-500/[0.01] dark:hover:bg-emerald-500/[0.02] transition-colors group">
                     <td className="px-8 py-5">
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                          <Tag className="w-4 h-4 text-blue-500" />
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                          <Tag className="w-4 h-4 text-emerald-500" />
                         </div>
                         <span className="text-sm font-bold truncate max-w-[250px] text-slate-800 dark:text-slate-100">{template.name}</span>
                       </div>

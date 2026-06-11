@@ -362,28 +362,28 @@ const WAAnalytics = () => {
   );
 
   return (
-    <div className="p-8 space-y-8 bg-transparent text-slate-800 dark:text-slate-100 min-h-screen font-sans transition-colors duration-300">
+    <div className="p-4 md:p-6 space-y-6 bg-transparent text-slate-800 dark:text-slate-100 min-h-screen font-sans transition-colors duration-300">
 
       {/* Header and Refresh Panel */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-white/5 pb-6">
-        <div className="flex items-center space-x-4">
-          <div className="p-3 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl text-white shadow-lg shadow-indigo-500/20">
-            <Activity className="w-6 h-6 animate-pulse" />
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-white/5 pb-4 shrink-0">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500 border border-emerald-500/20">
+            <Activity className="w-5 h-5 animate-pulse" />
           </div>
-          <div>
-            <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Campaign Insights</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium tracking-wide">Enterprise Analytics & Reporting Engine</p>
+          <div className="flex flex-col items-start leading-none">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Campaign Insights</h2>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mt-1">Enterprise Analytics & Reporting Engine</p>
           </div>
         </div>
 
         <div className="flex items-center space-x-3 flex-wrap gap-y-2">
           {/* Profile Select Dropdown */}
-          <div className="flex items-center space-x-2 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs">
+          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 text-xs transition-colors">
             <Database className="w-4 h-4 text-green-500" />
             <select
               value={selectedConfigId}
               onChange={handleConfigChange}
-              className="bg-transparent font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-200"
+              className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-200"
             >
               <option value="" className="bg-white dark:bg-slate-900">Default Server Config</option>
               {whatsappConfigs.map(cfg => (
@@ -401,7 +401,7 @@ const WAAnalytics = () => {
               if (activeTab === 'templates') fetchTemplatesPerformance();
               if (activeTab === 'schedules') fetchSchedulesPerformance();
             }}
-            className="flex items-center space-x-2 px-4 py-2.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 transition-all font-medium text-sm shadow-sm dark:shadow-md"
+            className="flex items-center space-x-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-350 transition-all font-bold text-xs rounded-xl shadow-sm"
           >
             <RefreshCw className="w-4 h-4" />
             <span>Sync Data</span>
@@ -429,8 +429,8 @@ const WAAnalytics = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center space-x-2 pb-4 font-semibold text-sm transition-all border-b-2 outline-none ${isActive
-                  ? 'border-indigo-500 text-indigo-500 dark:text-indigo-400'
-                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                ? 'border-emerald-500 text-emerald-500 dark:text-emerald-400'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
             >
               <Icon className="w-4 h-4" />
@@ -501,7 +501,7 @@ const WAAnalytics = () => {
 
               {kpisLoading ? (
                 <div className="h-56 flex items-center justify-center">
-                  <div className="w-8 h-8 border-2 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin"></div>
+                  <div className="w-8 h-8 border-2 border-emerald-500/10 border-t-emerald-500 rounded-full animate-spin"></div>
                 </div>
               ) : kpis ? (
                 <div className="space-y-6 py-4">
@@ -510,7 +510,7 @@ const WAAnalytics = () => {
                     label="Sent Volume"
                     value={kpis.totalSent}
                     percentage={100}
-                    color="bg-indigo-500"
+                    color="bg-emerald-500"
                   />
                   {/* Step 2: Delivered */}
                   <FunnelBar
@@ -524,7 +524,7 @@ const WAAnalytics = () => {
                     label="Opened (Read)"
                     value={kpis.totalRead}
                     percentage={kpis.totalSent > 0 ? (kpis.totalRead / kpis.totalSent) * 100 : 0}
-                    color="bg-blue-500"
+                    color="bg-emerald-500"
                   />
                   {/* Step 4: Failed */}
                   <FunnelBar
@@ -548,24 +548,24 @@ const WAAnalytics = () => {
 
               {queueLoading ? (
                 <div className="h-52 flex items-center justify-center">
-                  <div className="w-8 h-8 border-2 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin"></div>
+                  <div className="w-8 h-8 border-2 border-emerald-500/10 border-t-emerald-500 rounded-full animate-spin"></div>
                 </div>
               ) : queueHealth ? (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/5 pb-2">
                     <span className="text-xs text-slate-400 font-semibold uppercase">Redis Connection</span>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${queueHealth.redisConnected === 'ready'
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      : 'bg-red-500/10 text-red-400 border border-red-500/20'
                       }`}>
                       {String(queueHealth.redisConnected).toUpperCase()}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <QueueStateVal label="Active Jobs" count={queueHealth.counts?.active || 0} color="text-indigo-400" />
+                    <QueueStateVal label="Active Jobs" count={queueHealth.counts?.active || 0} color="text-emerald-400" />
                     <QueueStateVal label="Waiting" count={queueHealth.counts?.waiting || 0} color="text-amber-400" />
-                    <QueueStateVal label="Delayed" count={queueHealth.counts?.delayed || 0} color="text-blue-400" />
+                    <QueueStateVal label="Delayed" count={queueHealth.counts?.delayed || 0} color="text-emerald-400" />
                     <QueueStateVal label="Failed Logs" count={queueHealth.counts?.failed || 0} color="text-red-400" />
                   </div>
 
@@ -601,8 +601,8 @@ const WAAnalytics = () => {
                       key={i}
                       onClick={() => setTrendInterval(i)}
                       className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${trendInterval === i
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
                         }`}
                     >
                       {i.charAt(0).toUpperCase() + i.slice(1)}
@@ -633,7 +633,7 @@ const WAAnalytics = () => {
             <div className="h-80">
               {trendsLoading ? (
                 <div className="h-full flex items-center justify-center">
-                  <div className="w-8 h-8 border-2 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin"></div>
+                  <div className="w-8 h-8 border-2 border-emerald-500/10 border-t-emerald-500 rounded-full animate-spin"></div>
                 </div>
               ) : trends.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
@@ -691,7 +691,7 @@ const WAAnalytics = () => {
                   placeholder="Search campaigns..."
                   value={campaignSearch}
                   onChange={(e) => setCampaignSearch(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-white/10 pl-10 pr-4 py-2.5 rounded-xl text-slate-800 dark:text-slate-200 text-xs focus:outline-none focus:border-indigo-500 transition-all font-medium"
+                  className="w-full bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-white/10 pl-10 pr-4 py-2.5 rounded-xl text-slate-800 dark:text-slate-200 text-xs focus:outline-none focus:border-emerald-500 transition-all font-medium"
                 />
               </div>
 
@@ -700,7 +700,7 @@ const WAAnalytics = () => {
                 <select
                   value={campaignTypeFilter}
                   onChange={(e) => setCampaignTypeFilter(e.target.value)}
-                  className="appearance-none bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-white/10 pl-4 pr-10 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 text-xs focus:outline-none focus:border-indigo-500 font-medium"
+                  className="appearance-none bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-white/10 pl-4 pr-10 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 text-xs focus:outline-none focus:border-emerald-500 font-medium"
                 >
                   <option value="">All Types</option>
                   <option value="broadcast">Broadcast</option>
@@ -715,7 +715,7 @@ const WAAnalytics = () => {
                 <select
                   value={campaignStatusFilter}
                   onChange={(e) => setCampaignStatusFilter(e.target.value)}
-                  className="appearance-none bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-white/10 pl-4 pr-10 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 text-xs focus:outline-none focus:border-indigo-500 font-medium"
+                  className="appearance-none bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-white/10 pl-4 pr-10 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 text-xs focus:outline-none focus:border-emerald-500 font-medium"
                 >
                   <option value="">All Statuses</option>
                   <option value="draft">Draft</option>
@@ -749,7 +749,7 @@ const WAAnalytics = () => {
               {/* Trigger local load */}
               <button
                 onClick={fetchCampaignsPerformance}
-                className="p-2.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 rounded-xl transition-all border border-indigo-500/20"
+                className="p-2.5 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 rounded-xl transition-all border border-emerald-500/20"
               >
                 <RefreshCw className="w-4 h-4" />
               </button>
@@ -761,8 +761,8 @@ const WAAnalytics = () => {
                 onClick={fetchComparison}
                 disabled={compareIds.length < 2 || compareLoading}
                 className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl border text-xs font-semibold shadow-sm dark:shadow-md transition-all ${compareIds.length >= 2
-                    ? 'bg-blue-600/25 hover:bg-blue-600/35 text-blue-600 dark:text-blue-400 border-blue-500/30 font-bold'
-                    : 'bg-slate-100 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-white/5 cursor-not-allowed'
+                  ? 'bg-emerald-600/25 hover:bg-emerald-600/35 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-bold'
+                  : 'bg-slate-100 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-white/5 cursor-not-allowed'
                   }`}
               >
                 <Columns className="w-4 h-4" />
@@ -785,7 +785,7 @@ const WAAnalytics = () => {
           <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-3xl shadow-sm dark:shadow-xl overflow-hidden">
             {campaignsLoading ? (
               <div className="p-12 flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin"></div>
+                <div className="w-8 h-8 border-2 border-emerald-500/10 border-t-emerald-500 rounded-full animate-spin"></div>
               </div>
             ) : filteredCampaigns.length > 0 ? (
               <div className="overflow-x-auto">
@@ -814,7 +814,7 @@ const WAAnalytics = () => {
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => handleToggleCompare(c.id)}
-                              className="w-4 h-4 rounded border-slate-300 dark:border-white/10 bg-white dark:bg-slate-950 text-indigo-600 focus:ring-indigo-500"
+                              className="w-4 h-4 rounded border-slate-300 dark:border-white/10 bg-white dark:bg-slate-950 text-emerald-600 focus:ring-emerald-500"
                             />
                           </td>
                           <td className="py-4 px-6">
@@ -826,14 +826,14 @@ const WAAnalytics = () => {
                           </td>
                           <td className="py-4 px-6">
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${c.status === 'completed'
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                : c.status === 'running'
-                                  ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 animate-pulse'
-                                  : c.status === 'failed'
-                                    ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                                    : c.status === 'paused'
-                                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                      : 'bg-slate-800 text-slate-400 border border-white/5'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : c.status === 'running'
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse'
+                                : c.status === 'failed'
+                                  ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                  : c.status === 'paused'
+                                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                    : 'bg-slate-800 text-slate-400 border border-white/5'
                               }`}>
                               {c.status.toUpperCase()}
                             </span>
@@ -845,7 +845,7 @@ const WAAnalytics = () => {
                           <td className="py-4 px-6 text-center font-bold text-emerald-400">
                             {c.delivery_rate.toFixed(1)}%
                           </td>
-                          <td className="py-4 px-6 text-center font-bold text-indigo-400">
+                          <td className="py-4 px-6 text-center font-bold text-emerald-400">
                             {c.read_rate.toFixed(1)}%
                           </td>
                         </tr>
@@ -894,7 +894,7 @@ const WAAnalytics = () => {
               <div className="h-72">
                 {templatesLoading ? (
                   <div className="h-full flex items-center justify-center">
-                    <div className="w-8 h-8 border-2 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin"></div>
+                    <div className="w-8 h-8 border-2 border-emerald-500/10 border-t-emerald-500 rounded-full animate-spin"></div>
                   </div>
                 ) : templates.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -941,13 +941,13 @@ const WAAnalytics = () => {
                   [...templates]
                     .sort((a, b) => b.read_rate - a.read_rate)
                     .map((t, idx) => (
-                      <div key={t.template_name} className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-white/5 rounded-2xl hover:border-indigo-500/20 transition-all">
+                      <div key={t.template_name} className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-white/5 rounded-2xl hover:border-emerald-500/20 transition-all">
                         <div className="flex items-center space-x-3">
                           <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-extrabold text-[10px] ${idx === 0
-                              ? 'bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30'
-                              : idx === 1
-                                ? 'bg-slate-300/20 text-slate-650 dark:text-slate-300 border border-slate-300/30'
-                                : 'bg-orange-500/20 text-orange-500 dark:text-orange-400 border border-orange-500/30'
+                            ? 'bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30'
+                            : idx === 1
+                              ? 'bg-slate-300/20 text-slate-650 dark:text-slate-300 border border-slate-300/30'
+                              : 'bg-orange-500/20 text-orange-500 dark:text-orange-400 border border-orange-500/30'
                             }`}>
                             #{idx + 1}
                           </div>
@@ -957,7 +957,7 @@ const WAAnalytics = () => {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-indigo-400 text-xs">{t.read_rate.toFixed(1)}%</p>
+                          <p className="font-bold text-emerald-400 text-xs">{t.read_rate.toFixed(1)}%</p>
                           <span className="text-[9px] text-slate-500 font-medium">Read Rate</span>
                         </div>
                       </div>
@@ -974,7 +974,7 @@ const WAAnalytics = () => {
           <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-3xl shadow-sm dark:shadow-xl overflow-hidden">
             {templatesLoading ? (
               <div className="p-12 flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin"></div>
+                <div className="w-8 h-8 border-2 border-emerald-500/10 border-t-emerald-500 rounded-full animate-spin"></div>
               </div>
             ) : templates.length > 0 ? (
               <div className="overflow-x-auto">
@@ -1001,7 +1001,7 @@ const WAAnalytics = () => {
                         <td className="py-4 px-6 text-center font-bold text-emerald-400">
                           {t.delivery_rate.toFixed(1)}%
                         </td>
-                        <td className="py-4 px-6 text-center font-bold text-indigo-400">
+                        <td className="py-4 px-6 text-center font-bold text-emerald-400">
                           {t.read_rate.toFixed(1)}%
                         </td>
                       </tr>
@@ -1036,7 +1036,7 @@ const WAAnalytics = () => {
           <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-3xl shadow-sm dark:shadow-xl overflow-hidden">
             {schedulesLoading ? (
               <div className="p-12 flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin"></div>
+                <div className="w-8 h-8 border-2 border-emerald-500/10 border-t-emerald-500 rounded-full animate-spin"></div>
               </div>
             ) : schedules.length > 0 ? (
               <div className="overflow-x-auto">
@@ -1061,12 +1061,12 @@ const WAAnalytics = () => {
                           <p>{s.name}</p>
                           <span className="text-[10px] text-slate-500">ID: {s.parent_campaign_id}</span>
                         </td>
-                        <td className="py-4 px-6 font-mono text-[11px] text-indigo-600 dark:text-indigo-300">{s.cron_expression}</td>
+                        <td className="py-4 px-6 font-mono text-[11px] text-emerald-600 dark:text-emerald-300">{s.cron_expression}</td>
                         <td className="py-4 px-6 text-slate-500 dark:text-slate-400">{s.timezone}</td>
                         <td className="py-4 px-6">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${s.status === 'paused'
-                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                             }`}>
                             {s.status.toUpperCase()}
                           </span>
@@ -1117,7 +1117,7 @@ const WAAnalytics = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {comparisonData.map(c => (
-                <div key={c.id} className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-white/5 rounded-3xl p-5 shadow-sm dark:shadow-lg space-y-4 hover:border-indigo-500/20 transition-all flex flex-col justify-between">
+                <div key={c.id} className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-white/5 rounded-3xl p-5 shadow-sm dark:shadow-lg space-y-4 hover:border-emerald-500/20 transition-all flex flex-col justify-between">
                   <div>
                     <h4 className="font-bold text-slate-900 dark:text-white text-sm mb-1 truncate">{c.name}</h4>
                     <span className="text-[10px] text-slate-500 uppercase tracking-wider">{c.campaign_type} • ID: {c.id}</span>
@@ -1132,7 +1132,7 @@ const WAAnalytics = () => {
 
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <CompareRateCard label="Delivered" value={`${c.delivery_rate.toFixed(0)}%`} color="text-emerald-400" />
-                    <CompareRateCard label="Opened" value={`${c.read_rate.toFixed(0)}%`} color="text-indigo-400" />
+                    <CompareRateCard label="Opened" value={`${c.read_rate.toFixed(0)}%`} color="text-emerald-400" />
                     <CompareRateCard label="Failed" value={`${c.failure_rate.toFixed(0)}%`} color="text-red-400" />
                   </div>
                 </div>
@@ -1149,9 +1149,9 @@ const WAAnalytics = () => {
 
 const KPICard = ({ title, value, subtext, icon: Icon, color }) => {
   const colorMap = {
-    indigo: 'from-indigo-500/10 to-indigo-500/5 text-indigo-400 border-indigo-500/10',
+    indigo: 'from-emerald-500/10 to-emerald-500/5 text-emerald-400 border-emerald-500/10',
     emerald: 'from-emerald-500/10 to-emerald-500/5 text-emerald-400 border-emerald-500/10',
-    blue: 'from-blue-500/10 to-blue-500/5 text-blue-400 border-blue-500/10',
+    blue: 'from-emerald-500/10 to-emerald-500/5 text-emerald-400 border-emerald-500/10',
     red: 'from-red-500/10 to-red-500/5 text-red-400 border-red-500/10',
   };
 

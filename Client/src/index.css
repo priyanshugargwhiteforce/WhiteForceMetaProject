@@ -384,3 +384,39 @@ input:focus {
 .dark .auth-card-glass {
   box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.4);
 }
+
+/* WhatsApp Theme Styles & Background Doodles */
+.whatsapp-chat-bg {
+  background-color: #efeae2;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cg fill='%23e5ddd5' fill-opacity='0.4'%3E%3Cpath d='M10 20c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2c0 1.1-.9 2-2 2h-4c-1.1 0-2-.9-2-2zm0-10C10 7.8 12.2 6 15 6s5 1.8 5 4v1h-10zm25 15h10v2H35zm0-8h10v2H35zm0-8h10v2H35zm55 12c-3.3 0-6-2.7-6-6s2.7-6 6-6 6 2.7 6 6-2.7 6-6 6zm-10-8h4v2h-4zm50 20c0-2.8-2.2-5-5-5s-5 2.2-5 5 2.2 5 5 5 5-2.2 5-5zm-5 15h10v2h-10zm-45 35c0-4.4-3.6-8-8-8s-8 3.6-8 8 3.6 8 8 8 8-3.6 8-8zm-8 4c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm80-25c-5.5 0-10-4.5-10-10s4.5-10 10-10 10 4.5 10 10-4.5 10-10 10zm-5-10c0 2.8 2.2 5 5 5s5-2.2 5-5-2.2-5-5-5-5 2.2-5 5zm-30 40h10v2h-10zm0-8h10v2h-10zm0-8h10v2h-10zm-45-15c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h4c1.1 0 2-.9 2-2zm-6-2v-3c0-2.2 1.8-4 4-4s4 1.8 4 4v3zm56 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4zm50 15c0 1.7-1.3 3-3 3s-3-1.3-3-3 1.3-3 3-3 3 1.3 3 3z'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+.dark .whatsapp-chat-bg {
+  background-color: #0b141a;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cg fill='%231f2c34' fill-opacity='0.35'%3E%3Cpath d='M10 20c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2c0 1.1-.9 2-2 2h-4c-1.1 0-2-.9-2-2zm0-10C10 7.8 12.2 6 15 6s5 1.8 5 4v1h-10zm25 15h10v2H35zm0-8h10v2H35zm0-8h10v2H35zm55 12c-3.3 0-6-2.7-6-6s2.7-6 6-6 6 2.7 6 6-2.7 6-6 6zm-10-8h4v2h-4zm50 20c0-2.8-2.2-5-5-5s-5 2.2-5 5 2.2 5 5 5 5-2.2 5-5zm-5 15h10v2h-10zm-45 35c0-4.4-3.6-8-8-8s-8 3.6-8 8 3.6 8 8 8 8-3.6 8-8zm-8 4c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm80-25c-5.5 0-10-4.5-10-10s4.5-10 10-10 10 4.5 10 10-4.5 10-10 10zm-5-10c0 2.8 2.2 5 5 5s5-2.2 5-5-2.2-5-5-5-5 2.2-5 5zm-30 40h10v2h-10zm0-8h10v2h-10zm0-8h10v2h-10zm-45-15c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h4c1.1 0 2-.9 2-2zm-6-2v-3c0-2.2 1.8-4 4-4s4 1.8 4 4v3zm56 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4zm50 15c0 1.7-1.3 3-3 3s-3-1.3-3-3 1.3-3 3-3 3 1.3 3 3z'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+.text-whatsapp-teal {
+  color: #128c7e !important;
+}
+.text-whatsapp-green {
+  color: #25d366 !important;
+}
+.bg-whatsapp-teal {
+  background-color: #128c7e !important;
+}
+.bg-whatsapp-green {
+  background-color: #25d366 !important;
+}
+.border-whatsapp-teal {
+  border-color: #128c7e !important;
+}
+.border-whatsapp-green {
+  border-color: #25d366 !important;
+}
+.text-glow-green {
+  text-shadow: 0 0 15px rgba(37, 211, 102, 0.5);
+}
+

@@ -97,7 +97,7 @@ const WhatsAppManager = () => {
       success: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
       warning: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
       danger: 'bg-red-500/10 text-red-500 border-red-500/20',
-      info: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+      info: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
     };
 
     return (
@@ -108,16 +108,16 @@ const WhatsAppManager = () => {
   };
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 md:p-5 space-y-4">
       {/* Title & Refresh Block */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-        <div className="flex items-center space-x-4">
-          <div className="p-3 bg-green-500/10 rounded-2xl text-green-500">
-            <MessageCircle className="w-6 h-6" />
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-2">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500 border border-emerald-500/20">
+            <MessageCircle className="w-5 h-5" />
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">WhatsApp Manager</h2>
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-widest">Account & Number Settings</p>
+          <div className="flex flex-col items-start leading-none">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">WhatsApp Manager</h2>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Account & Number Settings</p>
           </div>
         </div>
         <div className="flex items-center space-x-3 flex-wrap gap-y-2">
@@ -202,15 +202,15 @@ const WhatsAppManager = () => {
             {/* WABA Card */}
             <div className="space-y-6">
               <h3 className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em] px-2 flex items-center">
-                <Globe className="w-4 h-4 mr-2 text-blue-500" />
+                <Globe className="w-4 h-4 mr-2 text-emerald-500" />
                 Business Account (WABA)
               </h3>
 
-              <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-sm p-8 group hover:border-blue-500/30 transition-all duration-500">
+              <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-sm p-8 group hover:border-emerald-500/30 transition-all duration-500">
                 <div className="flex items-center justify-between mb-8">
                   <div className="flex items-center space-x-4">
-                    <div className="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center border border-blue-500/20 shadow-inner group-hover:scale-110 transition-transform duration-500">
-                      <Settings className="w-7 h-7 text-blue-500" />
+                    <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20 shadow-inner group-hover:scale-110 transition-transform duration-500">
+                      <Settings className="w-7 h-7 text-emerald-500" />
                     </div>
                     <div>
                       <h4 className="text-2xl font-bold">{data?.waba?.name}</h4>
@@ -236,10 +236,10 @@ const WhatsAppManager = () => {
                   <Activity className="w-48 h-48 text-white" />
                 </div>
                 <h3 className="text-white text-lg font-bold mb-6 flex items-center">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 mr-3 animate-pulse"></div>
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 mr-3 animate-pulse"></div>
                   Raw API Synchronized Data
                 </h3>
-                <div className="bg-black/40 rounded-2xl p-6 font-mono text-xs text-blue-300 overflow-x-auto max-h-[300px]">
+                <div className="bg-black/40 rounded-2xl p-6 font-mono text-xs text-emerald-300 overflow-x-auto max-h-[300px]">
                   <pre>{JSON.stringify(data, null, 2)}</pre>
                 </div>
               </div>
@@ -255,7 +255,7 @@ const WhatsAppManager = () => {
 const DetailItem = ({ icon: Icon, label, value, className = '' }) => (
   <div className={`p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 flex items-center space-x-3 group/item hover:bg-white dark:hover:bg-white/10 transition-all ${className}`}>
     <div className="w-10 h-10 rounded-xl bg-white dark:bg-black/20 flex items-center justify-center shadow-sm group-hover/item:scale-110 transition-transform">
-      <Icon className="w-5 h-5 text-slate-400 group-hover/item:text-blue-500 transition-colors" />
+      <Icon className="w-5 h-5 text-slate-400 group-hover/item:text-emerald-500 transition-colors" />
     </div>
     <div>
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>

@@ -245,12 +245,12 @@ const WAPricingAnalytics = ({ selectedConfigId }) => {
   const chartData = Object.values(dailyChartGroups).reverse();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Filters and Actions Panel */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900/40 p-5 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm dark:shadow-md">
-        <div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Pricing & Cost Analytics</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Synced conversation cost audit breakdown grouped by country and pricing category</p>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900/40 p-4 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm dark:shadow-md">
+        <div className="flex flex-col items-start leading-none">
+          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">Pricing & Cost Analytics</h3>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold mt-1">Synced conversation cost audit breakdown grouped by country and pricing category</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -266,7 +266,7 @@ const WAPricingAnalytics = ({ selectedConfigId }) => {
                 key={r.id}
                 onClick={() => setDateRange(r.id)}
                 className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${dateRange === r.id
-                  ? 'bg-indigo-600 dark:bg-indigo-500 text-white shadow-sm'
+                  ? 'bg-emerald-600 dark:bg-emerald-500 text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
               >
@@ -279,7 +279,7 @@ const WAPricingAnalytics = ({ selectedConfigId }) => {
           <button
             onClick={handleSyncMetaPricing}
             disabled={syncing}
-            className="flex items-center space-x-2 px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 rounded-xl transition-all border border-indigo-500/20 font-semibold text-xs disabled:opacity-50"
+            className="flex items-center space-x-2 px-4 py-2 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 rounded-xl transition-all border border-emerald-500/20 font-semibold text-xs disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
             <span>Sync Live Pricing</span>
@@ -321,7 +321,7 @@ const WAPricingAnalytics = ({ selectedConfigId }) => {
           <button
             type="submit"
             disabled={loading}
-            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/10"
+            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/10"
           >
             Apply Range
           </button>
@@ -417,7 +417,7 @@ const WAPricingAnalytics = ({ selectedConfigId }) => {
                 <div className="space-y-5 flex-1 justify-center flex flex-col">
                   {categories.map(cat => {
                     const colors = {
-                      MARKETING: 'bg-indigo-500',
+                      MARKETING: 'bg-emerald-500',
                       UTILITY: 'bg-emerald-500',
                       AUTHENTICATION: 'bg-cyan-500'
                     };
@@ -453,7 +453,7 @@ const WAPricingAnalytics = ({ selectedConfigId }) => {
             <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-md dark:shadow-xl space-y-4">
               <div>
                 <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 flex items-center">
-                  <Globe className="w-4 h-4 text-indigo-500 mr-2" />
+                  <Globe className="w-4 h-4 text-emerald-500 mr-2" />
                   Top Countries by Spend
                 </h4>
                 <p className="text-[11px] text-slate-500">Destination distribution analysis</p>
@@ -467,7 +467,7 @@ const WAPricingAnalytics = ({ selectedConfigId }) => {
                         <p className="font-bold text-slate-800 dark:text-white text-xs">Country: {c.code}</p>
                         <span className="text-[10px] text-slate-500">{c.volume.toLocaleString()} messages delivered</span>
                       </div>
-                      <p className="font-bold text-indigo-500 dark:text-indigo-400 text-xs">
+                      <p className="font-bold text-emerald-500 dark:text-emerald-400 text-xs">
                         {currencySymbol}{c.cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     </div>
@@ -513,10 +513,10 @@ const WAPricingAnalytics = ({ selectedConfigId }) => {
                           </td>
                           <td className="py-3 px-6 font-bold">{dp.country}</td>
                           <td className="py-3 px-6 text-center">{dp.volume.toLocaleString()}</td>
-                          <td className="py-3 px-6 text-right font-bold text-indigo-500 dark:text-indigo-400">
+                          <td className="py-3 px-6 text-right font-bold text-emerald-500 dark:text-emerald-400">
                             {currencySymbol}{parseFloat(dp.cost).toFixed(2)}
                           </td>
-                          <td className="py-3 px-6 text-right font-bold text-indigo-500 dark:text-indigo-400">
+                          <td className="py-3 px-6 text-right font-bold text-emerald-500 dark:text-emerald-400">
                             {currencySymbol}{parseFloat(dp.cost / dp.volume).toFixed(2)}
                           </td>
                         </tr>
@@ -539,9 +539,9 @@ const WAPricingAnalytics = ({ selectedConfigId }) => {
 
 const PricingKPICard = ({ title, value, subtext, icon: Icon, color }) => {
   const colorMap = {
-    indigo: 'from-indigo-500/10 to-indigo-500/5 text-indigo-500 dark:text-indigo-400 border-indigo-500/10',
+    indigo: 'from-emerald-500/10 to-emerald-500/5 text-emerald-500 dark:text-emerald-400 border-emerald-500/10',
     emerald: 'from-emerald-500/10 to-emerald-500/5 text-emerald-500 dark:text-emerald-400 border-emerald-500/10',
-    blue: 'from-blue-500/10 to-blue-500/5 text-blue-500 dark:text-blue-400 border-blue-500/10',
+    blue: 'from-emerald-500/10 to-emerald-500/5 text-emerald-500 dark:text-emerald-400 border-emerald-500/10',
     amber: 'from-amber-500/10 to-amber-500/5 text-amber-500 dark:text-amber-400 border-amber-500/10',
   };
 

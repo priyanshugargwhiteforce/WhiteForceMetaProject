@@ -87,7 +87,7 @@ const WASchedules = () => {
     const base = "px-3 py-1 text-xs font-semibold rounded-full uppercase tracking-wider ";
     switch (status) {
       case 'queued':
-        return <span className={`${base} bg-blue-500/10 text-blue-400 border border-blue-500/20`}>Queued</span>;
+        return <span className={`${base} bg-emerald-500/10 text-emerald-400 border border-emerald-500/20`}>Queued</span>;
       case 'running':
         return <span className={`${base} bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse`}>Running</span>;
       case 'paused':
@@ -100,16 +100,16 @@ const WASchedules = () => {
   };
 
   return (
-    <div className="p-8 space-y-8 bg-transparent text-slate-800 dark:text-slate-100">
+    <div className="p-4 md:p-6 space-y-6 bg-transparent text-slate-800 dark:text-slate-100">
       {/* Header Block */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="p-3 bg-indigo-500/10 rounded-2xl text-indigo-500 border border-indigo-500/20">
-            <Calendar className="w-6 h-6" />
+      <div className="flex items-center justify-between flex-wrap gap-4 shrink-0">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500 border border-emerald-500/20">
+            <Calendar className="w-5 h-5" />
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Campaign Schedules</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-widest">
+          <div className="flex flex-col items-start leading-none">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Campaign Schedules</h2>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mt-1">
               Manage Delayed & Recurring BullMQ Queues
             </p>
           </div>
@@ -117,9 +117,9 @@ const WASchedules = () => {
 
         <button
           onClick={fetchSchedules}
-          className="p-2.5 bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-slate-600 dark:text-slate-300 transition-all shadow-sm"
+          className="p-2.5 bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-slate-650 dark:text-slate-350 transition-all shadow-sm"
         >
-          <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
@@ -132,7 +132,7 @@ const WASchedules = () => {
             placeholder="Search campaigns..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
           />
         </div>
 
@@ -141,7 +141,7 @@ const WASchedules = () => {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-indigo-500"
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
           >
             <option value="all">All Types</option>
             <option value="scheduled">One-Time Scheduled</option>
@@ -152,7 +152,7 @@ const WASchedules = () => {
 
       {loading ? (
         <div className="flex flex-col items-center justify-center h-[50vh]">
-          <div className="w-16 h-16 border-4 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin"></div>
+          <div className="w-16 h-16 border-4 border-emerald-500/10 border-t-emerald-500 rounded-full animate-spin"></div>
           <p className="mt-4 text-slate-400 font-medium">Loading execution schedules...</p>
         </div>
       ) : error ? (
@@ -179,8 +179,8 @@ const WASchedules = () => {
                 {/* Badge Header Row */}
                 <div className="flex justify-between items-start mb-4">
                   <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-lg border ${item.campaign_type === 'recurring'
-                      ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
-                      : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
+                    ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                     }`}>
                     {item.campaign_type === 'recurring' ? 'RECURRING' : 'ONE-TIME'}
                   </span>
@@ -240,7 +240,7 @@ const WASchedules = () => {
                 {item.nextRun && (
                   <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-950/40 px-3 py-2 rounded-xl border border-slate-200 dark:border-white/5">
                     <div className="flex items-center space-x-1.5 text-slate-500 dark:text-slate-400">
-                      <Clock className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+                      <Clock className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
                       <span>Next execution:</span>
                     </div>
                     <span className="font-semibold text-slate-800 dark:text-slate-200">

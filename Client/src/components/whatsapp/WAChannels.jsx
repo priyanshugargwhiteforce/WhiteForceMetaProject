@@ -231,33 +231,33 @@ const WAChannels = () => {
     );
   }, [historyData, historySearch]);
 
-  const primaryBlue = isDark ? '#3b82f6' : '#2563eb';
+  const primaryGreen = isDark ? '#10b981' : '#059669';
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 md:p-5 space-y-4">
       {/* Title & Controls Row */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center space-x-4">
-          <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500">
-            <TrendingUp className="w-6 h-6" />
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500 border border-emerald-500/20">
+            <TrendingUp className="w-5 h-5" />
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Channel Tracker</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-widest">WhatsApp Member Tracker & Stats</p>
+          <div className="flex flex-col items-start leading-none">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Channel Tracker</h2>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mt-1">WhatsApp Member Tracker & Stats</p>
           </div>
         </div>
 
         <div className="flex items-center space-x-3">
           <button
             onClick={fetchChannels}
-            className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-500 hover:bg-blue-500/20 transition-all active:scale-95"
+            className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-500 hover:bg-emerald-500/20 transition-all active:scale-95"
           >
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
           <button
             onClick={() => setIsCreateOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 active:scale-95"
+            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 active:scale-95"
           >
             <Plus className="w-4 h-4" />
             <span>Add Channel</span>
@@ -265,7 +265,7 @@ const WAChannels = () => {
 
           <button
             onClick={() => handleOpenUpdate()}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 active:scale-95"
+            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 active:scale-95"
             disabled={channels.length === 0}
           >
             <Calendar className="w-4 h-4" />
@@ -285,10 +285,10 @@ const WAChannels = () => {
             <div className="space-y-2">
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Tracked Channels</p>
               <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white group-hover:scale-105 transition-transform duration-300 origin-left">
-                {loading ? <Loader2 className="w-6 h-6 animate-spin text-blue-500" /> : stats.totalChannels}
+                {loading ? <Loader2 className="w-6 h-6 animate-spin text-emerald-500" /> : stats.totalChannels}
               </h3>
             </div>
-            <div className="p-4 bg-blue-500/10 rounded-2xl text-blue-500 border border-blue-500/10">
+            <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-500 border border-emerald-500/10">
               <MessageCircle className="w-6 h-6" />
             </div>
           </div>
@@ -298,10 +298,10 @@ const WAChannels = () => {
             <div className="space-y-2">
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Combined Active Members</p>
               <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white group-hover:scale-105 transition-transform duration-300 origin-left">
-                {loading ? <Loader2 className="w-6 h-6 animate-spin text-indigo-500" /> : stats.combinedMembers.toLocaleString()}
+                {loading ? <Loader2 className="w-6 h-6 animate-spin text-emerald-500" /> : stats.combinedMembers.toLocaleString()}
               </h3>
             </div>
-            <div className="p-4 bg-indigo-500/10 rounded-2xl text-indigo-500 border border-indigo-500/10">
+            <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-500 border border-emerald-500/10">
               <Users className="w-6 h-6" />
             </div>
           </div>
@@ -333,14 +333,14 @@ const WAChannels = () => {
         {/* Loading Indicator */}
         {loading ? (
           <div className="flex flex-col items-center justify-center h-[40vh]">
-            <div className="w-12 h-12 border-4 border-blue-500/10 border-t-blue-500 rounded-full animate-spin"></div>
+            <div className="w-12 h-12 border-4 border-emerald-500/10 border-t-emerald-500 rounded-full animate-spin"></div>
             <p className="mt-4 text-slate-500 font-medium animate-pulse tracking-wide">Retrieving channel tracking sheets...</p>
           </div>
         ) : channels.length === 0 ? (
 
           /* Empty State */
           <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 p-12 text-center flex flex-col items-center justify-center space-y-4 max-w-xl mx-auto mt-8 rounded-[2rem] shadow-sm">
-            <div className="p-4 bg-blue-500/10 rounded-full text-blue-500 border border-blue-500/5 mb-2">
+            <div className="p-4 bg-emerald-500/10 rounded-full text-emerald-500 border border-emerald-500/5 mb-2">
               <MessageCircle className="w-10 h-10" />
             </div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">No WhatsApp Channels Tracked Yet</h3>
@@ -349,7 +349,7 @@ const WAChannels = () => {
             </p>
             <button
               onClick={() => setIsCreateOpen(true)}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all shadow-md shadow-blue-500/20 active:scale-95"
+              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-all shadow-md shadow-emerald-500/20 active:scale-95"
             >
               Create Channel Profile
             </button>
@@ -374,7 +374,7 @@ const WAChannels = () => {
                           {channel.channel_name}
                         </h4>
                         <div className="flex items-center space-x-1.5 text-xs text-slate-500 dark:text-slate-400">
-                          <User className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          <User className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                           <span className="truncate">Managed by {channel.manager_name}</span>
                         </div>
                       </div>
@@ -398,7 +398,7 @@ const WAChannels = () => {
                   <div className="p-6 py-4 flex items-center justify-between">
                     <div>
                       <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Active Members</span>
-                      <div className="text-3xl font-extrabold tracking-tight mt-1 text-slate-900 dark:text-white text-glow-blue">
+                      <div className="text-3xl font-extrabold tracking-tight mt-1 text-slate-900 dark:text-white text-glow-green">
                         {channel.latest_member_count.toLocaleString()}
                       </div>
                     </div>
@@ -424,8 +424,8 @@ const WAChannels = () => {
                           <AreaChart data={chartData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
                             <defs>
                               <linearGradient id={`gradient-${channel.id}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor={primaryBlue} stopOpacity={0.3} />
-                                <stop offset="95%" stopColor={primaryBlue} stopOpacity={0} />
+                                <stop offset="5%" stopColor={primaryGreen} stopOpacity={0.3} />
+                                <stop offset="95%" stopColor={primaryGreen} stopOpacity={0} />
                               </linearGradient>
                             </defs>
                             <Tooltip
@@ -444,7 +444,7 @@ const WAChannels = () => {
                             <Area
                               type="monotone"
                               dataKey="member_count"
-                              stroke={primaryBlue}
+                              stroke={primaryGreen}
                               strokeWidth={2}
                               fillOpacity={1}
                               fill={`url(#gradient-${channel.id})`}
@@ -459,17 +459,17 @@ const WAChannels = () => {
                   <div className="p-4 bg-slate-50/50 dark:bg-slate-950/30 border-t border-slate-100 dark:border-white/5 grid grid-cols-3 gap-2 mt-auto">
                     <button
                       onClick={() => handleOpenUpdate(channel)}
-                      className="py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-white/5 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all flex items-center justify-center gap-1 hover:text-blue-500 active:scale-95 shadow-sm"
+                      className="py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-white/5 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all flex items-center justify-center gap-1 hover:text-emerald-500 active:scale-95 shadow-sm"
                     >
-                      <Calendar className="w-3.5 h-3.5 shrink-0 text-blue-500" />
+                      <Calendar className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
                       <span>Update</span>
                     </button>
 
                     <button
                       onClick={() => handleOpenHistory(channel)}
-                      className="py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-white/5 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all flex items-center justify-center gap-1 hover:text-indigo-500 active:scale-95 shadow-sm"
+                      className="py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-white/5 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all flex items-center justify-center gap-1 hover:text-emerald-500 active:scale-95 shadow-sm"
                     >
-                      <History className="w-3.5 h-3.5 shrink-0 text-indigo-500" />
+                      <History className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
                       <span>History</span>
                     </button>
 
@@ -498,7 +498,7 @@ const WAChannels = () => {
             {/* Header */}
             <div className="px-6 py-4 border-b border-slate-150 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/40 text-slate-900 dark:text-white">
               <h3 className="font-bold text-base flex items-center gap-2">
-                <Plus className="w-5 h-5 text-blue-500" />
+                <Plus className="w-5 h-5 text-emerald-500" />
                 <span>Create Channel Profile</span>
               </h3>
               <button
@@ -519,7 +519,7 @@ const WAChannels = () => {
                   placeholder="e.g. White Force Jobs Channel"
                   value={newChannelName}
                   onChange={(e) => setNewChannelName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-250 dark:border-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-sm focus:outline-none text-slate-900 dark:text-white transition-all"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-250 dark:border-slate-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-sm focus:outline-none text-slate-900 dark:text-white transition-all"
                 />
               </div>
 
@@ -531,7 +531,7 @@ const WAChannels = () => {
                   placeholder="e.g. Priyanshu Sharma"
                   value={newManagerName}
                   onChange={(e) => setNewManagerName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-250 dark:border-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-sm focus:outline-none text-slate-900 dark:text-white transition-all"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-250 dark:border-slate-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-sm focus:outline-none text-slate-900 dark:text-white transition-all"
                 />
               </div>
 
@@ -547,7 +547,7 @@ const WAChannels = () => {
                 <button
                   type="submit"
                   disabled={createSubmitLoading}
-                  className="flex items-center gap-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-all disabled:opacity-50 shadow-md shadow-blue-500/10"
+                  className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition-all disabled:opacity-50 shadow-md shadow-emerald-500/10"
                 >
                   {createSubmitLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   <span>Save Profile</span>
@@ -566,7 +566,7 @@ const WAChannels = () => {
             {/* Header */}
             <div className="px-6 py-4 border-b border-slate-150 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/40 text-slate-900 dark:text-white">
               <h3 className="font-bold text-base flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-indigo-500" />
+                <Calendar className="w-5 h-5 text-emerald-500" />
                 <span>Log Daily Member Count</span>
               </h3>
               <button
@@ -591,7 +591,7 @@ const WAChannels = () => {
                     const chan = channels.find(c => c.id === parseInt(id, 10));
                     setUpdateMemberCount(chan ? chan.latest_member_count || "" : "");
                   }}
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-250 dark:border-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-sm focus:outline-none text-slate-900 dark:text-white transition-all cursor-pointer"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-250 dark:border-slate-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-sm focus:outline-none text-slate-900 dark:text-white transition-all cursor-pointer"
                 >
                   <option value="" disabled>-- Select Channel --</option>
                   {channels.map(c => (
@@ -607,7 +607,7 @@ const WAChannels = () => {
                   required
                   value={updateDate}
                   onChange={(e) => setUpdateDate(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-250 dark:border-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-sm focus:outline-none text-slate-900 dark:text-white transition-all cursor-pointer"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-250 dark:border-slate-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-sm focus:outline-none text-slate-900 dark:text-white transition-all cursor-pointer"
                 />
               </div>
 
@@ -620,7 +620,7 @@ const WAChannels = () => {
                   placeholder="e.g. 5240"
                   value={updateMemberCount}
                   onChange={(e) => setUpdateMemberCount(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-250 dark:border-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-sm focus:outline-none text-slate-900 dark:text-white transition-all"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-250 dark:border-slate-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-sm focus:outline-none text-slate-900 dark:text-white transition-all"
                 />
                 <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium block mt-1.5 leading-normal">
                   * Note: If a record already exists for this channel on the selected date, saving will overwrite it.
@@ -639,7 +639,7 @@ const WAChannels = () => {
                 <button
                   type="submit"
                   disabled={updateSubmitLoading || !updateChannelId}
-                  className="flex items-center gap-1.5 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition-all disabled:opacity-50 shadow-md shadow-indigo-500/10"
+                  className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition-all disabled:opacity-50 shadow-md shadow-emerald-500/10"
                 >
                   {updateSubmitLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   <span>Save Record</span>
@@ -658,8 +658,8 @@ const WAChannels = () => {
             {/* Drawer Header */}
             <div className="px-8 py-6 border-b border-slate-150 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/40 text-slate-900 dark:text-white">
               <div className="space-y-1">
-                <h3 className="font-bold text-lg flex items-center gap-2 text-glow-blue text-slate-900 dark:text-white">
-                  <History className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+                <h3 className="font-bold text-lg flex items-center gap-2 text-glow-green text-slate-900 dark:text-white">
+                  <History className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
                   <span>Update History Logs</span>
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[450px]">
@@ -677,19 +677,19 @@ const WAChannels = () => {
             {/* Log Filters */}
             <div className="p-8 pb-4 border-b border-slate-150 dark:border-slate-850 flex gap-4 bg-slate-50/20 dark:bg-slate-950/15">
               <div className="relative flex-1 group">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-all" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-all" />
                 <input
                   type="text"
                   placeholder="Filter logs by date or member count..."
                   value={historySearch}
                   onChange={(e) => setHistorySearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-emerald-500 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none transition-all"
                 />
               </div>
 
               <button
                 onClick={() => handleOpenUpdate(selectedChannel)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all active:scale-95 whitespace-nowrap"
+                className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all active:scale-95 whitespace-nowrap"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Log Count</span>
@@ -700,7 +700,7 @@ const WAChannels = () => {
             <div className="flex-1 overflow-y-auto p-8 pt-4">
               {historyLoading ? (
                 <div className="flex flex-col items-center justify-center h-[50vh]">
-                  <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                  <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
                   <p className="mt-3 text-xs text-slate-500 font-semibold tracking-wide">Syncing channel updates history...</p>
                 </div>
               ) : filteredHistory.length === 0 ? (
@@ -719,7 +719,7 @@ const WAChannels = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
                       {filteredHistory.map((item) => (
-                        <tr key={item.id} className="hover:bg-blue-500/[0.01] dark:hover:bg-blue-500/[0.02] transition-colors group">
+                        <tr key={item.id} className="hover:bg-emerald-500/[0.01] dark:hover:bg-emerald-500/[0.02] transition-colors group">
                           <td className="px-6 py-3.5 font-bold text-slate-700 dark:text-slate-300">
                             {new Date(item.update_date).toLocaleDateString('en-US', {
                               weekday: 'short',

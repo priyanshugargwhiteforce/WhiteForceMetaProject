@@ -443,7 +443,7 @@ const WACampaigns = () => {
       }
     }
 
-    return { label: 'Manual Match', class: 'text-blue-500 bg-blue-500/10 border border-blue-500/20' };
+    return { label: 'Manual Match', class: 'text-emerald-500 bg-emerald-500/10 border border-emerald-500/20' };
   };
 
   const resolvePreviewValue = (contact, varName) => {
@@ -658,7 +658,7 @@ const WACampaigns = () => {
   const StatusBadge = ({ status }) => {
     const styles = {
       success: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-      info: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+      info: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
       warning: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
       danger: 'bg-red-500/10 text-red-500 border-red-500/20',
       neutral: 'bg-slate-500/10 text-slate-500 border-slate-500/20'
@@ -672,23 +672,23 @@ const WACampaigns = () => {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
 
       {/* Title Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4 bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-6 shadow-sm">
-        <div className="flex items-center space-x-4">
-          <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500">
-            <Send className="w-6 h-6" />
+      <div className="flex items-center justify-between flex-wrap gap-4 shrink-0">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500 border border-emerald-500/20">
+            <Send className="w-5 h-5" />
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Campaigns Manager</h2>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Create, Sync & Monitor Broadcasters</p>
+          <div className="flex flex-col items-start leading-none">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Campaigns Manager</h2>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Create, Sync & Monitor Broadcasters</p>
           </div>
         </div>
         {view === 'list' && (
           <button
             onClick={() => setView('new')}
-            className="flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-blue-600/20"
+            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs transition-all shadow-lg shadow-emerald-600/10"
           >
             <Plus className="w-4 h-4" />
             Create Campaign
@@ -697,7 +697,7 @@ const WACampaigns = () => {
         {view !== 'list' && (
           <button
             onClick={() => { setView('list'); setSelectedCampaign(null); }}
-            className="flex items-center gap-2 px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 rounded-2xl font-bold text-sm border border-slate-200 dark:border-white/10 transition-all"
+            className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 rounded-xl font-bold text-xs border border-slate-200 dark:border-white/10 transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to List
@@ -733,14 +733,14 @@ const WACampaigns = () => {
                   placeholder="Search campaigns..."
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-3 pl-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100 placeholder-slate-400"
+                  className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-3 pl-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-800 dark:text-slate-100 placeholder-slate-400"
                 />
                 <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               </div>
 
               <button
                 onClick={fetchCampaigns}
-                className="p-3 bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 hover:text-blue-500 transition-all"
+                className="p-3 bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 hover:text-emerald-500 transition-all"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               </button>
@@ -748,7 +748,7 @@ const WACampaigns = () => {
 
             {loading && campaigns.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
-                <div className="w-12 h-12 border-4 border-blue-500/10 border-t-blue-500 rounded-full animate-spin"></div>
+                <div className="w-12 h-12 border-4 border-emerald-500/10 border-t-emerald-500 rounded-full animate-spin"></div>
                 <p className="mt-4 text-sm text-slate-500 font-medium animate-pulse">Loading Campaigns...</p>
               </div>
             ) : campaigns.length === 0 ? (
@@ -781,7 +781,7 @@ const WACampaigns = () => {
                           <td className="py-4 pl-4">
                             <div className="font-bold text-slate-900 dark:text-white">{c.name}</div>
                             <div className="text-xs text-slate-400 mt-1 capitalize font-medium flex items-center gap-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                               {c.campaign_type}
                               {c.created_at && (
                                 <>
@@ -792,7 +792,7 @@ const WACampaigns = () => {
                             </div>
                           </td>
                           <td className="py-4">
-                            <span className="font-mono text-xs font-bold text-indigo-400 dark:text-indigo-300">{c.template_name}</span>
+                            <span className="font-mono text-xs font-bold text-emerald-400 dark:text-emerald-300">{c.template_name}</span>
                           </td>
                           <td className="py-4 font-medium text-slate-700 dark:text-slate-300">
                             {c.list_name || `List ID: ${c.contact_list_id}`}
@@ -808,13 +808,13 @@ const WACampaigns = () => {
                               </div>
                               <div className="w-full bg-slate-100 dark:bg-white/5 rounded-full h-1.5 overflow-hidden">
                                 <div
-                                  className={`h-full rounded-full ${c.status === 'failed' ? 'bg-red-500' : 'bg-blue-500'}`}
+                                  className={`h-full rounded-full ${c.status === 'failed' ? 'bg-red-500' : 'bg-emerald-500'}`}
                                   style={{ width: `${progressPercent}%` }}
                                 ></div>
                               </div>
                               <div className="text-[10px] text-slate-400 mt-1 flex gap-2">
                                 <span>Del: <strong className="text-emerald-500">{c.delivered_count || 0}</strong></span>
-                                <span>Read: <strong className="text-blue-500">{c.read_count || 0}</strong></span>
+                                <span>Read: <strong className="text-emerald-500">{c.read_count || 0}</strong></span>
                                 <span>Fail: <strong className="text-red-500">{c.failed_count || 0}</strong></span>
                               </div>
                             </div>
@@ -830,7 +830,7 @@ const WACampaigns = () => {
                               <button
                                 onClick={() => handleCloneCampaign(c.id)}
                                 title="Clone Campaign"
-                                className="p-2 bg-slate-100 hover:bg-indigo-50 dark:bg-white/5 dark:hover:bg-indigo-950/20 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 hover:text-indigo-500 transition-all"
+                                className="p-2 bg-slate-100 hover:bg-emerald-50 dark:bg-white/5 dark:hover:bg-emerald-950/20 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 hover:text-emerald-500 transition-all"
                               >
                                 <Copy className="w-3.5 h-3.5" />
                               </button>
@@ -879,7 +879,7 @@ const WACampaigns = () => {
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-6 shadow-sm space-y-6">
               <h3 className="text-base font-bold text-slate-900 dark:text-white pb-3 border-b border-slate-100 dark:border-white/5 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-blue-500" />
+                <Activity className="w-5 h-5 text-emerald-500" />
                 Campaign Performance
               </h3>
 
@@ -891,7 +891,7 @@ const WACampaigns = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Template ID</label>
-                  <div className="text-xs font-mono font-semibold text-indigo-400 dark:text-indigo-300 mt-1">{selectedCampaign.template_name}</div>
+                  <div className="text-xs font-mono font-semibold text-emerald-400 dark:text-emerald-300 mt-1">{selectedCampaign.template_name}</div>
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Type</label>
@@ -911,7 +911,7 @@ const WACampaigns = () => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-semibold text-slate-500">Sent Messages</span>
-                  <span className="text-sm font-bold text-indigo-500">{selectedCampaign.sent_count || 0}</span>
+                  <span className="text-sm font-bold text-emerald-500">{selectedCampaign.sent_count || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-semibold text-slate-500">Delivered</span>
@@ -919,7 +919,7 @@ const WACampaigns = () => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-semibold text-slate-500">Read Receipts</span>
-                  <span className="text-sm font-bold text-blue-500">{selectedCampaign.read_count || 0}</span>
+                  <span className="text-sm font-bold text-emerald-500">{selectedCampaign.read_count || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-semibold text-slate-500">Failed Delivery</span>
@@ -950,7 +950,7 @@ const WACampaigns = () => {
 
               {detailsLoading && recipientsList.length === 0 ? (
                 <div className="flex justify-center py-12">
-                  <div className="w-8 h-8 border-4 border-blue-500/10 border-t-blue-500 rounded-full animate-spin"></div>
+                  <div className="w-8 h-8 border-4 border-emerald-500/10 border-t-emerald-500 rounded-full animate-spin"></div>
                 </div>
               ) : recipientsList.length === 0 ? (
                 <div className="text-center py-12 text-slate-400 text-xs">No recipients logs recorded for this campaign.</div>
@@ -971,11 +971,11 @@ const WACampaigns = () => {
                         <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01]">
                           <td className="py-3 pl-2 font-mono">{r.phone}</td>
                           <td className="py-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase border ${r.status === 'sent' ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20' :
-                                r.status === 'delivered' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                                  r.status === 'read' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                                    r.status === 'failed' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                                      'bg-slate-500/10 text-slate-500 border-slate-500/20'
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase border ${r.status === 'sent' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                              r.status === 'delivered' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                r.status === 'read' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                  r.status === 'failed' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                    'bg-slate-500/10 text-slate-500 border-slate-500/20'
                               }`}>
                               {r.status}
                             </span>
@@ -1056,7 +1056,7 @@ const WACampaigns = () => {
                 placeholder="e.g. June Promotional Offer"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100"
+                className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-800 dark:text-slate-100"
               />
             </div>
 
@@ -1070,7 +1070,7 @@ const WACampaigns = () => {
                   <select
                     value={selectedConfigId}
                     onChange={(e) => setSelectedConfigId(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none text-slate-800 dark:text-slate-100 cursor-pointer"
+                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 appearance-none text-slate-800 dark:text-slate-100 cursor-pointer"
                   >
                     <option value="">Default Server Config</option>
                     {whatsappConfigs.map(cfg => (
@@ -1089,7 +1089,7 @@ const WACampaigns = () => {
                   <select
                     value={contactListId}
                     onChange={(e) => setContactListId(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none text-slate-800 dark:text-slate-100 cursor-pointer"
+                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 appearance-none text-slate-800 dark:text-slate-100 cursor-pointer"
                   >
                     <option value="">Choose a contact list...</option>
                     {contactLists.map(l => (
@@ -1110,7 +1110,7 @@ const WACampaigns = () => {
                 <select
                   value={templateId}
                   onChange={(e) => setTemplateId(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none text-slate-800 dark:text-slate-100 cursor-pointer"
+                  className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 appearance-none text-slate-800 dark:text-slate-100 cursor-pointer"
                 >
                   <option value="">Choose an approved template...</option>
                   {templates.map(t => (
@@ -1129,7 +1129,7 @@ const WACampaigns = () => {
                   <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/40 dark:border-white/5 pb-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-3">
-                        <h4 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-2">
+                        <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-2">
                           <Database className="w-4 h-4" />
                           Map Template Parameters
                         </h4>
@@ -1193,7 +1193,7 @@ const WACampaigns = () => {
                       return (
                         <div key={v.variable_name} className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-center border-b border-slate-200/40 dark:border-white/5 pb-4 last:border-b-0 last:pb-0">
                           <div className="text-xs font-bold">
-                            <span className="font-mono text-indigo-500 dark:text-indigo-400">{`{{${v.variable_name}}}`}</span>
+                            <span className="font-mono text-emerald-500 dark:text-emerald-400">{`{{${v.variable_name}}}`}</span>
                             <span className="ml-2 text-[9px] uppercase font-bold text-slate-400 bg-slate-100 dark:bg-white/5 px-1.5 py-0.5 rounded">
                               {v.component_type}
                             </span>
@@ -1260,7 +1260,7 @@ const WACampaigns = () => {
                         id="shouldSaveMapping"
                         checked={shouldSaveMapping}
                         onChange={(e) => setShouldSaveMapping(e.target.checked)}
-                        className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500/20"
+                        className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500/20"
                       />
                       <label htmlFor="shouldSaveMapping" className="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
                         Save Mapping For Future Use
@@ -1287,7 +1287,7 @@ const WACampaigns = () => {
                             id="isSaveDefault"
                             checked={isSaveDefault}
                             onChange={(e) => setIsSaveDefault(e.target.checked)}
-                            className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500/20"
+                            className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500/20"
                           />
                           <label htmlFor="isSaveDefault" className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-2 cursor-pointer">
                             Set as Default Profile
@@ -1302,7 +1302,7 @@ const WACampaigns = () => {
                 {contactListId && previewContacts.length > 0 && (
                   <div className="p-6 bg-slate-50 dark:bg-white/[0.01] border border-slate-200/60 dark:border-white/5 rounded-3xl space-y-4 animate-in fade-in duration-300">
                     <div className="flex justify-between items-center">
-                      <h4 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-2">
+                      <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-2">
                         <Users className="w-4 h-4" />
                         Mapping Preview (Max 3 Contacts)
                       </h4>
@@ -1331,7 +1331,7 @@ const WACampaigns = () => {
                                 </div>
                               </td>
                               {variables.map(v => (
-                                <td key={v.variable_name} className="p-3 font-medium font-mono text-indigo-500 dark:text-indigo-400">
+                                <td key={v.variable_name} className="p-3 font-medium font-mono text-emerald-500 dark:text-emerald-400">
                                   {resolvePreviewValue(c, v.variable_name) || <span className="text-slate-400 italic">empty</span>}
                                 </td>
                               ))}
@@ -1355,7 +1355,7 @@ const WACampaigns = () => {
                   <select
                     value={campaignType}
                     onChange={(e) => setCampaignType(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none text-slate-800 dark:text-slate-100 cursor-pointer"
+                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 appearance-none text-slate-800 dark:text-slate-100 cursor-pointer"
                   >
                     <option value="broadcast">Instant Broadcast (Immediate)</option>
                     <option value="scheduled">Scheduled (Future Queue)</option>
@@ -1368,14 +1368,14 @@ const WACampaigns = () => {
               {campaignType === 'scheduled' && (
                 <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
                   <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                    <Calendar className="w-3.5 h-3.5 text-emerald-500" />
                     Scheduled Target Date & Time
                   </label>
                   <input
                     type="datetime-local"
                     value={scheduledTime}
                     onChange={(e) => setScheduledTime(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100"
+                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-800 dark:text-slate-100"
                   />
                 </div>
               )}
@@ -1396,7 +1396,7 @@ const WACampaigns = () => {
                           else if (val === 'weekly') setCronExpression('0 9 * * 1');
                           else if (val === 'monthly') setCronExpression('0 9 1 * *');
                         }}
-                        className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none text-slate-800 dark:text-slate-100 cursor-pointer"
+                        className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 appearance-none text-slate-800 dark:text-slate-100 cursor-pointer"
                       >
                         <option value="daily">Daily (9:00 AM)</option>
                         <option value="weekly">Weekly (Monday 9:00 AM)</option>
@@ -1417,7 +1417,7 @@ const WACampaigns = () => {
                       onChange={(e) => setCronExpression(e.target.value)}
                       disabled={recurringFrequency !== 'custom'}
                       placeholder="e.g. 0 9 * * *"
-                      className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100 disabled:opacity-60"
+                      className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-800 dark:text-slate-100 disabled:opacity-60"
                     />
                   </div>
                 </div>
@@ -1426,7 +1426,7 @@ const WACampaigns = () => {
               {campaignType !== 'broadcast' && (
                 <div className="space-y-2 animate-in slide-in-from-top-2 duration-300 col-span-1 md:col-span-2">
                   <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                    <Globe className="w-3.5 h-3.5 text-blue-500" />
+                    <Globe className="w-3.5 h-3.5 text-emerald-500" />
                     Schedule Timezone
                   </label>
                   <input
@@ -1434,7 +1434,7 @@ const WACampaigns = () => {
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
                     placeholder="e.g. UTC or Asia/Kolkata"
-                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100"
+                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-800 dark:text-slate-100"
                   />
                   <p className="text-[10px] text-slate-400">Specify timezone for scheduled execution. Default is your current browser timezone.</p>
                 </div>
@@ -1456,7 +1456,7 @@ const WACampaigns = () => {
                 type="button"
                 disabled={submitting}
                 onClick={() => handleCreateCampaign(true)}
-                className="flex items-center gap-2 px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-xs transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50"
+                className="flex items-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl text-xs transition-all shadow-lg shadow-emerald-600/20 disabled:opacity-50"
               >
                 <Play className="w-3.5 h-3.5" />
                 {campaignType === 'broadcast' ? 'Send / Queue Now' : 'Schedule Campaign'}
@@ -1474,8 +1474,8 @@ const WACampaigns = () => {
 
 const StatsCard = ({ label, value, color }) => {
   const colors = {
-    blue: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-    indigo: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20',
+    blue: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+    indigo: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
     emerald: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
     violet: 'bg-violet-500/10 text-violet-500 border-violet-500/20'
   };

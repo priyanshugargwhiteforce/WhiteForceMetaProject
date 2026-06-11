@@ -281,15 +281,17 @@ const SendMessage = () => {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 md:p-5 max-w-6xl mx-auto space-y-4">
       {/* Title & Header Row */}
-      <div className="flex items-center space-x-4 bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-6 shadow-sm">
-        <div className="p-3 bg-indigo-500/10 rounded-2xl text-indigo-500">
-          <Send className="w-6 h-6 animate-pulse" />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Broadcast Message</h2>
-          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Send Templates to Multiple Users</p>
+      <div className="flex items-center justify-between flex-wrap gap-4 shrink-0">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500 border border-emerald-500/20">
+            <Send className="w-5 h-5 animate-pulse" />
+          </div>
+          <div className="flex flex-col items-start leading-none">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Broadcast Message</h2>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Send Templates to Multiple Users</p>
+          </div>
         </div>
       </div>
 
@@ -299,20 +301,20 @@ const SendMessage = () => {
 
             {/* Left Side: Config */}
             <div className="space-y-6">
-              <h3 className="text-xs font-bold text-indigo-500 uppercase tracking-wider border-b border-slate-100 dark:border-white/5 pb-2">
+              <h3 className="text-xs font-bold text-emerald-500 uppercase tracking-wider border-b border-slate-100 dark:border-white/5 pb-2">
                 1. Sender & Template Setup
               </h3>
 
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                  <Database className="w-3.5 h-3.5 text-indigo-500/70" />
+                  <Database className="w-3.5 h-3.5 text-emerald-500/70" />
                   Select WhatsApp Sender Account
                 </label>
                 <div className="relative">
                   <select
                     value={selectedConfigId}
                     onChange={(e) => setSelectedConfigId(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 appearance-none transition-all cursor-pointer text-slate-800 dark:text-slate-100"
+                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 appearance-none transition-all cursor-pointer text-slate-800 dark:text-slate-100"
                   >
                     <option value="" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Default Server Config</option>
                     {whatsappConfigs.map(cfg => (
@@ -329,14 +331,14 @@ const SendMessage = () => {
 
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                  <FileText className="w-3.5 h-3.5 text-indigo-500/70" />
+                  <FileText className="w-3.5 h-3.5 text-emerald-500/70" />
                   Select Approved Template
                 </label>
                 <div className="relative">
                   <select
                     value={selectedTemplate}
                     onChange={(e) => setSelectedTemplate(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 appearance-none transition-all cursor-pointer text-slate-800 dark:text-slate-100"
+                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 appearance-none transition-all cursor-pointer text-slate-800 dark:text-slate-100"
                   >
                     <option value="" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Choose a template...</option>
                     {templates.map(t => (
@@ -351,11 +353,11 @@ const SendMessage = () => {
                 </div>
               </div>
 
-              <div className="p-5 bg-indigo-500/5 rounded-3xl border border-indigo-500/10 relative overflow-hidden">
+              <div className="p-5 bg-emerald-500/5 rounded-3xl border border-emerald-500/10 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-5">
                   <MessageSquare className="w-16 h-16" />
                 </div>
-                <h4 className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-2">Campaign Note</h4>
+                <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-2">Campaign Note</h4>
                 <p className="text-xs text-slate-500 leading-relaxed font-medium">
                   Make sure your recipients have opted-in to receive messages. WhatsApp enforces strict policies for promotional broadcasting.
                 </p>
@@ -374,14 +376,14 @@ const SendMessage = () => {
                   <button
                     type="button"
                     onClick={() => setRecipientMode('manual')}
-                    className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all ${recipientMode === 'manual' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all ${recipientMode === 'manual' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                   >
                     Manual Entry
                   </button>
                   <button
                     type="button"
                     onClick={() => setRecipientMode('bulk')}
-                    className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all ${recipientMode === 'bulk' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all ${recipientMode === 'bulk' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                   >
                     Excel/CSV Upload
                   </button>
@@ -395,7 +397,7 @@ const SendMessage = () => {
                     <button
                       type="button"
                       onClick={handleAddNumber}
-                      className="text-[10px] font-bold text-indigo-500 hover:text-indigo-400 uppercase transition-colors flex items-center gap-1.5"
+                      className="text-[10px] font-bold text-emerald-500 hover:text-emerald-400 uppercase transition-colors flex items-center gap-1.5"
                     >
                       <Plus className="w-3.5 h-3.5" /> Add Number
                     </button>
@@ -428,8 +430,8 @@ const SendMessage = () => {
                 <div className="space-y-4">
                   {/* File Input Dropzone */}
                   {!bulkFile ? (
-                    <label className="border-2 border-dashed border-slate-200 dark:border-white/10 hover:border-indigo-500/50 dark:hover:border-indigo-500/50 rounded-[2rem] p-8 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-indigo-500/[0.01]">
-                      <UploadCloud className="w-10 h-10 text-indigo-500 mb-3 animate-pulse" />
+                    <label className="border-2 border-dashed border-slate-200 dark:border-white/10 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-[2rem] p-8 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-emerald-500/[0.01]">
+                      <UploadCloud className="w-10 h-10 text-emerald-500 mb-3 animate-pulse" />
                       <span className="text-sm font-bold text-slate-800 dark:text-white">Upload CSV or Excel file</span>
                       <span className="text-[10px] text-slate-400 mt-1 uppercase font-semibold">Supports .csv, .xlsx, .xls</span>
                       <input
@@ -474,7 +476,7 @@ const SendMessage = () => {
                       {detectedHeaders.length > 0 && (
                         <div className="space-y-4 bg-slate-50 dark:bg-white/[0.02] p-5 rounded-3xl border border-slate-200 dark:border-white/10 shadow-inner">
                           <div className="flex items-center space-x-2 pb-2 border-b border-slate-100 dark:border-white/5">
-                            <Database className="w-4 h-4 text-indigo-500" />
+                            <Database className="w-4 h-4 text-emerald-500" />
                             <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest">Column Mapping Setup</h4>
                           </div>
 
@@ -488,7 +490,7 @@ const SendMessage = () => {
                                 <select
                                   value={phoneColIdx}
                                   onChange={(e) => setPhoneColIdx(parseInt(e.target.value))}
-                                  className="w-full bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 pr-10 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all text-slate-800 dark:text-slate-100 cursor-pointer appearance-none"
+                                  className="w-full bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 pr-10 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-slate-800 dark:text-slate-100 cursor-pointer appearance-none"
                                 >
                                   {detectedHeaders.map((header, idx) => (
                                     <option key={idx} value={idx} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
@@ -521,7 +523,7 @@ const SendMessage = () => {
                                           return updated;
                                         });
                                       }}
-                                      className="w-full bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 pr-10 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all text-slate-800 dark:text-slate-100 cursor-pointer appearance-none"
+                                      className="w-full bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 pr-10 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-slate-800 dark:text-slate-100 cursor-pointer appearance-none"
                                     >
                                       <option value={-1} className="bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500">-- Select Column (or Empty) --</option>
                                       {detectedHeaders.map((header, idx) => (
@@ -619,7 +621,7 @@ const SendMessage = () => {
             <button
               disabled={loading}
               type="submit"
-              className={`px-10 py-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-2xl font-bold text-sm shadow-xl shadow-indigo-600/20 flex items-center transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:grayscale cursor-pointer`}
+              className={`px-10 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-sm shadow-xl shadow-emerald-600/20 flex items-center transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:grayscale cursor-pointer`}
             >
               {loading ? (
                 <>Processing... <Activity className="w-4 h-4 ml-2 animate-spin" /></>
@@ -645,12 +647,12 @@ const SendMessage = () => {
               {results.map((res, i) => (
                 <div key={i} className="bg-black/40 border border-white/5 p-5 rounded-2xl flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${res.success ? (res.status === 'queued' ? 'bg-indigo-500/10 text-indigo-500' : 'bg-emerald-500/10 text-emerald-500') : 'bg-red-500/10 text-red-500'}`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${res.success ? (res.status === 'queued' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-emerald-500/10 text-emerald-500') : 'bg-red-500/10 text-red-500'}`}>
                       {res.success ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
                     </div>
                     <div>
                       <p className="text-xs font-mono text-white">{res.number}</p>
-                      <p className={`text-[10px] font-bold uppercase ${res.success ? (res.status === 'queued' ? 'text-indigo-400' : 'text-emerald-500') : 'text-red-500'}`}>
+                      <p className={`text-[10px] font-bold uppercase ${res.success ? (res.status === 'queued' ? 'text-emerald-400' : 'text-emerald-500') : 'text-red-500'}`}>
                         {res.success ? (res.status === 'queued' ? 'Enqueued' : 'Delivered') : 'Failed'}
                       </p>
                     </div>
