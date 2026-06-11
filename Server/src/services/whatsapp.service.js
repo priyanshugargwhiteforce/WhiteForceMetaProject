@@ -188,13 +188,15 @@ const getTemplates = async (forceSync = false, configId = null) => {
         const [updatedRows] = await pool.query('SELECT * FROM whatsapp_templates WHERE waba_id = ?', [wabaId]);
         return updatedRows.map(r => ({
             ...r,
-            components: typeof r.components === 'string' ? JSON.parse(r.components) : r.components
+            components: typeof r.components === 'string' ? JSON.parse(r.components) : r.components,
+            variables: typeof r.variables === 'string' ? JSON.parse(r.variables) : r.variables
         }));
     }
 
     return rows.map(r => ({
         ...r,
-        components: typeof r.components === 'string' ? JSON.parse(r.components) : r.components
+        components: typeof r.components === 'string' ? JSON.parse(r.components) : r.components,
+        variables: typeof r.variables === 'string' ? JSON.parse(r.variables) : r.variables
     }));
 };
 
@@ -212,12 +214,27 @@ const logSentMessage = async (phoneId, recipient, templateName, status, messageI
 };
 
 // Parse template components and save dynamic variables to dedicated database tables
-async function processAndSaveTemplateVariables(templateId, components) {
+async function processAndSaveTemplateVariables(templateId, components, originalComponents = null) {
     try {
+        // Check if we already have custom non-numeric variables saved in DB for this template (e.g. from template builder)
+        // If they exist, we skip overwriting them during bulk/auto template sync so that names are preserved.
+        const [existingVars] = await pool.query(
+            'SELECT variable_name FROM whatsapp_template_variables WHERE template_id = ?',
+            [templateId]
+        );
+        const hasCustomNames = existingVars.some(v => isNaN(v.variable_name));
+        if (hasCustomNames && !originalComponents) {
+            console.log(`Template ${templateId} already has custom name variables. Skipping override during sync.`);
+            return;
+        }
+
         const comps = typeof components === 'string' ? JSON.parse(components) : (components || []);
+        const origComps = originalComponents 
+            ? (typeof originalComponents === 'string' ? JSON.parse(originalComponents) : originalComponents) 
+            : comps;
         const extracted = [];
 
-        comps.forEach(comp => {
+        origComps.forEach((comp, compIdx) => {
             const compType = String(comp.type).toLowerCase();
             if (compType === 'body' && comp.text) {
                 const matches = [...comp.text.matchAll(/\{\{([a-zA-Z0-9_]+)\}\}/g)];

@@ -3,6 +3,72 @@ const axios = require('axios');
 const { processAndSaveTemplateVariables, resolveWhatsAppConfig } = require('./whatsapp.service');
 
 /**
+ * Map named variables like {{first_name}} to sequential numbered variables like {{1}}
+ * for Meta template creation compatibility, and construct example payloads.
+ */
+const mapNameVariablesToNumbers = (components) => {
+    const variableMap = {};
+    const varNames = [];
+    const mappedComponents = JSON.parse(JSON.stringify(components));
+
+    mappedComponents.forEach(comp => {
+        const compType = String(comp.type).toLowerCase();
+        if ((compType === 'body' || compType === 'header') && comp.text) {
+            // Find all matches of {{variable_name}}
+            const matches = [...comp.text.matchAll(/\{\{([a-zA-Z0-9_]+)\}\}/g)];
+            matches.forEach(match => {
+                const varName = match[1];
+                if (!variableMap[varName]) {
+                    varNames.push(varName);
+                    variableMap[varName] = varNames.length; // 1-based index
+                }
+            });
+
+            // Replace in text
+            comp.text = comp.text.replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (fullMatch, varName) => {
+                return `{{${variableMap[varName]}}}`;
+            });
+
+            // Add examples for Meta validation
+            const uniqueMatches = [...comp.text.matchAll(/\{\{(\d+)\}\}/g)];
+            if (uniqueMatches.length > 0) {
+                if (compType === 'body') {
+                    comp.example = {
+                        body_text: [uniqueMatches.map((_, i) => `SampleValue${i + 1}`)]
+                    };
+                } else if (compType === 'header') {
+                    comp.example = {
+                        header_text: [uniqueMatches.map((_, i) => `SampleValue${i + 1}`)]
+                    };
+                }
+            }
+        }
+
+        // Button URL variables
+        if (compType === 'buttons' && Array.isArray(comp.buttons)) {
+            comp.buttons.forEach(btn => {
+                if (btn.type === 'URL' && btn.url) {
+                    const matches = [...btn.url.matchAll(/\{\{([a-zA-Z0-9_]+)\}\}/g)];
+                    matches.forEach(match => {
+                        const varName = match[1];
+                        if (!variableMap[varName]) {
+                            varNames.push(varName);
+                            variableMap[varName] = varNames.length;
+                        }
+                    });
+
+                    btn.url = btn.url.replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (fullMatch, varName) => {
+                        return `{{${variableMap[varName]}}}`;
+                    });
+                }
+            });
+        }
+    });
+
+    return { mappedComponents, varNames };
+};
+
+/**
  * Create a message template in Meta WABA
  */
 const createMetaTemplate = async (templateData, configId = null) => {
@@ -14,13 +80,16 @@ const createMetaTemplate = async (templateData, configId = null) => {
 
     const url = `https://graph.facebook.com/v24.0/${wabaId}/message_templates`;
 
+    // Map named variables to sequential numbers (e.g. {{name}} -> {{1}}) for Meta template submit
+    const { mappedComponents, varNames } = mapNameVariablesToNumbers(templateData.components || []);
+
     try {
         console.log(`Creating template "${templateData.name}" on Meta WABA...`);
         const response = await axios.post(url, {
             name: templateData.name.toLowerCase().trim().replace(/\s+/g, '_'),
             category: templateData.category || 'MARKETING',
             language: templateData.language || 'en_US',
-            components: templateData.components || []
+            components: mappedComponents
         }, {
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -31,11 +100,12 @@ const createMetaTemplate = async (templateData, configId = null) => {
         // Insert/cache newly created template in DB
         const templateId = response.data.id;
         await pool.query(
-            `INSERT INTO whatsapp_templates (id, waba_id, name, status, language, category, components)
-             VALUES (?, ?, ?, ?, ?, ?, ?)
+            `INSERT INTO whatsapp_templates (id, waba_id, name, status, language, category, components, variables)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE
                 status = VALUES(status),
                 components = VALUES(components),
+                variables = VALUES(variables),
                 synced_at = CURRENT_TIMESTAMP`,
             [
                 templateId,
@@ -44,11 +114,12 @@ const createMetaTemplate = async (templateData, configId = null) => {
                 'PENDING', // Default state on submit is PENDING
                 templateData.language || 'en_US',
                 templateData.category || 'MARKETING',
-                JSON.stringify(templateData.components || [])
+                JSON.stringify(mappedComponents),
+                JSON.stringify(varNames)
             ]
         );
 
-        await processAndSaveTemplateVariables(templateId, templateData.components || []);
+        await processAndSaveTemplateVariables(templateId, mappedComponents, templateData.components || []);
 
         return response.data;
     } catch (error) {

@@ -50,6 +50,36 @@ const WATemplateBuilder = () => {
   // Buttons State
   const [buttons, setButtons] = useState([]); // Array of { type: 'QUICK_REPLY'|'URL'|'PHONE', text: '', value: '' }
 
+  const isNameValid = !name || /^[a-z0-9_]+$/.test(name);
+
+  const insertFormatting = (marker) => {
+    const textarea = document.getElementById('bodyTextarea');
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = bodyText;
+    
+    let selectedText = text.substring(start, end);
+    let newText = '';
+
+    if (start === end) {
+      newText = text.substring(0, start) + marker + marker + text.substring(end);
+      setBodyText(newText);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + marker.length, start + marker.length);
+      }, 0);
+    } else {
+      newText = text.substring(0, start) + marker + selectedText + marker + text.substring(end);
+      setBodyText(newText);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start, start + selectedText.length + marker.length * 2);
+      }, 0);
+    }
+  };
+
   useEffect(() => {
     if (location.state?.cloneTemplate) {
       const t = location.state.cloneTemplate;
@@ -110,6 +140,10 @@ const WATemplateBuilder = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!/^[a-z0-9_]+$/.test(name)) {
+      setError('Template name must contain only lowercase letters, numbers, and underscores (no spaces or hyphens).');
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -139,7 +173,7 @@ const WATemplateBuilder = () => {
       text: bodyText
     };
 
-    const variableRegex = /\{\{(\d+)\}\}/g;
+    const variableRegex = /\{\{([a-zA-Z0-9_]+)\}\}/g;
     const matches = [...bodyText.matchAll(variableRegex)];
     if (matches.length > 0) {
       bodyObj.example = {
@@ -239,8 +273,13 @@ const WATemplateBuilder = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-800 dark:text-white font-mono"
+                className={`w-full bg-slate-50 dark:bg-white/5 border ${!isNameValid ? 'border-red-500 focus:ring-red-500/20' : 'border-slate-200 dark:border-white/10 focus:ring-emerald-500/20'} rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 text-slate-800 dark:text-white font-mono transition-all`}
               />
+              {!isNameValid && (
+                <p className="text-[10px] text-red-500 font-semibold mt-1.5 leading-tight">
+                  Template name can only contain lowercase letters, numbers, and underscores (no spaces or hyphens).
+                </p>
+              )}
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 block">Category</label>
@@ -313,18 +352,60 @@ const WATemplateBuilder = () => {
               <label className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center">
                 <MessageSquare className="w-4 h-4 mr-2" /> Body Section (Required)
               </label>
-              <button
-                type="button"
-                onClick={() => setBodyText(prev => prev + ` {{${(prev.match(/\{\{(\d+)\}\}/g) || []).length + 1}}}`)}
-                className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 transition-colors flex items-center"
-              >
-                <Plus className="w-3.5 h-3.5 mr-1" /> Add Variable Tag
-              </button>
+              <div className="flex items-center space-x-2">
+                {/* Formatting Buttons */}
+                <div className="flex bg-slate-100 dark:bg-white/5 p-0.5 rounded-lg border border-slate-200 dark:border-white/10 mr-1.5 shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => insertFormatting('*')}
+                    className="px-2 py-0.5 text-xs font-extrabold hover:bg-white dark:hover:bg-white/10 rounded text-slate-755 dark:text-slate-250 transition-all"
+                    title="Bold (*text*)"
+                  >
+                    B
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertFormatting('_')}
+                    className="px-2 py-0.5 text-xs font-serif italic hover:bg-white dark:hover:bg-white/10 rounded text-slate-755 dark:text-slate-250 transition-all"
+                    title="Italic (_text_)"
+                  >
+                    I
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertFormatting('~')}
+                    className="px-2 py-0.5 text-xs line-through hover:bg-white dark:hover:bg-white/10 rounded text-slate-755 dark:text-slate-250 transition-all"
+                    title="Strikethrough (~text~)"
+                  >
+                    S
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertFormatting('```')}
+                    className="px-2 py-0.5 text-[9px] font-mono hover:bg-white dark:hover:bg-white/10 rounded text-slate-755 dark:text-slate-250 transition-all"
+                    title="Monospace (```text```)"
+                  >
+                    M
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const matches = bodyText.match(/\{\{([a-zA-Z0-9_]+)\}\}/g) || [];
+                    const nextNum = matches.length + 1;
+                    setBodyText(prev => prev + ` {{var_${nextNum}}}`);
+                  }}
+                  className="text-[10px] font-bold text-emerald-605 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 transition-colors flex items-center bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Add Variable Tag
+                </button>
+              </div>
             </div>
 
             <textarea
+              id="bodyTextarea"
               rows={5}
-              placeholder="e.g. Hello {{1}}, your package has been shipped! Track it here: {{2}}"
+              placeholder="e.g. Hello {{first_name}}, your package has been shipped! Track it here: {{track_url}}"
               value={bodyText}
               onChange={(e) => setBodyText(e.target.value)}
               required
@@ -434,7 +515,7 @@ const WATemplateBuilder = () => {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !isNameValid}
               className="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-sm shadow-md hover:scale-[1.02] active:scale-95 transition-all flex items-center disabled:opacity-50 disabled:grayscale"
             >
               {loading ? 'Submitting...' : 'Submit to Meta'}
@@ -444,7 +525,7 @@ const WATemplateBuilder = () => {
         </form>
 
         {/* Right Side: Smartphone Real-time Mock Simulator */}
-        <div className="lg:col-span-5 flex flex-col items-center">
+        <div className="lg:col-span-5 lg:sticky lg:top-24 lg:self-start flex flex-col items-center">
           <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6 flex items-center">
             <Eye className="w-4 h-4 mr-2 text-emerald-500 dark:text-emerald-400" /> WhatsApp Live Mockup
           </h3>
@@ -490,14 +571,17 @@ const WATemplateBuilder = () => {
                   {/* 1. Preview Header */}
                   {headerType !== 'NONE' && (
                     <div className="font-bold text-slate-900 dark:text-white border-b border-black/5 dark:border-white/5 pb-1 mb-1 text-[13px]">
-                      {headerType === 'TEXT' ? headerText || 'Header Text Preview' : `[Media Component: ${headerType}]`}
+                      {headerType === 'TEXT' ? (
+                        <span dangerouslySetInnerHTML={{ __html: formatWhatsAppText(headerText || 'Header Text Preview') }} />
+                      ) : `[Media Component: ${headerType}]`}
                     </div>
                   )}
 
                   {/* 2. Preview Body */}
-                  <div className="whitespace-pre-wrap leading-relaxed text-slate-800 dark:text-slate-100 text-[12.5px]">
-                    {bodyText || 'Start typing in the editor to see your template mockup here...'}
-                  </div>
+                  <div 
+                    className="whitespace-pre-wrap leading-relaxed text-slate-800 dark:text-slate-100 text-[12.5px]"
+                    dangerouslySetInnerHTML={{ __html: formatWhatsAppText(bodyText || 'Start typing in the editor to see your template mockup here...') }}
+                  />
 
                   {/* 3. Preview Footer */}
                   {footerText.trim() && (
@@ -550,6 +634,33 @@ const WATemplateBuilder = () => {
       </div>
     </div>
   );
+};
+
+const formatWhatsAppText = (text) => {
+  if (!text) return '';
+  
+  // Escape HTML characters to prevent rendering arbitrary HTML from text input
+  let escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // Bold: *text* -> <strong>text</strong>
+  escaped = escaped.replace(/\*([^\*]+)\*/g, '<strong>$1</strong>');
+
+  // Italic: _text_ -> <em>text</em>
+  escaped = escaped.replace(/_([^_]+)_/g, '<em>$1</em>');
+
+  // Strikethrough: ~text~ -> <del>text</del>
+  escaped = escaped.replace(/~([^~]+)~/g, '<del>$1</del>');
+
+  // Monospace: ```text``` -> <code>text</code>
+  escaped = escaped.replace(/```([^`]+)```/g, '<code class="bg-slate-100 dark:bg-black/40 px-1.5 py-0.5 rounded font-mono text-[11px] text-emerald-600 dark:text-emerald-400">$1</code>');
+
+  // Variable tags: {{name}} -> styled colored badge
+  escaped = escaped.replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, '<span class="text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 dark:bg-emerald-500/20 px-1.5 py-0.5 rounded-md text-[11.5px] border border-emerald-500/20 font-mono">{{$1}}</span>');
+
+  return escaped;
 };
 
 export default WATemplateBuilder;
