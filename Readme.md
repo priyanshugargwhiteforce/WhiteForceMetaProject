@@ -223,48 +223,7 @@ To run the server, configure the environment variables in a `.env` file inside t
 PORT=8000
 NODE_ENV=development
 
-# --- MySQL Database Configurations ---
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_NAME=meta_api_db
 
-# --- JWT Configuration ---
-JWT_SECRET=your_jwt_signing_token_secret
-JWT_EXPIRES_IN=7d
-
-# --- Redis Configuration ---
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
-REDIS_PASSWORD=
-
-# --- Groq AI Configuration ---
-GROQ_API_KEY=gsk_your_groq_api_key_string
-
-# --- Google Ads & YouTube Configurations ---
-GOOGLE_CLIENT_ID=your_google_oauth_client_id
-GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
-GOOGLE_DEVELOPER_TOKEN=your_google_developer_token
-GOOGLE_REFRESH_TOKEN=your_google_refresh_token
-GOOGLE_CUSTOMER_ID=your_google_customer_id
-
-# --- WhatsApp Default Configurations ---
-WABA_ID=your_default_waba_account_id
-PHONE_NUMBER_ID=your_default_sender_phone_id
-META_ACCESS_TOKEN=your_default_system_user_access_token
-
-# --- LinkedIn Ads OAuth Credentials ---
-LINKEDIN_CLIENT_ID=your_linkedin_client_id
-LINKEDIN_CLIENT_SECRET=your_linkedin_client_secret
-LINKEDIN_REDIRECT_URI=http://localhost:8000/api/linkedin/auth/callback
-
-# --- SMTP Transactional Mail Client ---
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=your_smtp_auth_user@gmail.com
-SMTP_PASS=your_smtp_app_password
-SMTP_FROM="Meta API Project" <noreply@yourdomain.com>
 ```
 
 ---
