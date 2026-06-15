@@ -169,9 +169,122 @@ const getFailsafeAnalytics = (views) => {
     };
 };
 
+/**
+ * Fetch shorts from channel using YouTube Data API v3
+ */
+const getChannelShorts = async (channelId) => {
+    if (!channelId) return [];
+    const apiKey = process.env.GOOGLE_API_KEY;
+
+    try {
+        console.log(`Fetching YouTube shorts for Channel ID: ${channelId}...`);
+        
+        let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&type=video&videoDuration=short&maxResults=25&order=date`;
+        const headers = { "Accept": "application/json" };
+
+        if (apiKey) {
+            url += `&key=${apiKey}`;
+        } else {
+            const accessToken = await getAccessToken();
+            headers["Authorization"] = `Bearer ${accessToken}`;
+        }
+
+        const response = await fetch(url, { headers });
+        const data = await response.json();
+
+        if (data.items && data.items.length > 0) {
+            return data.items
+                .filter(item => item.id && item.id.videoId)
+                .map(item => ({
+                    video_id: item.id.videoId,
+                    title: item.snippet.title || "YouTube Short",
+                    description: item.snippet.description || "",
+                    thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || "",
+                    published_at: item.snippet.publishedAt || new Date().toISOString(),
+                    channel_title: item.snippet.channelTitle || ""
+                }));
+        } else {
+            console.warn(`No YouTube shorts found for Channel ID: ${channelId}`);
+        }
+    } catch (err) {
+        console.error(`Error fetching YouTube shorts for Channel ${channelId}:`, err.message);
+    }
+    return [];
+};
+
+/**
+ * Return premium fallback mock shorts when API call is unavailable or fails
+ */
+const getFailsafeShorts = (channelName = "White Force") => {
+    return [
+        {
+            video_id: "z8l1mvavX7n",
+            title: "White Force Recruitment 2026: Join the Dream Team! 🚀 #shorts #hiring",
+            description: "Are you ready to accelerate your career? Join White Force today and build your future. Apply now at our website!",
+            thumbnail: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=600&auto=format&fit=crop&q=80",
+            published_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+            channel_title: channelName
+        },
+        {
+            video_id: "6TGeiX9eTjS",
+            title: "Master Your Next Interview in 60 Seconds! 💡 #shorts #career #tips",
+            description: "Here are 3 quick tips to make a stellar first impression at your next job interview. Watch now!",
+            thumbnail: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&auto=format&fit=crop&q=80",
+            published_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+            channel_title: channelName
+        },
+        {
+            video_id: "hw69p_YYOlT",
+            title: "Office Culture at White Force - Innovation & Collaboration 🌟 #shorts #worklife",
+            description: "A quick sneak peek into our workspace, team building events, and daily collaborative sprints.",
+            thumbnail: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=600&auto=format&fit=crop&q=80",
+            published_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
+            channel_title: channelName
+        },
+        {
+            video_id: "aqz-KE-bpKQ",
+            title: "Top Skills Employers Want in 2026 | White Force Guide 📊 #shorts",
+            description: "What skills are most in-demand? Here is what you need to focus on to stay ahead in 2026.",
+            thumbnail: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80",
+            published_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days ago
+            channel_title: channelName
+        },
+        {
+            video_id: "tgbNymZ7vqY",
+            title: "Why Recruitment Agencies are Crucial for Job Seekers 🤝 #shorts #jobs",
+            description: "Struggling to find the right job opening? Here is how a premium agency like White Force helps you land interviews.",
+            thumbnail: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&auto=format&fit=crop&q=80",
+            published_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days ago
+            channel_title: channelName
+        }
+    ];
+};
+
+/**
+ * Intelligent failsafe backup calculator for YouTube Shorts Analytics
+ */
+const getFailsafeShortsAnalytics = (views) => {
+    const rawViews = parseInt(views) || 0;
+    const avgViewDuration = 22.8; // Average 22.8 seconds per view for shorts
+    const watchTime = parseFloat(((rawViews * avgViewDuration) / 60).toFixed(2)); // in minutes
+    const subscribersGained = Math.round(rawViews * 0.0045); // Shorts drive higher subscriber conversion (~4.5 per 1,000 views)
+    const audienceRetention = 82.4; // Shorts have higher retention (e.g. 82.4%)
+
+    return {
+        watch_time: watchTime,
+        avg_view_duration: avgViewDuration,
+        audience_retention: audienceRetention,
+        subscribers_gained: subscribersGained,
+        is_estimated: true
+    };
+};
+
 module.exports = {
     getAccessToken,
     getVideoDetails,
     getVideoAnalytics,
-    getFailsafeAnalytics
+    getFailsafeAnalytics,
+    getChannelShorts,
+    getFailsafeShorts,
+    getFailsafeShortsAnalytics
 };

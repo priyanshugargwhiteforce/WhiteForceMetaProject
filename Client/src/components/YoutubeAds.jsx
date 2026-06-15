@@ -40,7 +40,7 @@ const YoutubeAds = () => {
       const data = await res.json();
       if (data.success && data.accounts.length > 0) {
         setAccounts(data.accounts);
-        setSelectedAccount(data.accounts[0]);
+        setSelectedAccount(data.accounts.includes('7571652142') ? '7571652142' : data.accounts[0]);
       } else if (data.missingCredentials) {
         setMissingCreds(true);
         setLoading(false);

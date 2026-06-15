@@ -339,8 +339,98 @@ const syncLinkedInData = async (accountId = null) => {
     }
 };
 
+const callLinkedInWriteAPI = async (method, url, data = null, params = {}, headers = {}) => {
+    let token = await getAccessToken();
+
+    const getHeaders = (tokenVal) => {
+        return {
+            'Authorization': `Bearer ${tokenVal}`,
+            'X-Restli-Protocol-Version': '2.0.0',
+            'LinkedIn-Version': '202605',
+            'Content-Type': 'application/json',
+            ...headers
+        };
+    };
+
+    const buildUrl = (baseUrl, queryParams) => {
+        const queryParts = [];
+        for (const [key, value] of Object.entries(queryParams)) {
+            if (value !== undefined && value !== null) {
+                queryParts.push(`${key}=${value}`);
+            }
+        }
+        return baseUrl + (queryParts.length ? '?' + queryParts.join('&') : '');
+    };
+
+    const executeRequest = async (tokenVal) => {
+        const config = {
+            method: method.toUpperCase(),
+            url: buildUrl(url, params),
+            headers: getHeaders(tokenVal)
+        };
+        if (data) {
+            config.data = data;
+        }
+        return await axios(config);
+    };
+
+    try {
+        const response = await executeRequest(token);
+        return { success: true, data: response.data, headers: response.headers };
+    } catch (error) {
+        if (error.response && error.response.status === 401) {
+            console.log('[LinkedIn Write API] 401 Unauthorized. Attempting token refresh...');
+            try {
+                token = await refreshAccessToken();
+                // Retry request once with the new token
+                const response = await executeRequest(token);
+                return { success: true, data: response.data, headers: response.headers };
+            } catch (refreshErr) {
+                console.error('[LinkedIn Write API] Retry failed after refresh:', refreshErr.message);
+                return { 
+                    success: false, 
+                    error: refreshErr.response?.data || refreshErr.message,
+                    status: refreshErr.response?.status || 500
+                };
+            }
+        }
+        console.error(`[LinkedIn Write API] Request failed (${method} ${url}):`, error.response?.data || error.message);
+        return { 
+            success: false, 
+            error: error.response?.data || error.message,
+            status: error.response?.status || 500
+        };
+    }
+};
+
+const logLinkedInWriteAction = async (accountId, actionType, requestPayload, responsePayload, status, errorMessage = null, executionTime = null, campaignGroupId = null, campaignId = null) => {
+    try {
+        await pool.query(
+            `INSERT INTO linkedin_write_logs (account_id, action_type, request_payload, response_payload, status, error_message, execution_time, campaign_group_id, campaign_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                accountId || null,
+                actionType,
+                requestPayload ? JSON.stringify(requestPayload) : null,
+                responsePayload ? JSON.stringify(responsePayload) : null,
+                status,
+                errorMessage || null,
+                executionTime || null,
+                campaignGroupId || null,
+                campaignId || null
+            ]
+        );
+        console.log(`[LinkedIn Write Log] Logged ${actionType} with status ${status}`);
+    } catch (err) {
+        console.error('[LinkedIn Service] Failed to write to linkedin_write_logs:', err.message);
+    }
+};
+
 module.exports = {
     getAccessToken,
     refreshAccessToken,
-    syncLinkedInData
+    syncLinkedInData,
+    callLinkedInAPI,
+    callLinkedInWriteAPI,
+    logLinkedInWriteAction
 };

@@ -956,6 +956,224 @@ const initSchema = async () => {
             console.log(' - Added fk_user_manager foreign key constraint to users table');
         } catch (e) { /* Constraint might exist */ }
 
+        // --- LinkedIn Ads Write Readiness Schema Alterations ---
+        try {
+            await pool.query("ALTER TABLE linkedin_campaigns ADD COLUMN daily_budget DECIMAL(15,2) NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE linkedin_campaigns ADD COLUMN lifetime_budget DECIMAL(15,2) NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE linkedin_campaigns ADD COLUMN start_time TIMESTAMP NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE linkedin_campaigns ADD COLUMN end_time TIMESTAMP NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE linkedin_campaigns ADD COLUMN unit_cost DECIMAL(15,2) NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE linkedin_campaigns ADD COLUMN cost_type VARCHAR(50) NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE linkedin_campaigns ADD COLUMN targeting_criteria JSON NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE linkedin_campaigns ADD COLUMN creation_status VARCHAR(50) DEFAULT 'SYNCED'");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE linkedin_campaigns ADD COLUMN linkedin_raw_response JSON NULL");
+        } catch (e) { /* Column might exist */ }
+
+        // Create linkedin_assets table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS linkedin_assets (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                asset_urn VARCHAR(255) NOT NULL UNIQUE,
+                account_id VARCHAR(100) NULL,
+                campaign_id VARCHAR(100) NULL,
+                file_name VARCHAR(255) NULL,
+                media_type VARCHAR(50) NULL,
+                upload_status VARCHAR(50) DEFAULT 'PENDING',
+                upload_url TEXT NULL,
+                linkedin_asset_type VARCHAR(100) NULL,
+                linkedin_asset_status VARCHAR(100) NULL,
+                linkedin_asset_url TEXT NULL,
+                thumbnail_url TEXT NULL,
+                linkedin_media_library_id VARCHAR(255) NULL,
+                linkedin_raw_response JSON NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - linkedin_assets table created/verified');
+
+        // Create linkedin_write_logs table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS linkedin_write_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                account_id VARCHAR(100) NULL,
+                action_type VARCHAR(100) NOT NULL,
+                request_payload JSON NULL,
+                response_payload JSON NULL,
+                status VARCHAR(50) NOT NULL,
+                error_message TEXT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        // Create linkedin_write_logs table created/verified log message
+        console.log(' - linkedin_write_logs table created/verified');
+
+        // --- LinkedIn Ads Write Flow Phase 2 Schema Alterations ---
+        const runSafeQuery = async (sql) => {
+            try {
+                await pool.query(sql);
+            } catch (err) {
+                if (err.code === 'ER_DUP_FIELDNAME' || err.code === 'ER_DUP_KEYNAME' || err.code === 'ER_DUP_ENTRY' || err.errno === 1060 || err.errno === 1061 || err.errno === 1062) {
+                    // Safe duplicate column/key/index error to ignore
+                    return;
+                }
+                console.warn(`[Migration Warning] Safely catch failure on execution:`, err.message);
+                throw err;
+            }
+        };
+
+        try {
+            await runSafeQuery("ALTER TABLE linkedin_campaign_groups ADD COLUMN creation_source VARCHAR(50) DEFAULT 'SYNCED'");
+            await runSafeQuery("ALTER TABLE linkedin_campaign_groups ADD COLUMN linkedin_raw_response JSON NULL");
+            await runSafeQuery("ALTER TABLE linkedin_campaign_groups ADD COLUMN run_schedule_start TIMESTAMP NULL");
+            await runSafeQuery("ALTER TABLE linkedin_campaign_groups ADD COLUMN run_schedule_end TIMESTAMP NULL");
+            await runSafeQuery("ALTER TABLE linkedin_campaign_groups ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+
+            await runSafeQuery("ALTER TABLE linkedin_write_logs ADD COLUMN campaign_group_id VARCHAR(100) NULL");
+            await runSafeQuery("ALTER TABLE linkedin_write_logs ADD COLUMN campaign_id VARCHAR(100) NULL");
+            await runSafeQuery("ALTER TABLE linkedin_write_logs ADD COLUMN execution_time INT NULL");
+
+            // Add indexes
+            await runSafeQuery("ALTER TABLE linkedin_campaign_groups ADD INDEX idx_lcg_account_id (account_id)");
+            await runSafeQuery("ALTER TABLE linkedin_campaigns ADD INDEX idx_lc_group_id (campaign_group_id)");
+            await runSafeQuery("ALTER TABLE linkedin_write_logs ADD INDEX idx_lwl_account_id (account_id)");
+            console.log(' - LinkedIn Ads Phase 2 columns and indexes verified/added');
+
+            // --- LinkedIn Ads Write Flow Phase 3 Schema Alterations ---
+            await runSafeQuery("ALTER TABLE linkedin_campaigns ADD COLUMN objective VARCHAR(100) NULL");
+            await runSafeQuery("ALTER TABLE linkedin_campaigns ADD COLUMN language VARCHAR(50) NULL");
+            await runSafeQuery("ALTER TABLE linkedin_campaigns ADD COLUMN bid_strategy VARCHAR(100) NULL");
+            await runSafeQuery("ALTER TABLE linkedin_campaigns ADD COLUMN optimization_goal VARCHAR(100) NULL");
+            await runSafeQuery("ALTER TABLE linkedin_campaigns ADD COLUMN timezone VARCHAR(100) NULL");
+            await runSafeQuery("ALTER TABLE linkedin_campaigns ADD COLUMN draft_data JSON NULL");
+            await runSafeQuery("ALTER TABLE linkedin_campaigns ADD COLUMN creation_source VARCHAR(50) DEFAULT 'SYNCED'");
+            await runSafeQuery("ALTER TABLE linkedin_campaigns ADD COLUMN linkedin_campaign_urn VARCHAR(255) NULL");
+            await runSafeQuery("ALTER TABLE linkedin_campaigns ADD COLUMN last_publish_status VARCHAR(50) NULL");
+            await runSafeQuery("ALTER TABLE linkedin_campaigns ADD COLUMN last_publish_error TEXT NULL");
+
+            // Add standard indexes
+            await runSafeQuery("ALTER TABLE linkedin_campaigns ADD INDEX idx_lc_acc_grp_name (account_id, campaign_group_id, name)");
+            await runSafeQuery("ALTER TABLE linkedin_campaigns ADD INDEX idx_lc_creation_source (creation_source)");
+            console.log(' - LinkedIn Ads Phase 3 columns and indexes verified/added');
+
+            // --- LinkedIn Ads Phase 4 - Media Library & Creatives Schema ---
+            console.log('Initializing Phase 4 Media Library & Creatives database schema...');
+            
+            // Create media_library table
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS media_library (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    uuid VARCHAR(36) NOT NULL UNIQUE,
+                    asset_name VARCHAR(255) NOT NULL,
+                    original_filename VARCHAR(255) NOT NULL,
+                    platform VARCHAR(50) NOT NULL,
+                    asset_type VARCHAR(50) NOT NULL,
+                    mime_type VARCHAR(100) NOT NULL,
+                    extension VARCHAR(10) NOT NULL,
+                    file_size INT NOT NULL,
+                    width INT DEFAULT NULL,
+                    height INT DEFAULT NULL,
+                    duration INT DEFAULT NULL,
+                    storage_provider VARCHAR(50) NOT NULL DEFAULT 'LOCAL',
+                    local_path VARCHAR(255) NOT NULL,
+                    cdn_url VARCHAR(255) DEFAULT NULL,
+                    thumbnail_url VARCHAR(255) DEFAULT NULL,
+                    preview_url VARCHAR(255) DEFAULT NULL,
+                    hash VARCHAR(64) NOT NULL UNIQUE,
+                    linkedin_asset_urn VARCHAR(255) DEFAULT NULL,
+                    meta_asset_id VARCHAR(255) DEFAULT NULL,
+                    google_asset_id VARCHAR(255) DEFAULT NULL,
+                    processing_status VARCHAR(50) NOT NULL DEFAULT 'UPLOADING',
+                    owner_account VARCHAR(100) DEFAULT NULL,
+                    used_count INT DEFAULT 0,
+                    last_used TIMESTAMP NULL DEFAULT NULL,
+                    is_deleted BOOLEAN DEFAULT FALSE,
+                    uploaded_by INT NULL,
+                    access_scope VARCHAR(50) DEFAULT 'ORGANIZATION',
+                    checksum_algorithm VARCHAR(50) DEFAULT 'SHA256',
+                    linked_platforms JSON DEFAULT NULL,
+                    metadata JSON DEFAULT NULL,
+                    error_message TEXT DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
+                )
+            `);
+            console.log(' - media_library table created/verified');
+
+            // Create linkedin_creatives table
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS linkedin_creatives (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    creative_urn VARCHAR(255) DEFAULT NULL UNIQUE,
+                    account_id VARCHAR(100) NOT NULL,
+                    campaign_group_id VARCHAR(100) NOT NULL,
+                    campaign_id VARCHAR(100) NOT NULL,
+                    media_library_id INT DEFAULT NULL,
+                    headline VARCHAR(255) DEFAULT NULL,
+                    description TEXT DEFAULT NULL,
+                    destination_url TEXT DEFAULT NULL,
+                    call_to_action VARCHAR(50) DEFAULT NULL,
+                    creative_type VARCHAR(50) NOT NULL,
+                    status VARCHAR(50) DEFAULT 'ACTIVE',
+                    linkedin_raw_response JSON DEFAULT NULL,
+                    creative_payload JSON DEFAULT NULL,
+                    preview_payload JSON DEFAULT NULL,
+                    last_publish_error TEXT DEFAULT NULL,
+                    creation_source VARCHAR(50) DEFAULT 'LOCAL_DRAFT',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (media_library_id) REFERENCES media_library(id) ON DELETE SET NULL
+                )
+            `);
+            console.log(' - linkedin_creatives table created/verified');
+
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS linkedin_ad_drafts (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    account_id VARCHAR(100) NOT NULL,
+                    campaign_id VARCHAR(100) NOT NULL,
+                    creative_id VARCHAR(100) NOT NULL,
+                    ad_name VARCHAR(255) NOT NULL,
+                    ad_format VARCHAR(50) NOT NULL,
+                    draft_payload JSON NOT NULL,
+                    preview_payload JSON DEFAULT NULL,
+                    status VARCHAR(20) DEFAULT 'DRAFT',
+                    creation_source VARCHAR(20) DEFAULT 'LOCAL_DRAFT',
+                    created_by INT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                )
+            `);
+            console.log(' - linkedin_ad_drafts table created/verified');
+
+            // Add indexes safely
+            await runSafeQuery("ALTER TABLE media_library ADD INDEX idx_ml_hash (hash)");
+            await runSafeQuery("ALTER TABLE media_library ADD INDEX idx_ml_uuid (uuid)");
+            await runSafeQuery("ALTER TABLE linkedin_creatives ADD INDEX idx_lc_camp_id (campaign_id)");
+            await runSafeQuery("ALTER TABLE linkedin_ad_drafts ADD INDEX idx_lad_created_by (created_by)");
+            console.log(' - LinkedIn Ads Phase 4 and 5 columns and indexes verified/added');
+        } catch (migErr) {
+            console.error('[Migration Error] LinkedIn Phase 2/3/4 database schema initialization failed:', migErr.message);
+            throw migErr;
+        }
+
         console.log('Database schema initialization completed successfully.');
     } catch (error) {
         console.error('Error initializing database schema:', error.message);

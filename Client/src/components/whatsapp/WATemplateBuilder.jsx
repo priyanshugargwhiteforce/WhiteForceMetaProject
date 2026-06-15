@@ -525,13 +525,14 @@ const WATemplateBuilder = () => {
         </form>
 
         {/* Right Side: Smartphone Real-time Mock Simulator */}
-        <div className="lg:col-span-5 lg:sticky lg:top-24 lg:self-start flex flex-col items-center">
-          <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6 flex items-center">
-            <Eye className="w-4 h-4 mr-2 text-emerald-500 dark:text-emerald-400" /> WhatsApp Live Mockup
-          </h3>
+        <div className="lg:col-span-5 w-full">
+          <div className="lg:sticky lg:top-6 flex flex-col items-center w-full">
+            <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6 flex items-center">
+              <Eye className="w-4 h-4 mr-2 text-emerald-500 dark:text-emerald-400" /> WhatsApp Live Mockup
+            </h3>
 
-          {/* Phone body */}
-          <div className="w-[335px] h-[660px] bg-slate-900 border-[10px] border-slate-800 dark:border-slate-700 rounded-[2.8rem] shadow-2xl relative overflow-hidden flex flex-col">
+            {/* Phone body */}
+            <div className="w-[335px] h-[660px] bg-slate-900 border-[10px] border-slate-800 dark:border-slate-700 rounded-[2.8rem] shadow-2xl relative overflow-hidden flex flex-col">
 
             {/* Camera notch */}
             <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-28 h-5 bg-slate-800 rounded-full z-30 flex items-center justify-center">
@@ -633,6 +634,7 @@ const WATemplateBuilder = () => {
         </div>
       </div>
     </div>
+  </div>
   );
 };
 

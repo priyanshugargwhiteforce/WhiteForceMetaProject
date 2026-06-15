@@ -434,6 +434,14 @@ const YoutubeAdDetail = () => {
                 </div>
               )}
 
+              <button
+                onClick={() => navigate(`/youtube-ad/${ad.id}/shorts`)}
+                className="mt-4 w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white rounded-2xl font-bold text-sm shadow-lg shadow-red-500/25 transition-all hover:scale-[1.01] hover:shadow-red-500/35"
+              >
+                <Video className="w-4 h-4 text-white" />
+                <span>View Channel Shorts</span>
+              </button>
+
               <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs text-slate-400">
                 <span className="font-semibold text-slate-500">Video Destination:</span>
                 <a

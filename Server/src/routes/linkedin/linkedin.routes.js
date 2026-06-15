@@ -7,6 +7,17 @@ const { protect, authorizeLinkedin } = require('../../middlewares/auth.middlewar
 router.get('/auth/login', linkedinController.initiateOAuth);
 router.get('/auth/callback', linkedinController.handleOAuthCallback);
 
+// Protected Readiness Check
+router.get('/write-readiness', protect, authorizeLinkedin, linkedinController.checkWriteReadiness);
+
+// Protected Write Manage endpoints (Registered BEFORE dynamic route params)
+router.post('/campaign-groups/manage/create', protect, authorizeLinkedin, linkedinController.createLinkedInCampaignGroup);
+router.get('/campaign-groups/manage/:accountId', protect, authorizeLinkedin, linkedinController.getLinkedInCampaignGroupsManage);
+router.put('/campaigns/manage/:id/pause', protect, authorizeLinkedin, linkedinController.pauseLinkedInCampaign);
+router.put('/campaigns/manage/:id/resume', protect, authorizeLinkedin, linkedinController.resumeLinkedInCampaign);
+router.post('/campaigns/manage/draft', protect, authorizeLinkedin, linkedinController.saveLinkedInCampaignDraft);
+router.post('/campaigns/manage/create', protect, authorizeLinkedin, linkedinController.createLinkedInCampaign);
+
 // Apply protection & authorization to all subsequent routes
 router.use(protect);
 router.use(authorizeLinkedin);

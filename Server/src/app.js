@@ -32,7 +32,13 @@ app.use('/api/google', protect, require('./routes/google.routes'));
 app.use('/api/whatsapp', require('./routes/whatsapp/whatsapp.routes'));
 app.use('/api/youtube-ads', protect, require('./routes/youtubeAd.routes'));
 app.use('/api/linkedin', require('./routes/linkedin/linkedin.routes'));
-app.use('/api/tasks', protect, require('./routes/task.routes'));
+app.use('/api/linkedin/ads', require('./routes/linkedin/ads.routes'));
+app.use('/api/tasks', protect, require('./routes/task.routes'));;
+
+// Phase 4 - Media Library, Assets, and Creatives Router Registry
+app.use('/api/media', require('./routes/media.routes'));
+app.use('/api/linkedin/assets', require('./routes/linkedin/assets.routes'));
+app.use('/api/linkedin/creatives', require('./routes/linkedin/creatives.routes'));
 
 // Health check route
 app.get('/health', (req, res) => {

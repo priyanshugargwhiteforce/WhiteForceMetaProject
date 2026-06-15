@@ -87,6 +87,7 @@ const YoutubeAd = {
             sql += ' AND start_date >= ? AND end_date <= ?';
             params.push(startDate, endDate);
         }
+        sql += " ORDER BY COALESCE(start_date, '1970-01-01') DESC, id DESC";
         const [rows] = await pool.query(sql, params);
         return rows;
     },

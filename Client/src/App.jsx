@@ -15,6 +15,8 @@ import GooglePerformance from './components/GooglePerformance';
 import GoogleInsights from './components/GoogleInsights';
 import YoutubeAds from './components/YoutubeAds';
 import YoutubeAdDetail from './components/YoutubeAdDetail';
+import YoutubeShortsManager from './components/YoutubeShortsManager';
+import YoutubeShorts from './components/YoutubeShorts';
 import Overview from './components/Overview';
 import WhatsAppManager from './components/whatsapp/WhatsAppManager';
 import WATemplates from './components/whatsapp/WATemplates';
@@ -30,13 +32,22 @@ import WAChatWindow from './components/whatsapp/WAChatWindow';
 import UserManagement from './components/UserManagement';
 import AllLeads from './components/AllLeads';
 import LinkedInManager from './components/linkedin/LinkedInManager';
+import LinkedInAdBuilder from './components/linkedin/LinkedInAdBuilder';
+import AdLibrary from './components/linkedin/AdLibrary';
+import AdDetail from './components/linkedin/AdDetail';
 import LinkedInCampaigns from './components/linkedin/LinkedInCampaigns';
 import LinkedInAnalytics from './components/linkedin/LinkedInAnalytics';
 import LinkedInLeads from './components/linkedin/LinkedInLeads';
+import LinkedInCampaignManagement from './components/linkedin/LinkedInCampaignManagement';
+import LinkedInCampaignWizard from './components/linkedin/wizard/LinkedInCampaignWizard';
 import MetaSettings from './components/MetaSettings';
 import WhatsAppSettings from './components/WhatsAppSettings';
 import AdOwner from './components/AdOwner';
 import TaskManager from './components/TaskManager';
+import MediaLibrary from './components/media/MediaLibrary';
+import LinkedInAssetManager from './components/linkedin/LinkedInAssetManager';
+import CreativeBuilder from './components/linkedin/CreativeBuilder';
+import CreativeLibrary from './components/linkedin/CreativeLibrary';
 import './App.css';
 
 import Layout from './components/Layout';
@@ -92,22 +103,24 @@ const ManagerOrAdminRoute = ({ children }) => {
     return <Navigate to="/" replace />;
 };
 
+import { AdBuilderProvider } from './context/AdBuilderContext';
 import { ThemeProvider } from './context/ThemeContext';
 
 function App() {
     return (
         <ThemeProvider>
             <AuthProvider>
-                <Router>
-                    <Routes>
-                        <Route 
-                            path="/" 
-                            element={
-                                <ProtectedRoute>
-                                    <Overview />
-                                </ProtectedRoute>
-                            } 
-                        />
+                <AdBuilderProvider>
+                    <Router>
+                        <Routes>
+                            <Route 
+                                path="/" 
+                                element={
+                                    <ProtectedRoute>
+                                        <Overview />
+                                    </ProtectedRoute>
+                                } 
+                            />
                         <Route 
                             path="/ad-accounts" 
                             element={
@@ -209,11 +222,31 @@ function App() {
                             } 
                         />
                         <Route 
+                            path="/youtube-shorts" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="google_access">
+                                        <YoutubeShorts />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
                             path="/youtube-ad/:id" 
                             element={
                                 <ProtectedRoute>
                                     <PermissionRoute permission="google_access">
                                         <YoutubeAdDetail />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/youtube-ad/:id/shorts" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="google_access">
+                                        <YoutubeShortsManager />
                                     </PermissionRoute>
                                 </ProtectedRoute>
                             } 
@@ -398,6 +431,26 @@ function App() {
                             } 
                         />
                         <Route 
+                            path="/linkedin-management" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="linkedin_access">
+                                        <LinkedInCampaignManagement />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/linkedin-management/campaign/new" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="linkedin_access">
+                                        <LinkedInCampaignWizard />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
                             path="/linkedin-analytics" 
                             element={
                                 <ProtectedRoute>
@@ -417,12 +470,54 @@ function App() {
                                 </ProtectedRoute>
                             } 
                         />
+                        <Route 
+                            path="/media-library" 
+                            element={
+                                <ProtectedRoute>
+                                    <MediaLibrary />
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/linkedin-assets" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="linkedin_access">
+                                        <LinkedInAssetManager />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/linkedin-creatives" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="linkedin_access">
+                                        <CreativeLibrary />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/linkedin-creatives/new" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="linkedin_access">
+                                        <CreativeBuilder />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route path="/linkedin-ads" element={<ProtectedRoute><PermissionRoute permission="linkedin_access"><AdLibrary /></PermissionRoute></ProtectedRoute>} />
+                        <Route path="/linkedin-ads/new" element={<ProtectedRoute><PermissionRoute permission="linkedin_access"><LinkedInAdBuilder /></PermissionRoute></ProtectedRoute>} />
+                        <Route path="/linkedin-ads/:id" element={<ProtectedRoute><PermissionRoute permission="linkedin_access"><AdDetail /></PermissionRoute></ProtectedRoute>} />
                         <Route path="/login" element={<Login />} />
                         <Route path="/register" element={<Register />} />
                         <Route path="/forgot-password" element={<ForgotPassword />} />
                         <Route path="/reset-password/:token" element={<ResetPassword />} />
                     </Routes>
-                </Router>
+                    </Router>
+                </AdBuilderProvider>
             </AuthProvider>
         </ThemeProvider>
     );
