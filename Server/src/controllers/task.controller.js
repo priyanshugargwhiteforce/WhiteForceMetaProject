@@ -133,7 +133,7 @@ exports.createTask = async (req, res) => {
 exports.updateTask = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, description, assigned_to, ad_platform, ad_id, ad_name, priority, status, due_date } = req.body;
+        const { title, description, assigned_to, ad_platform, ad_id, ad_name, priority, status, due_date, remark } = req.body;
         const { role, id: userId } = req.user;
 
         // Fetch task
@@ -162,12 +162,48 @@ exports.updateTask = async (req, res) => {
             return res.status(403).json({ success: false, message: 'You are not authorized to update this task.' });
         }
 
-        // If assignee (and not admin/creator/manager of assignee), they can only update status
-        if (!isAdmin && !isCreator && !isManagerOfAssignee && isAssignee) {
-            if (status === undefined) {
-                return res.status(400).json({ success: false, message: 'Assignees can only update the task status.' });
+        // Parse existing remarks
+        let remarksArray = [];
+        if (task.remarks) {
+            try {
+                remarksArray = typeof task.remarks === 'string' ? JSON.parse(task.remarks) : task.remarks;
+                if (!Array.isArray(remarksArray)) {
+                    remarksArray = [];
+                }
+            } catch (e) {
+                remarksArray = [];
             }
-            await pool.query('UPDATE tasks SET status = ? WHERE id = ?', [status, id]);
+        }
+
+        // Append new remark if provided
+        if (remark !== undefined && remark !== null && remark.toString().trim() !== '') {
+            remarksArray.push({
+                text: remark.toString().trim(),
+                by: role,
+                username: req.user.username,
+                at: new Date().toISOString()
+            });
+        }
+
+        // If assignee (and not admin/creator/manager of assignee), they can only update status or add a remark
+        if (!isAdmin && !isCreator && !isManagerOfAssignee && isAssignee) {
+            if (status === undefined && remark === undefined) {
+                return res.status(400).json({ success: false, message: 'Assignees can only update the task status or add a remark.' });
+            }
+            
+            const fields = [];
+            const params = [];
+            if (status !== undefined) {
+                fields.push('status = ?');
+                params.push(status);
+            }
+            if (remark !== undefined) {
+                fields.push('remarks = ?');
+                params.push(JSON.stringify(remarksArray));
+            }
+            
+            params.push(id);
+            await pool.query(`UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`, params);
         } else {
             // Full update for admin, manager, or creator
             const fields = [];
@@ -182,6 +218,7 @@ exports.updateTask = async (req, res) => {
             if (priority !== undefined) { fields.push('priority = ?'); params.push(priority); }
             if (status !== undefined) { fields.push('status = ?'); params.push(status); }
             if (due_date !== undefined) { fields.push('due_date = ?'); params.push(due_date); }
+            if (remark !== undefined) { fields.push('remarks = ?'); params.push(JSON.stringify(remarksArray)); }
 
             if (fields.length === 0) {
                 return res.status(400).json({ success: false, message: 'No fields provided for update.' });

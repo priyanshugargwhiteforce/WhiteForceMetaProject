@@ -22,10 +22,16 @@ const WATemplates = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchTemplates();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const fetchTemplates = async () => {
     try {
@@ -78,6 +84,19 @@ const WATemplates = () => {
     t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const sortedTemplates = [...filteredTemplates].sort((a, b) => {
+    const timeA = a.synced_at ? new Date(a.synced_at).getTime() : 0;
+    const timeB = b.synced_at ? new Date(b.synced_at).getTime() : 0;
+    if (timeA !== timeB) {
+      return timeB - timeA;
+    }
+    return b.id.localeCompare(a.id);
+  });
+
+  const totalPages = Math.ceil(sortedTemplates.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedTemplates = sortedTemplates.slice(startIndex, startIndex + itemsPerPage);
 
   const getStatusStyle = (status) => {
     switch (status?.toUpperCase()) {
@@ -154,9 +173,9 @@ const WATemplates = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05]">
-                {filteredTemplates.map((template) => (
+                {paginatedTemplates.map((template) => (
                   <tr key={template.id} className="hover:bg-emerald-500/[0.01] dark:hover:bg-emerald-500/[0.02] transition-colors group">
-                    <td className="px-8 py-5">
+                    <td className="px-4 py-2">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                           <Tag className="w-4 h-4 text-emerald-500" />
@@ -164,23 +183,23 @@ const WATemplates = () => {
                         <span className="text-sm font-bold truncate max-w-[250px] text-slate-800 dark:text-slate-100">{template.name}</span>
                       </div>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-4 py-2">
                       <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 dark:bg-white/5 rounded-lg text-slate-600 dark:text-slate-300">
                         {template.category}
                       </span>
                     </td>
-                    <td className="px-8 py-5 text-center">
+                    <td className="px-4 py-2 text-center">
                       <div className="inline-flex items-center space-x-2">
                         <Globe className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                         <span className="text-xs font-bold font-mono text-slate-700 dark:text-slate-300">{template.language}</span>
                       </div>
                     </td>
-                    <td className="px-8 py-5 text-center">
+                    <td className="px-4 py-2 text-center">
                       <span className={`px-3 py-1 rounded-full text-[9px] font-bold border ${getStatusStyle(template.status)}`}>
                         {template.status}
                       </span>
                     </td>
-                    <td className="px-8 py-5 text-right space-x-2">
+                    <td className="px-4 py-2 text-right space-x-2">
                       <button
                         onClick={() => handleCloneTemplate(template)}
                         title="Clone Template"
@@ -198,7 +217,7 @@ const WATemplates = () => {
                     </td>
                   </tr>
                 ))}
-                {filteredTemplates.length === 0 && (
+                {paginatedTemplates.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-8 py-10 text-center text-xs text-slate-400 dark:text-slate-500 italic">
                       No templates match the criteria.
@@ -207,6 +226,29 @@ const WATemplates = () => {
                 )}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-between items-center border-t border-slate-100 dark:border-white/5 p-6 bg-slate-50/50 dark:bg-white/[0.01]">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                  className="px-4 py-2 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
+                >
+                  Previous
+                </button>
+                <span className="text-xs text-slate-400 font-bold">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                  className="px-4 py-2 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

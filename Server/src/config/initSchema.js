@@ -921,7 +921,8 @@ const initSchema = async () => {
                 ad_platform VARCHAR(50) DEFAULT 'general',
                 ad_id VARCHAR(255) DEFAULT NULL,
                 ad_name VARCHAR(255) DEFAULT NULL,
-                status ENUM('pending', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending',
+                status ENUM('pending', 'in_progress', 'completed', 'cancelled', 'on_hold') DEFAULT 'pending',
+                remarks JSON DEFAULT NULL,
                 priority ENUM('low', 'medium', 'high', 'critical') DEFAULT 'medium',
                 due_date DATE DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -931,6 +932,13 @@ const initSchema = async () => {
             )
         `);
         console.log(' - tasks table created/verified');
+
+        try {
+            await pool.query("ALTER TABLE tasks ADD COLUMN remarks JSON DEFAULT NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE tasks MODIFY COLUMN status ENUM('pending', 'in_progress', 'completed', 'cancelled', 'on_hold') DEFAULT 'pending'");
+        } catch (e) { /* Modify might fail */ }
 
         // Indexes for tasks table
         try {

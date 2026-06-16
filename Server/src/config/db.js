@@ -6,8 +6,8 @@ dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
 
 const dbConfig = {
     host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '123456',
+    user: process.env.DB_USER || 'app_user',
+    password: process.env.DB_PASSWORD || 'App@123456',
     database: process.env.DB_NAME || 'meta_api_db',
     waitForConnections: true,
     connectionLimit: 10,

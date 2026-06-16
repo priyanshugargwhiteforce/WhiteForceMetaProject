@@ -566,9 +566,8 @@ const SubNavDropdown = ({ icon: Icon, label, open, onToggle, active = false, chi
   <div className="mb-1">
     <button
       onClick={onToggle}
-      className={`flex items-center justify-between w-full px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-all duration-300 group ${
-        open || active ? 'text-slate-900 dark:text-white bg-slate-50 dark:bg-white/5 font-semibold' : ''
-      }`}
+      className={`flex items-center justify-between w-full px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-all duration-300 group ${open || active ? 'text-slate-900 dark:text-white bg-slate-50 dark:bg-white/5 font-semibold' : ''
+        }`}
     >
       <div className="flex items-center">
         <Icon className={`w-4 h-4 mr-3 transition-colors ${open || active ? 'text-blue-500' : 'group-hover:text-blue-500'}`} />
