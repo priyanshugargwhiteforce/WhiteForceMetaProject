@@ -45,6 +45,14 @@ const TaskManager = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingTask, setViewingTask] = useState(null);
   const [newRemark, setNewRemark] = useState('');
+  const [activeAssigneeIndex, setActiveAssigneeIndex] = useState(0);
+
+  const activeAssignee = useMemo(() => {
+    if (!viewingTask || !viewingTask.assignees || viewingTask.assignees.length === 0) {
+      return null;
+    }
+    return viewingTask.assignees[activeAssigneeIndex] || viewingTask.assignees[0];
+  }, [viewingTask, activeAssigneeIndex]);
 
   // Status Change with Remark Modal state
   const [isStatusRemarkModalOpen, setIsStatusRemarkModalOpen] = useState(false);
@@ -65,6 +73,7 @@ const TaskManager = () => {
 
   const handleViewClick = (task) => {
     setViewingTask(task);
+    setActiveAssigneeIndex(0);
     setNewRemark('');
     setIsViewModalOpen(true);
   };
@@ -73,7 +82,8 @@ const TaskManager = () => {
     e.preventDefault();
     if (!newRemark.trim()) return;
     try {
-      const res = await axios.put(`/api/tasks/${viewingTask.id}`, {
+      const targetTaskId = activeAssignee ? activeAssignee.taskId : viewingTask.id;
+      const res = await axios.put(`/api/tasks/${targetTaskId}`, {
         remark: newRemark
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -87,7 +97,8 @@ const TaskManager = () => {
         if (refreshedTasksRes.data.success) {
           const refreshedTasks = refreshedTasksRes.data.tasks || [];
           setTasks(refreshedTasks);
-          const updatedTask = refreshedTasks.find(t => t.id === viewingTask.id);
+          const groupKey = viewingTask.parent_task_id || viewingTask.id;
+          const updatedTask = refreshedTasks.find(t => (t.parent_task_id || t.id) === groupKey);
           if (updatedTask) {
             setViewingTask(updatedTask);
           }
@@ -118,6 +129,20 @@ const TaskManager = () => {
       if (res.data.success) {
         setIsStatusRemarkModalOpen(false);
         fetchTasks();
+        // Also refresh viewingTask if we are in the view details modal!
+        if (viewingTask) {
+          const refreshedTasksRes = await axios.get('/api/tasks', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (refreshedTasksRes.data.success) {
+            const refreshedTasks = refreshedTasksRes.data.tasks || [];
+            const groupKey = viewingTask.parent_task_id || viewingTask.id;
+            const updatedTask = refreshedTasks.find(t => (t.parent_task_id || t.id) === groupKey);
+            if (updatedTask) {
+              setViewingTask(updatedTask);
+            }
+          }
+        }
       }
     } catch (err) {
       console.error(err);
@@ -222,6 +247,10 @@ const TaskManager = () => {
 
   const handleCreateTask = async (e) => {
     e.preventDefault();
+    if (!formData.assigned_to || (Array.isArray(formData.assigned_to) && formData.assigned_to.length === 0)) {
+      alert('Please select at least one assignee.');
+      return;
+    }
     try {
       const res = await axios.post('/api/tasks', formData, {
         headers: { Authorization: `Bearer ${token}` }
@@ -303,7 +332,7 @@ const TaskManager = () => {
     setFormData({
       title: '',
       description: '',
-      assigned_to: '',
+      assigned_to: [],
       ad_platform: 'general',
       ad_id: '',
       ad_name: '',
@@ -437,14 +466,14 @@ const TaskManager = () => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none text-slate-850 dark:text-slate-350 pr-8"
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none text-slate-800 dark:text-slate-200 pr-8"
             >
-              <option value="All">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="in_progress">In Progress</option>
-              <option value="on_hold">On Hold</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="All">All Statuses</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="pending">Pending</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="in_progress">In Progress</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="on_hold">On Hold</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="completed">Completed</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="cancelled">Cancelled</option>
             </select>
             <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
           </div>
@@ -454,13 +483,13 @@ const TaskManager = () => {
             <select
               value={filterPriority}
               onChange={(e) => setFilterPriority(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none text-slate-850 dark:text-slate-350 pr-8"
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none text-slate-800 dark:text-slate-200 pr-8"
             >
-              <option value="All">All Priorities</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="All">All Priorities</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="low">Low</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="medium">Medium</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="high">High</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="critical">Critical</option>
             </select>
             <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
           </div>
@@ -470,14 +499,14 @@ const TaskManager = () => {
             <select
               value={filterPlatform}
               onChange={(e) => setFilterPlatform(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none text-slate-850 dark:text-slate-350 pr-8"
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none text-slate-800 dark:text-slate-200 pr-8"
             >
-              <option value="All">All Platforms</option>
-              <option value="general">General</option>
-              <option value="meta">Meta Ads</option>
-              <option value="google">Google Ads</option>
-              <option value="linkedin">LinkedIn Ads</option>
-              <option value="whatsapp">WhatsApp Campaigns</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="All">All Platforms</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="general">General</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="meta">Meta Ads</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="google">Google Ads</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="linkedin">LinkedIn Ads</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="whatsapp">WhatsApp Campaigns</option>
             </select>
             <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
           </div>
@@ -488,11 +517,11 @@ const TaskManager = () => {
               <select
                 value={filterAssignee}
                 onChange={(e) => setFilterAssignee(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none text-slate-850 dark:text-slate-350 pr-8"
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none text-slate-850 dark:text-slate-250 pr-8"
               >
-                <option value="All">All Assignees</option>
+                <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="All">All Assignees</option>
                 {assignees.map(u => (
-                  <option key={u.id} value={u.id}>{u.username}</option>
+                  <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" key={u.id} value={u.id}>{u.username}</option>
                 ))}
               </select>
               <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
@@ -572,25 +601,41 @@ const TaskManager = () => {
 
                       {/* Status select dropdown */}
                       <td className="px-6 py-3.5 whitespace-nowrap">
-                        {isAssignee || isAdmin || isCreator || isManagerOfAssignee ? (
-                          <div className="relative inline-block">
-                            <select
-                              value={task.status}
-                              onChange={(e) => handleStatusChangeClick(task, e.target.value)}
-                              className={`pl-2 pr-6 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider border cursor-pointer appearance-none focus:outline-none ${getStatusBadgeColor(task.status)}`}
-                            >
-                              <option value="pending">Pending</option>
-                              <option value="in_progress">In Progress</option>
-                              <option value="on_hold">On Hold</option>
-                              <option value="completed">Completed</option>
-                              <option value="cancelled">Cancelled</option>
-                            </select>
-                            <ChevronDown className="w-3 h-3 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
-                          </div>
+                        {task.assignees && task.assignees.length > 1 ? (
+                          (() => {
+                            const completedCount = task.assignees.filter(a => a.status === 'completed').length;
+                            const totalCount = task.assignees.length;
+                            const isAllCompleted = completedCount === totalCount;
+                            const badgeColor = isAllCompleted 
+                              ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                              : 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20';
+                            return (
+                              <span className={`px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider border ${badgeColor}`} title={task.assignees.map(a => `${a.assignee_name}: ${a.status}`).join('\n')}>
+                                {completedCount}/{totalCount} Done
+                              </span>
+                            );
+                          })()
                         ) : (
-                          <span className={`px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider border ${getStatusBadgeColor(task.status)}`}>
-                            {task.status.replace(/_/g, ' ')}
-                          </span>
+                          isAssignee || isAdmin || isCreator || isManagerOfAssignee ? (
+                            <div className="relative inline-block">
+                              <select
+                                value={task.status}
+                                onChange={(e) => handleStatusChangeClick(task, e.target.value)}
+                                className={`pl-2 pr-6 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider border cursor-pointer appearance-none focus:outline-none ${getStatusBadgeColor(task.status)}`}
+                              >
+                                <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="pending">Pending</option>
+                                <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="in_progress">In Progress</option>
+                                <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="on_hold">On Hold</option>
+                                <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="completed">Completed</option>
+                                <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="cancelled">Cancelled</option>
+                              </select>
+                              <ChevronDown className="w-3 h-3 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
+                            </div>
+                          ) : (
+                            <span className={`px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider border ${getStatusBadgeColor(task.status)}`}>
+                              {task.status.replace(/_/g, ' ')}
+                            </span>
+                          )
                         )}
                       </td>
 
@@ -598,10 +643,13 @@ const TaskManager = () => {
                       <td className="px-6 py-3.5 whitespace-nowrap">
                         <div className="flex items-center space-x-2">
                           <div className="w-6 h-6 rounded-full bg-blue-600/10 border border-blue-500/20 text-blue-500 flex items-center justify-center font-bold text-[10px]">
-                            {task.assignee_name ? task.assignee_name.charAt(0).toUpperCase() : 'U'}
+                            {task.assignees && task.assignees.length > 1 ? task.assignees.length : (task.assignee_name ? task.assignee_name.charAt(0).toUpperCase() : 'U')}
                           </div>
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">
-                            {task.assignee_name} {isAssignee && <span className="text-[9px] text-blue-500 font-bold">(You)</span>}
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 max-w-[150px] truncate" title={task.assignees && task.assignees.map(a => a.assignee_name).join(', ')}>
+                            {task.assignees && task.assignees.length > 1 
+                              ? `${task.assignees[0].assignee_name} +${task.assignees.length - 1} others`
+                              : task.assignee_name || 'Unassigned'}
+                            {isAssignee && <span className="text-[9px] text-blue-500 font-bold ml-1">(You)</span>}
                           </span>
                         </div>
                       </td>
@@ -732,29 +780,93 @@ const TaskManager = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Assignee */}
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Assignee</label>
+                {/* Assignee Selection */}
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Assignee(s)</label>
+                  {isCreateModalOpen ? (
+                    // Multi-select scrollable checklist for Creation
+                    <div className="border border-slate-200 dark:border-white/10 rounded-xl bg-slate-50 dark:bg-slate-800 p-3 space-y-2.5">
+                      <span className="text-[10px] text-slate-550 dark:text-slate-400 font-bold block mb-1">
+                        Select one or more employee assignees:
+                      </span>
+                      <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1 scrollbar-thin">
+                        {assignees.map(u => {
+                          const isChecked = Array.isArray(formData.assigned_to) && formData.assigned_to.includes(u.id);
+                          return (
+                            <label
+                              key={u.id}
+                              className={`flex items-center space-x-2.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all ${
+                                isChecked
+                                  ? 'bg-blue-600/10 border-blue-500/30 text-blue-600 dark:text-blue-400'
+                                  : 'border-transparent hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-350'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  const checkedList = [...(formData.assigned_to || [])];
+                                  if (e.target.checked) {
+                                    if (!checkedList.includes(u.id)) checkedList.push(u.id);
+                                  } else {
+                                    const index = checkedList.indexOf(u.id);
+                                    if (index > -1) checkedList.splice(index, 1);
+                                  }
+                                  setFormData(prev => ({ ...prev, assigned_to: checkedList }));
+                                }}
+                                className="w-3.5 h-3.5 rounded border-slate-300 dark:border-white/10 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-900"
+                              />
+                              <span>{u.username} ({u.role.toUpperCase()})</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      {Array.isArray(formData.assigned_to) && formData.assigned_to.length > 0 && (
+                        <div className="pt-2 border-t border-slate-200 dark:border-white/5 flex flex-wrap gap-1">
+                          {formData.assigned_to.map(id => {
+                            const found = assignees.find(u => u.id === id);
+                            return found ? (
+                              <span key={id} className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-blue-600 text-white text-[9px] font-bold">
+                                <span>{found.username}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const checkedList = (formData.assigned_to || []).filter(item => item !== id);
+                                    setFormData(prev => ({ ...prev, assigned_to: checkedList }));
+                                  }}
+                                  className="hover:text-red-300 font-bold focus:outline-none"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    // Single-select dropdown for Editing
                     <div className="relative">
                       <select
                         required
                         name="assigned_to"
                         value={formData.assigned_to}
                         onChange={handleInputChange}
-                        className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-slate-800 dark:text-slate-200 appearance-none pr-8"
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-slate-800 dark:text-slate-200 appearance-none pr-8"
                       >
-                        <option value="">Select Employee...</option>
+                        <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="">Select Employee...</option>
                         {assignees.map(u => (
-                          <option key={u.id} value={u.id}>
+                          <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" key={u.id} value={u.id}>
                             {u.username} ({u.role.toUpperCase()})
                           </option>
                         ))}
                       </select>
                       <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
                     </div>
-                  </div>
+                  )}
+                </div>
 
+                <div className="grid grid-cols-2 gap-4">
                   {/* Priority */}
                   <div className="space-y-1">
                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Priority</label>
@@ -763,19 +875,17 @@ const TaskManager = () => {
                         name="priority"
                         value={formData.priority}
                         onChange={handleInputChange}
-                        className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-slate-800 dark:text-slate-200 appearance-none pr-8"
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-slate-800 dark:text-slate-200 appearance-none pr-8"
                       >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                        <option value="critical">Critical</option>
+                        <option className="bg-white dark:bg-slate-800 text-slate-855 dark:text-slate-200" value="low">Low</option>
+                        <option className="bg-white dark:bg-slate-800 text-slate-855 dark:text-slate-200" value="medium">Medium</option>
+                        <option className="bg-white dark:bg-slate-800 text-slate-855 dark:text-slate-200" value="high">High</option>
+                        <option className="bg-white dark:bg-slate-800 text-slate-855 dark:text-slate-200" value="critical">Critical</option>
                       </select>
                       <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
                     </div>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
                   {/* Due Date */}
                   <div className="space-y-1">
                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Due Date</label>
@@ -787,7 +897,9 @@ const TaskManager = () => {
                       className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800 dark:text-slate-200"
                     />
                   </div>
+                </div>
 
+                <div className="grid grid-cols-2 gap-4">
                   {/* Ad Platform Selector */}
                   <div className="space-y-1">
                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Link Platform</label>
@@ -796,13 +908,13 @@ const TaskManager = () => {
                         name="ad_platform"
                         value={formData.ad_platform}
                         onChange={handleInputChange}
-                        className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-slate-800 dark:text-slate-200 appearance-none pr-8"
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-slate-800 dark:text-slate-200 appearance-none pr-8"
                       >
-                        <option value="general">None / General</option>
-                        <option value="meta">Meta Ads</option>
-                        <option value="google">Google Ads</option>
-                        <option value="linkedin">LinkedIn Ads</option>
-                        <option value="whatsapp">WhatsApp Campaigns</option>
+                        <option className="bg-white dark:bg-slate-800 text-slate-855 dark:text-slate-200" value="general">None / General</option>
+                        <option className="bg-white dark:bg-slate-800 text-slate-855 dark:text-slate-200" value="meta">Meta Ads</option>
+                        <option className="bg-white dark:bg-slate-800 text-slate-855 dark:text-slate-200" value="google">Google Ads</option>
+                        <option className="bg-white dark:bg-slate-800 text-slate-855 dark:text-slate-200" value="linkedin">LinkedIn Ads</option>
+                        <option className="bg-white dark:bg-slate-800 text-slate-855 dark:text-slate-200" value="whatsapp">WhatsApp Campaigns</option>
                       </select>
                       <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
                     </div>
@@ -819,11 +931,11 @@ const TaskManager = () => {
                         value={formData.ad_id}
                         onChange={handleInputChange}
                         disabled={adsLoading}
-                        className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-slate-800 dark:text-slate-200 appearance-none pr-8 disabled:opacity-50"
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-slate-800 dark:text-slate-200 appearance-none pr-8 disabled:opacity-50"
                       >
-                        <option value="">{adsLoading ? 'Fetching active ads...' : 'Select active ad/campaign...'}</option>
+                        <option className="bg-white dark:bg-slate-800 text-slate-855 dark:text-slate-200" value="">{adsLoading ? 'Fetching active ads...' : 'Select active ad/campaign...'}</option>
                         {ads.map(ad => (
-                          <option key={ad.id} value={ad.id}>
+                          <option className="bg-white dark:bg-slate-800 text-slate-855 dark:text-slate-200" key={ad.id} value={ad.id}>
                             {ad.name} {ad.owner_name ? `(${ad.owner_name})` : ''}
                           </option>
                         ))}
@@ -883,9 +995,28 @@ const TaskManager = () => {
                   <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border ${getPriorityBadgeColor(viewingTask.priority)}`}>
                     {viewingTask.priority}
                   </span>
-                  <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border ${getStatusBadgeColor(viewingTask.status)}`}>
-                    {viewingTask.status.replace(/_/g, ' ')}
-                  </span>
+                  {viewingTask.assignees && viewingTask.assignees.length > 1 ? (
+                    activeAssignee && (
+                      <div className="relative inline-block">
+                        <select
+                          value={activeAssignee.status}
+                          onChange={(e) => handleStatusChangeClick({ ...viewingTask, id: activeAssignee.taskId, status: activeAssignee.status }, e.target.value)}
+                          className={`pl-2 pr-6 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider border cursor-pointer appearance-none focus:outline-none ${getStatusBadgeColor(activeAssignee.status)}`}
+                        >
+                          <option className="bg-white dark:bg-slate-800 text-slate-855 dark:text-slate-200" value="pending">Pending</option>
+                          <option className="bg-white dark:bg-slate-800 text-slate-855 dark:text-slate-200" value="in_progress">In Progress</option>
+                          <option className="bg-white dark:bg-slate-800 text-slate-855 dark:text-slate-200" value="on_hold">On Hold</option>
+                          <option className="bg-white dark:bg-slate-800 text-slate-855 dark:text-slate-200" value="completed">Completed</option>
+                          <option className="bg-white dark:bg-slate-800 text-slate-855 dark:text-slate-200" value="cancelled">Cancelled</option>
+                        </select>
+                        <ChevronDown className="w-3 h-3 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
+                      </div>
+                    )
+                  ) : (
+                    <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border ${getStatusBadgeColor(viewingTask.status)}`}>
+                      {viewingTask.status.replace(/_/g, ' ')}
+                    </span>
+                  )}
                   {viewingTask.ad_platform && viewingTask.ad_platform !== 'general' && getPlatformIcon(viewingTask.ad_platform)}
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-snug">
@@ -893,10 +1024,46 @@ const TaskManager = () => {
                 </h3>
               </div>
 
+              {/* Tab Selector for Multi-Assignee Tasks */}
+              {viewingTask.assignees && viewingTask.assignees.length > 1 && (
+                <div className="space-y-1.5">
+                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Assignee to View Remarks & Manage Status</span>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {viewingTask.assignees.map((assignee, idx) => {
+                      const isActive = activeAssigneeIndex === idx;
+                      return (
+                        <button
+                          key={assignee.taskId}
+                          type="button"
+                          onClick={() => { setActiveAssigneeIndex(idx); setNewRemark(''); }}
+                          className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center space-x-1.5 transition-all ${
+                            isActive
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/10'
+                              : 'bg-slate-50 dark:bg-white/[0.03] border-slate-200 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-350'
+                          }`}
+                        >
+                          <div className="w-4 h-4 rounded-full bg-white/20 text-white flex items-center justify-center font-bold text-[9px] uppercase">
+                            {assignee.assignee_name ? assignee.assignee_name.charAt(0) : 'U'}
+                          </div>
+                          <span>{assignee.assignee_name}</span>
+                          <span className={`px-1.5 py-0.2 rounded text-[8px] font-bold uppercase border ${
+                            isActive
+                              ? 'bg-white/20 text-white border-white/10'
+                              : getStatusBadgeColor(assignee.status)
+                          }`}>
+                            {assignee.status.replace(/_/g, ' ')}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Description Container */}
               <div className="space-y-1">
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Description</label>
-                <div className="bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 rounded-xl p-4 text-xs text-slate-700 dark:text-slate-350 whitespace-pre-wrap leading-relaxed">
+                <div className="bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 rounded-xl p-4 text-xs text-slate-700 dark:text-green-300 whitespace-pre-wrap leading-relaxed">
                   {viewingTask.description || <span className="italic text-slate-400">No description provided.</span>}
                 </div>
               </div>
@@ -905,7 +1072,9 @@ const TaskManager = () => {
               <div className="grid grid-cols-2 gap-4 bg-slate-50/50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/[0.02] p-4 rounded-xl text-xs">
                 <div className="space-y-1">
                   <span className="block text-slate-400 font-medium">Assigned To</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{viewingTask.assignee_name}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {activeAssignee ? activeAssignee.assignee_name : viewingTask.assignee_name}
+                  </span>
                 </div>
                 <div className="space-y-1">
                   <span className="block text-slate-400 font-medium">Assigned By</span>
@@ -933,10 +1102,10 @@ const TaskManager = () => {
 
                 {/* History list */}
                 <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
-                  {getTaskRemarksArray(viewingTask.remarks).length === 0 ? (
+                  {getTaskRemarksArray(activeAssignee ? activeAssignee.remarks : viewingTask.remarks).length === 0 ? (
                     <p className="text-xs text-slate-400 italic text-center py-4">No remarks recorded yet.</p>
                   ) : (
-                    getTaskRemarksArray(viewingTask.remarks).map((rem, idx) => {
+                    getTaskRemarksArray(activeAssignee ? activeAssignee.remarks : viewingTask.remarks).map((rem, idx) => {
                       const roleStr = rem.by ? rem.by.toUpperCase() : 'USER';
                       return (
                         <div key={idx} className="bg-slate-50 dark:bg-white/[0.02] border border-slate-150 dark:border-white/5 rounded-xl p-3 space-y-1 text-xs">

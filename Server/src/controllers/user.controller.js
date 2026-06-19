@@ -206,3 +206,137 @@ exports.getManagers = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// @desc    Get dashboard stats for logged-in user (different results by role)
+// @route   GET /api/users/dashboard/stats
+// @access  Private
+exports.getDashboardStats = async (req, res) => {
+    try {
+        const { role, id: userId } = req.user;
+        const { pool } = require('../config/db');
+
+        if (role === 'manager') {
+            // 1. Team members status count (excluding the manager themselves)
+            const [teamStatusRows] = await pool.query(
+                `SELECT status, COUNT(*) as count 
+                 FROM users 
+                 WHERE manager_id = ? AND id != ?
+                 GROUP BY status`,
+                [userId, userId]
+            );
+
+            // Structure team statuses: active, hold, rejected
+            const teamStats = {
+                total: 0,
+                active: 0,
+                hold: 0,
+                rejected: 0
+            };
+            for (const row of teamStatusRows) {
+                if (teamStats[row.status] !== undefined) {
+                    teamStats[row.status] = row.count;
+                }
+                teamStats.total += row.count;
+            }
+
+            // 2. Team tasks stats (tasks assigned to users under this manager)
+            const [teamTaskRows] = await pool.query(
+                `SELECT t.status, COUNT(*) as count 
+                 FROM tasks t
+                 JOIN users u ON t.assigned_to = u.id
+                 WHERE u.manager_id = ? AND u.id != ?
+                 GROUP BY t.status`,
+                [userId, userId]
+            );
+
+            const teamTasksStats = {
+                total: 0,
+                pending: 0,
+                in_progress: 0,
+                completed: 0,
+                cancelled: 0,
+                on_hold: 0
+            };
+            for (const row of teamTaskRows) {
+                if (teamTasksStats[row.status] !== undefined) {
+                    teamTasksStats[row.status] = row.count;
+                }
+                teamTasksStats.total += row.count;
+            }
+
+            // 3. Manager's own tasks stats (tasks assigned to the manager themselves)
+            const [myTaskRows] = await pool.query(
+                `SELECT status, COUNT(*) as count 
+                 FROM tasks 
+                 WHERE assigned_to = ?
+                 GROUP BY status`,
+                [userId]
+            );
+
+            const myTasksStats = {
+                total: 0,
+                pending: 0,
+                in_progress: 0,
+                completed: 0,
+                cancelled: 0,
+                on_hold: 0
+            };
+            for (const row of myTaskRows) {
+                if (myTasksStats[row.status] !== undefined) {
+                    myTasksStats[row.status] = row.count;
+                }
+                myTasksStats.total += row.count;
+            }
+
+            return res.status(200).json({
+                success: true,
+                role,
+                teamStats,
+                teamTasksStats,
+                myTasksStats
+            });
+
+        } else if (role === 'user') {
+            // Standard user
+            const [myTaskRows] = await pool.query(
+                `SELECT status, COUNT(*) as count 
+                 FROM tasks 
+                 WHERE assigned_to = ?
+                 GROUP BY status`,
+                [userId]
+            );
+
+            const myTasksStats = {
+                total: 0,
+                pending: 0,
+                in_progress: 0,
+                completed: 0,
+                cancelled: 0,
+                on_hold: 0
+            };
+            for (const row of myTaskRows) {
+                if (myTasksStats[row.status] !== undefined) {
+                    myTasksStats[row.status] = row.count;
+                }
+                myTasksStats.total += row.count;
+            }
+
+            return res.status(200).json({
+                success: true,
+                role,
+                myTasksStats
+            });
+        } else {
+            // Admin role
+            return res.status(200).json({
+                success: true,
+                role
+            });
+        }
+
+    } catch (error) {
+        console.error('getDashboardStats Error:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+

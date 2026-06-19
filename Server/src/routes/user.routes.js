@@ -5,14 +5,19 @@ const {
     createUser,
     updateUser,
     deleteUser,
-    getManagers
+    getManagers,
+    getDashboardStats
 } = require('../controllers/user.controller');
 
 const { protect, authorize } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 
-// Route to get list of managers (strictly Admin)
+// Route to get dashboard statistics
+router.route('/dashboard/stats')
+    .get(getDashboardStats);
+
+// Route to get list of active managers (strictly Admin)
 router.route('/managers/list')
     .get(authorize('admin'), getManagers);
 

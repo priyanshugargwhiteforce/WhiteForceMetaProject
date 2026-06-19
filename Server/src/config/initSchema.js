@@ -939,6 +939,12 @@ const initSchema = async () => {
         try {
             await pool.query("ALTER TABLE tasks MODIFY COLUMN status ENUM('pending', 'in_progress', 'completed', 'cancelled', 'on_hold') DEFAULT 'pending'");
         } catch (e) { /* Modify might fail */ }
+        try {
+            await pool.query("ALTER TABLE tasks ADD COLUMN parent_task_id INT NULL DEFAULT NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("UPDATE tasks SET parent_task_id = id WHERE parent_task_id IS NULL");
+        } catch (e) { /* Update legacy tasks */ }
 
         // Indexes for tasks table
         try {
@@ -952,6 +958,9 @@ const initSchema = async () => {
         } catch (e) { /* Index might exist */ }
         try {
             await pool.query("ALTER TABLE tasks ADD INDEX idx_tasks_ad_id (ad_id)");
+        } catch (e) { /* Index might exist */ }
+        try {
+            await pool.query("ALTER TABLE tasks ADD INDEX idx_tasks_parent_task_id (parent_task_id)");
         } catch (e) { /* Index might exist */ }
 
         // --- User Hierarchy Migrations ---
