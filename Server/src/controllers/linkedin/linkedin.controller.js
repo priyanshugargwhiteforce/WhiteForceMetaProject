@@ -15,11 +15,14 @@ exports.getLinkedInAccounts = async (req, res) => {
         let [rows] = await pool.query('SELECT * FROM linkedin_accounts ORDER BY name ASC');
 
         if (rows.length === 0) {
-            console.log('[LinkedIn Controller] No accounts found in DB. Returning empty array (user must manually sync).');
-            return res.status(200).json({
-                success: true,
-                adaccounts: { data: [] }
-            });
+            console.log('[LinkedIn Controller] No accounts found in DB. Triggering auto-bootstrap sync...');
+            try {
+                const syncResult = await syncLinkedInData();
+                console.log(`[LinkedIn Controller] Auto-bootstrap sync completed. Synced ${syncResult.recordsSynced} records.`);
+                [rows] = await pool.query('SELECT * FROM linkedin_accounts ORDER BY name ASC');
+            } catch (syncErr) {
+                console.error('[LinkedIn Controller] Auto-bootstrap sync failed:', syncErr.message);
+            }
         }
 
         res.status(200).json({

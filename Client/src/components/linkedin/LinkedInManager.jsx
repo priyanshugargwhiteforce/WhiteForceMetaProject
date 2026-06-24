@@ -103,7 +103,6 @@ const LinkedInManager = () => {
   };
 
   const handleSyncRealtimeData = async () => {
-    if (!selectedAccountId) return;
     setSyncing(true);
     setSyncError(null);
     setSyncSuccess(null);
@@ -115,13 +114,17 @@ const LinkedInManager = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ accountId: selectedAccountId })
+        body: JSON.stringify({ accountId: selectedAccountId || null })
       });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || "Failed to sync LinkedIn API");
 
-      // Reload fresh database records
-      await fetchDashboardData(selectedAccountId);
+      // Reload fresh accounts if list was empty, otherwise reload dashboard data
+      if (!selectedAccountId) {
+        await fetchAdAccounts();
+      } else {
+        await fetchDashboardData(selectedAccountId);
+      }
 
       setSyncSuccess(result.message);
       setTimeout(() => setSyncSuccess(null), 8000);
@@ -284,7 +287,7 @@ const LinkedInManager = () => {
 
           {/* Sync Button */}
           <button
-            disabled={syncing || !selectedAccountId}
+            disabled={syncing}
             onClick={handleSyncRealtimeData}
             className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-500/10 transition-all hover:scale-105 disabled:opacity-50 disabled:pointer-events-none"
           >
