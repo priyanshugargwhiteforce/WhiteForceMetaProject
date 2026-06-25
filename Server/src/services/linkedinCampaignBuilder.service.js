@@ -23,6 +23,54 @@ const normalizeGroupUrn = (groupId) => {
  * @param {String} currency - Readonly currency from active ad account
  * @returns {Object} RESTli payload matching LinkedIn API v2 specs
  */
+
+/**
+ * Normalizes targeting items into URN strings.
+ * Supports both raw URN strings and { name, urn } objects.
+ * @param {Array} list - Array of URN strings or targeting objects
+ * @returns {Array} List of validated URN strings
+ */
+const normalizeTargetingUrns = (list) => {
+    if (!Array.isArray(list)) return [];
+    return list
+        .map(item => {
+            let urn = null;
+            if (typeof item === 'string') urn = item;
+            else if (item && typeof item === 'object' && typeof item.urn === 'string') urn = item.urn;
+            
+            // Auto-convert legacy language URNs to supported interfaceLocales URNs
+            if (urn && urn.startsWith('urn:li:language:')) {
+                const lang = urn.replace('urn:li:language:', '');
+                const langMap = {
+                    en: 'en_US',
+                    es: 'es_ES',
+                    fr: 'fr_FR',
+                    de: 'de_DE',
+                    hi: 'hi_IN',
+                    ja: 'ja_JP',
+                    zh: 'zh_CN',
+                    pt: 'pt_BR',
+                    it: 'it_IT',
+                    ru: 'ru_RU',
+                    ar: 'ar_AE',
+                    ko: 'ko_KR',
+                    nl: 'nl_NL',
+                    tr: 'tr_TR'
+                };
+                const mappedLocale = langMap[lang] || 'en_US';
+                return `urn:li:locale:${mappedLocale}`;
+            }
+            return urn;
+        })
+        .filter(urn => urn && urn.startsWith('urn:li:'));
+};
+
+/**
+ * Build the RESTli v2 API payload for creating a campaign
+ * @param {Object} data - Validation-cleared campaign config from wizard
+ * @param {String} currency - Readonly currency from active ad account
+ * @returns {Object} RESTli payload matching LinkedIn API v2 specs
+ */
 const buildLinkedInCampaignPayload = (data, currency = 'USD') => {
     const payload = {
         account: normalizeAccountUrn(data.accountId),
@@ -57,9 +105,22 @@ const buildLinkedInCampaignPayload = (data, currency = 'USD') => {
     }
 
     // 2.5. Build Locale (Required by LinkedIn API)
+    // Map language code to standard, supported interface locale country pairs to prevent INVALID_INTERFACE_LOCALE_CODE validation error
+    const lang = data.language || 'en';
+    let countryCode = 'US';
+    if (lang === 'es') countryCode = 'ES';
+    else if (lang === 'fr') countryCode = 'FR';
+    else if (lang === 'de') countryCode = 'DE';
+    else if (lang === 'it') countryCode = 'IT';
+    else if (lang === 'ja') countryCode = 'JP';
+    else if (lang === 'pt') countryCode = 'BR';
+    else if (lang === 'ru') countryCode = 'RU';
+    else if (lang === 'zh') countryCode = 'CN';
+    else if (lang === 'ko') countryCode = 'KR';
+
     payload.locale = {
-        language: data.language || 'en',
-        country: data.country || 'US'
+        language: lang,
+        country: countryCode
     };
 
     // 3. Cost Type
@@ -71,51 +132,43 @@ const buildLinkedInCampaignPayload = (data, currency = 'USD') => {
 
         // Geographies / locations
         const locations = data.targeting.locations || data.targeting.countries || [];
-        if (locations.length > 0) {
-            const locUrns = locations.filter(val => typeof val === 'string' && val.startsWith('urn:li:'));
-            if (locUrns.length > 0) {
-                andFilters.push({
-                    or: {
-                        'urn:li:adTargetingFacet:locations': locUrns
-                    }
-                });
-            }
+        const locUrns = normalizeTargetingUrns(locations);
+        if (locUrns.length > 0) {
+            andFilters.push({
+                or: {
+                    'urn:li:adTargetingFacet:locations': locUrns
+                }
+            });
         }
 
-        // Languages
-        if (Array.isArray(data.targeting.languages) && data.targeting.languages.length > 0) {
-            const langUrns = data.targeting.languages.filter(val => typeof val === 'string' && val.startsWith('urn:li:'));
-            if (langUrns.length > 0) {
-                andFilters.push({
-                    or: {
-                        'urn:li:adTargetingFacet:interfaceLanguages': langUrns
-                    }
-                });
-            }
+        // Languages (interfaceLocales)
+        const langUrns = normalizeTargetingUrns(data.targeting.languages);
+        if (langUrns.length > 0) {
+            andFilters.push({
+                or: {
+                    'urn:li:adTargetingFacet:interfaceLocales': langUrns
+                }
+            });
         }
 
         // Job Functions
-        if (Array.isArray(data.targeting.jobFunctions) && data.targeting.jobFunctions.length > 0) {
-            const jobUrns = data.targeting.jobFunctions.filter(val => typeof val === 'string' && val.startsWith('urn:li:'));
-            if (jobUrns.length > 0) {
-                andFilters.push({
-                    or: {
-                        'urn:li:adTargetingFacet:jobFunctions': jobUrns
-                    }
-                });
-            }
+        const jobUrns = normalizeTargetingUrns(data.targeting.jobFunctions);
+        if (jobUrns.length > 0) {
+            andFilters.push({
+                or: {
+                    'urn:li:adTargetingFacet:jobFunctions': jobUrns
+                }
+            });
         }
 
         // Industries
-        if (Array.isArray(data.targeting.industries) && data.targeting.industries.length > 0) {
-            const indUrns = data.targeting.industries.filter(val => typeof val === 'string' && val.startsWith('urn:li:'));
-            if (indUrns.length > 0) {
-                andFilters.push({
-                    or: {
-                        'urn:li:adTargetingFacet:industries': indUrns
-                    }
-                });
-            }
+        const indUrns = normalizeTargetingUrns(data.targeting.industries);
+        if (indUrns.length > 0) {
+            andFilters.push({
+                or: {
+                    'urn:li:adTargetingFacet:industries': indUrns
+                }
+            });
         }
 
         if (andFilters.length > 0) {
@@ -133,5 +186,6 @@ const buildLinkedInCampaignPayload = (data, currency = 'USD') => {
 module.exports = {
     normalizeAccountUrn,
     normalizeGroupUrn,
+    normalizeTargetingUrns,
     buildLinkedInCampaignPayload
 };

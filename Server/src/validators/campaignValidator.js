@@ -7,13 +7,19 @@ const isUrn = (str) => {
     return typeof str === 'string' && (str.startsWith('urn:li:') || str.startsWith('urn:lia:'));
 };
 
+const getUrn = (val) => {
+    if (typeof val === 'string') return val;
+    if (val && typeof val === 'object' && typeof val.urn === 'string') return val.urn;
+    return null;
+};
+
 /**
  * Validate campaign data
  * @param {Object} data - The campaign request payload
  * @param {Boolean} isPublish - Whether this is a publish action (true) or draft save (false)
  * @returns {Array} List of validation errors: { field, message }
  */
-const validateCampaign = (data, isPublish = false) => {
+const validateCampaign = (data, isPublish = false, currency = 'USD') => {
     const errors = [];
 
     // --- Draft and Publish Shared Minimums ---
@@ -56,9 +62,14 @@ const validateCampaign = (data, isPublish = false) => {
             errors.push({ field: 'language', message: 'Language is required for publication.' });
         }
 
-        // Daily budget must be greater than 0
-        if (data.dailyBudget === undefined || data.dailyBudget === null || Number(data.dailyBudget) <= 0) {
-            errors.push({ field: 'dailyBudget', message: 'Daily budget must be greater than 0 for publication.' });
+        // Daily budget must meet currency-based minimums
+        const numDaily = Number(data.dailyBudget);
+        let minBudget = 10.00;
+        if (currency === 'INR') minBudget = 500.00;
+        else if (currency === 'JPY') minBudget = 1000.00;
+
+        if (data.dailyBudget === undefined || data.dailyBudget === null || isNaN(numDaily) || numDaily < minBudget) {
+            errors.push({ field: 'dailyBudget', message: `Daily budget must be at least ${currency} ${minBudget.toFixed(2)} for publication.` });
         }
 
         // Lifetime budget must be >= Daily Budget if provided
@@ -99,12 +110,23 @@ const validateCampaign = (data, isPublish = false) => {
             }
         }
 
+        // Location is required for publish targeting
+        if (!data.targeting || !Array.isArray(data.targeting.locations) || data.targeting.locations.length === 0) {
+            errors.push({
+                field: 'targeting.locations',
+                message: 'At least one target location is required for publication.'
+            });
+        }
+
         // Targeting Safety: Must be valid URN formats
         if (data.targeting) {
             const facets = ['countries', 'locations', 'languages', 'jobFunctions', 'industries'];
             facets.forEach(facet => {
                 if (Array.isArray(data.targeting[facet])) {
-                    const invalidItems = data.targeting[facet].filter(val => !isUrn(val));
+                    const invalidItems = data.targeting[facet].filter(val => {
+                        const urn = getUrn(val);
+                        return !urn || !isUrn(urn);
+                    });
                     if (invalidItems.length > 0) {
                         errors.push({
                             field: `targeting.${facet}`,

@@ -7,6 +7,7 @@ import {
 const MediaCard = ({ asset, onPreview, onDelete, onUse }) => {
     const [copiedId, setCopiedId] = React.useState(false);
     const [copiedUrn, setCopiedUrn] = React.useState(false);
+    const [copiedUrl, setCopiedUrl] = React.useState(false);
 
     const handleCopyId = () => {
         navigator.clipboard.writeText(asset.id);
@@ -20,6 +21,13 @@ const MediaCard = ({ asset, onPreview, onDelete, onUse }) => {
             setCopiedUrn(true);
             setTimeout(() => setCopiedUrn(false), 2000);
         }
+    };
+
+    const handleCopyUrl = () => {
+        const fullUrl = `${window.location.protocol}//${window.location.host}/api/media/${asset.uuid}/preview`;
+        navigator.clipboard.writeText(fullUrl);
+        setCopiedUrl(true);
+        setTimeout(() => setCopiedUrl(false), 2000);
     };
 
     const getIcon = () => {
@@ -162,6 +170,16 @@ const MediaCard = ({ asset, onPreview, onDelete, onUse }) => {
                         >
                             {copiedUrn ? <Check className="w-2.5 h-2.5 text-emerald-500" /> : <Copy className="w-2.5 h-2.5" />}
                             <span>URN</span>
+                        </button>
+
+                        {/* Copy URL */}
+                        <button
+                            onClick={handleCopyUrl}
+                            className="flex items-center gap-1 px-2 py-1 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg text-[9px] font-bold text-slate-600 dark:text-slate-300 transition-all"
+                            title="Copy Shareable Preview URL"
+                        >
+                            {copiedUrl ? <Check className="w-2.5 h-2.5 text-emerald-500" /> : <Copy className="w-2.5 h-2.5" />}
+                            <span>URL</span>
                         </button>
                     </div>
 
