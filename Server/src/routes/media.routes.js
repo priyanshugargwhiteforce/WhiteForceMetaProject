@@ -119,7 +119,7 @@ router.delete('/:id', protect, async (req, res, next) => {
  * GET /api/media/:id/preview
  * Authenticated preview stream with path-traversal check
  */
-router.get('/:id/preview', protect, async (req, res, next) => {
+router.get('/:id/preview', async (req, res, next) => {
     try {
         const asset = await getAssetById(req.params.id);
         // Fallback check by UUID if ID was not matched

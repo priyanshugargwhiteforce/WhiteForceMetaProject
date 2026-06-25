@@ -4,6 +4,7 @@ import {
   ArrowLeft, ArrowRight, Save, Play, CheckCircle, AlertCircle, Info,
   Plus, Trash2, Calendar, Target, Award, DollarSign, Clock, ShieldAlert
 } from 'lucide-react';
+import AsyncSearchSelect from './AsyncSearchSelect';
 
 const LinkedInCampaignWizard = () => {
   const navigate = useNavigate();
@@ -113,7 +114,15 @@ const LinkedInCampaignWizard = () => {
       // Find selected account currency
       const selectedAcc = adAccounts.find(acc => String(acc.id) === String(accountId));
       if (selectedAcc && selectedAcc.currency) {
-        setCurrency(selectedAcc.currency);
+        const newCurrency = selectedAcc.currency;
+        setCurrency(newCurrency);
+        
+        // Update default budget if it was the standard default
+        setDailyBudget(prev => {
+          if (newCurrency === 'INR' && prev === '10.00') return '500.00';
+          if (newCurrency !== 'INR' && prev === '500.00') return '10.00';
+          return prev;
+        });
       }
       fetchCampaignGroups(accountId);
     } else {
@@ -182,10 +191,11 @@ const LinkedInCampaignWizard = () => {
       });
       const result = await response.json();
       if (result.success && result.data) {
-        // Filter out status = 'ACTIVE' or all groups
-        setCampaignGroups(result.data);
-        if (result.data.length > 0) {
-          setCampaignGroupId(result.data[0].id);
+        // Filter out status = 'REMOVED' groups as they cannot accept new campaigns
+        const activeGroups = result.data.filter(grp => grp.status !== 'REMOVED');
+        setCampaignGroups(activeGroups);
+        if (activeGroups.length > 0) {
+          setCampaignGroupId(activeGroups[0].id);
         } else {
           setCampaignGroupId('');
         }
@@ -568,7 +578,9 @@ const LinkedInCampaignWizard = () => {
                   >
                     <option value="">-- Select Group --</option>
                     {campaignGroups.map(grp => (
-                      <option key={grp.id} value={grp.id}>{grp.name}</option>
+                      <option key={grp.id} value={grp.id}>
+                        {grp.name} ({grp.status ? grp.status.toLowerCase() : 'unknown'})
+                      </option>
                     ))}
                   </select>
                 )}
@@ -664,7 +676,7 @@ const LinkedInCampaignWizard = () => {
                 <input
                   type="number"
                   step="0.01"
-                  min="10"
+                  min={currency === 'INR' ? 500 : (currency === 'JPY' ? 1000 : 10)}
                   value={dailyBudget}
                   onChange={(e) => handleFieldChange(setDailyBudget, e.target.value)}
                   className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white"
@@ -672,7 +684,9 @@ const LinkedInCampaignWizard = () => {
                 {getFieldError('dailyBudget') && (
                   <p className="text-[10px] text-red-500 font-bold">{getFieldError('dailyBudget')}</p>
                 )}
-                <span className="text-[10px] text-slate-400">Minimum daily budget is {currency} 10.00</span>
+                <span className="text-[10px] text-slate-400">
+                  Minimum daily budget is {currency} {currency === 'INR' ? '500.00' : (currency === 'JPY' ? '1000.00' : '10.00')}
+                </span>
               </div>
 
               {/* Lifetime Budget */}
@@ -817,144 +831,56 @@ const LinkedInCampaignWizard = () => {
                 Audience Targeting Facets
               </h3>
               <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
-                Enter valid LinkedIn URN formats (e.g. <code className="bg-slate-100 dark:bg-white/5 px-1 py-0.5 rounded text-blue-500">urn:li:geo:103644278</code>). Leave targeting blank if not available. Free-text targeting is strictly blocked on publish.
+                Search and select targeting fields. Leave targeting blank to match all. Free-text targeting is strictly blocked on publish.
               </p>
             </div>
 
             <div className="space-y-6">
-              {/* Locations URN */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Target Locations (URN format only)</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="e.g. urn:li:geo:103644278"
-                    value={locationsInput}
-                    onChange={(e) => setLocationsInput(e.target.value)}
-                    className="flex-1 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => addTargetingItem(locationsInput, setLocationsInput, locationsList, setLocationsList, 'Location')}
-                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold text-xs transition-all flex items-center"
-                  >
-                    <Plus className="w-4 h-4 mr-0.5" /> Add
-                  </button>
-                </div>
+              {/* Locations */}
+              <div className="space-y-1.5">
+                <AsyncSearchSelect
+                  type="location"
+                  selectedValues={locationsList}
+                  onChange={(nextList) => handleFieldChange(setLocationsList, nextList)}
+                  placeholder="Search target locations (e.g. Delhi, Mumbai, India)..."
+                  label="Target Locations"
+                />
                 {getFieldError('targeting.locations') && (
                   <p className="text-[10px] text-red-500 font-bold">{getFieldError('targeting.locations')}</p>
                 )}
-                {/* List display */}
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {locationsList.map((urn, i) => (
-                    <span key={i} className="flex items-center space-x-1.5 px-3 py-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs rounded-full font-bold text-slate-700 dark:text-slate-300">
-                      <span>{urn}</span>
-                      <button type="button" onClick={() => removeTargetingItem(i, locationsList, setLocationsList)} className="text-red-500 hover:text-red-700">✕</button>
-                    </span>
-                  ))}
-                  {locationsList.length === 0 && (
-                    <span className="text-[10px] text-slate-400 italic">No locations configured. All locations (worldwide/omitted) will apply.</span>
-                  )}
-                </div>
               </div>
 
-              {/* Interface Languages URN */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Target Languages (URN format only)</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="e.g. urn:li:adTargetingFacet:interfaceLanguages:en"
-                    value={languagesInput}
-                    onChange={(e) => setLanguagesInput(e.target.value)}
-                    className="flex-1 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => addTargetingItem(languagesInput, setLanguagesInput, languagesList, setLanguagesList, 'Language')}
-                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold text-xs transition-all flex items-center"
-                  >
-                    <Plus className="w-4 h-4 mr-0.5" /> Add
-                  </button>
-                </div>
-                {/* List display */}
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {languagesList.map((urn, i) => (
-                    <span key={i} className="flex items-center space-x-1.5 px-3 py-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs rounded-full font-bold text-slate-700 dark:text-slate-300">
-                      <span>{urn}</span>
-                      <button type="button" onClick={() => removeTargetingItem(i, languagesList, setLanguagesList)} className="text-red-500 hover:text-red-700">✕</button>
-                    </span>
-                  ))}
-                  {languagesList.length === 0 && (
-                    <span className="text-[10px] text-slate-400 italic">No interface languages configured.</span>
-                  )}
-                </div>
+              {/* Languages */}
+              <div className="space-y-1.5">
+                <AsyncSearchSelect
+                  type="language"
+                  selectedValues={languagesList}
+                  onChange={(nextList) => handleFieldChange(setLanguagesList, nextList)}
+                  placeholder="Search target interface languages (e.g. English, French)..."
+                  label="Target Languages"
+                />
               </div>
 
-              {/* Job Functions URN */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Target Job Functions (URN format only)</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="e.g. urn:li:adTargetingFacet:jobFunctions:1"
-                    value={jobFunctionsInput}
-                    onChange={(e) => setJobFunctionsInput(e.target.value)}
-                    className="flex-1 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => addTargetingItem(jobFunctionsInput, setJobFunctionsInput, jobFunctionsList, setJobFunctionsList, 'Job Function')}
-                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold text-xs transition-all flex items-center"
-                  >
-                    <Plus className="w-4 h-4 mr-0.5" /> Add
-                  </button>
-                </div>
-                {/* List display */}
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {jobFunctionsList.map((urn, i) => (
-                    <span key={i} className="flex items-center space-x-1.5 px-3 py-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs rounded-full font-bold text-slate-700 dark:text-slate-300">
-                      <span>{urn}</span>
-                      <button type="button" onClick={() => removeTargetingItem(i, jobFunctionsList, setJobFunctionsList)} className="text-red-500 hover:text-red-700">✕</button>
-                    </span>
-                  ))}
-                  {jobFunctionsList.length === 0 && (
-                    <span className="text-[10px] text-slate-400 italic">No job functions configured.</span>
-                  )}
-                </div>
+              {/* Job Functions */}
+              <div className="space-y-1.5">
+                <AsyncSearchSelect
+                  type="jobFunction"
+                  selectedValues={jobFunctionsList}
+                  onChange={(nextList) => handleFieldChange(setJobFunctionsList, nextList)}
+                  placeholder="Search target job functions (e.g. Engineering, Sales)..."
+                  label="Target Job Functions"
+                />
               </div>
 
-              {/* Industries URN */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Target Industries (URN format only)</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="e.g. urn:li:adTargetingFacet:industries:96"
-                    value={industriesInput}
-                    onChange={(e) => setIndustriesInput(e.target.value)}
-                    className="flex-1 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => addTargetingItem(industriesInput, setIndustriesInput, industriesList, setIndustriesList, 'Industry')}
-                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold text-xs transition-all flex items-center"
-                  >
-                    <Plus className="w-4 h-4 mr-0.5" /> Add
-                  </button>
-                </div>
-                {/* List display */}
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {industriesList.map((urn, i) => (
-                    <span key={i} className="flex items-center space-x-1.5 px-3 py-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs rounded-full font-bold text-slate-700 dark:text-slate-300">
-                      <span>{urn}</span>
-                      <button type="button" onClick={() => removeTargetingItem(i, industriesList, setIndustriesList)} className="text-red-500 hover:text-red-700">✕</button>
-                    </span>
-                  ))}
-                  {industriesList.length === 0 && (
-                    <span className="text-[10px] text-slate-400 italic">No industries configured.</span>
-                  )}
-                </div>
+              {/* Industries */}
+              <div className="space-y-1.5">
+                <AsyncSearchSelect
+                  type="industry"
+                  selectedValues={industriesList}
+                  onChange={(nextList) => handleFieldChange(setIndustriesList, nextList)}
+                  placeholder="Search target industries (e.g. Software, Finance)..."
+                  label="Target Industries"
+                />
               </div>
             </div>
           </div>
@@ -1013,7 +939,10 @@ const LinkedInCampaignWizard = () => {
                   <div>
                     <span className="text-slate-400 font-semibold block mb-1">Locations ({locationsList.length}):</span>
                     <div className="flex flex-wrap gap-1.5">
-                      {locationsList.map((l, idx) => <span key={idx} className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-700 dark:text-slate-300">{l}</span>)}
+                      {locationsList.map((l, idx) => {
+                        const displayName = typeof l === 'string' ? l : l.name;
+                        return <span key={idx} className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-700 dark:text-slate-300">{displayName}</span>;
+                      })}
                       {locationsList.length === 0 && <span className="italic text-slate-400">Omitted (no location filtering)</span>}
                     </div>
                   </div>
@@ -1021,7 +950,10 @@ const LinkedInCampaignWizard = () => {
                     <div>
                       <span className="text-slate-400 font-semibold block mb-1">Interface Languages ({languagesList.length}):</span>
                       <div className="flex flex-wrap gap-1.5">
-                        {languagesList.map((l, idx) => <span key={idx} className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-700 dark:text-slate-300">{l}</span>)}
+                        {languagesList.map((l, idx) => {
+                          const displayName = typeof l === 'string' ? l : l.name;
+                          return <span key={idx} className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-700 dark:text-slate-300">{displayName}</span>;
+                        })}
                       </div>
                     </div>
                   )}
@@ -1029,7 +961,10 @@ const LinkedInCampaignWizard = () => {
                     <div>
                       <span className="text-slate-400 font-semibold block mb-1">Job Functions ({jobFunctionsList.length}):</span>
                       <div className="flex flex-wrap gap-1.5">
-                        {jobFunctionsList.map((l, idx) => <span key={idx} className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-700 dark:text-slate-300">{l}</span>)}
+                        {jobFunctionsList.map((l, idx) => {
+                          const displayName = typeof l === 'string' ? l : l.name;
+                          return <span key={idx} className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-700 dark:text-slate-300">{displayName}</span>;
+                        })}
                       </div>
                     </div>
                   )}
@@ -1037,7 +972,10 @@ const LinkedInCampaignWizard = () => {
                     <div>
                       <span className="text-slate-400 font-semibold block mb-1">Industries ({industriesList.length}):</span>
                       <div className="flex flex-wrap gap-1.5">
-                        {industriesList.map((l, idx) => <span key={idx} className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-700 dark:text-slate-300">{l}</span>)}
+                        {industriesList.map((l, idx) => {
+                          const displayName = typeof l === 'string' ? l : l.name;
+                          return <span key={idx} className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-700 dark:text-slate-300">{displayName}</span>;
+                        })}
                       </div>
                     </div>
                   )}

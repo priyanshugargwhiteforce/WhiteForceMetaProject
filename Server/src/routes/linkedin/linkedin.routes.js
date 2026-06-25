@@ -30,6 +30,7 @@ router.get('/insights/:accountId', linkedinController.getLinkedInInsights);
 router.get('/leads/:accountId', linkedinController.getLinkedInLeads);
 router.get('/audience/:accountId', linkedinController.getLinkedInAudience);
 router.post('/sync', linkedinController.syncLinkedInData);
+router.get('/targeting/search', linkedinController.searchTargetingFacets);
 
 module.exports = router;
 

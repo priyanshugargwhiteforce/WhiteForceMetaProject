@@ -732,6 +732,14 @@ const updateLinkedInCampaignStatus = async (req, res, targetStatus) => {
         }
 
         const campaign = campRows[0];
+
+        // Intercept local draft status update request (never update status of drafts on LinkedIn)
+        if (cleanCampaignId.startsWith('temp_') || campaign.creation_source === 'LOCAL_DRAFT') {
+            return res.status(400).json({
+                success: false,
+                message: 'Draft campaigns cannot be paused or resumed on LinkedIn until they are published.'
+            });
+        }
         
         // Verify ownership
         if (String(campaign.account_id) !== cleanAccountId) {
@@ -1088,12 +1096,21 @@ exports.createLinkedInCampaign = async (req, res) => {
     } = req.body;
 
     try {
-        // Run full publish validation
-        const valErrors = validateCampaign(req.body, true);
-        
         const cleanAccountId = accountId ? String(accountId).replace('urn:li:sponsoredAccount:', '').replace('urn:lia:sponsoredAccount:', '') : null;
         const cleanCampaignGroupId = campaignGroupId ? String(campaignGroupId).replace('urn:li:sponsoredCampaignGroup:', '') : null;
 
+        // Fetch currency code first to validate budget constraints dynamically
+        let currency = 'USD';
+        if (cleanAccountId) {
+            const [accRows] = await pool.query('SELECT currency FROM linkedin_accounts WHERE id = ?', [cleanAccountId]);
+            if (accRows.length > 0 && accRows[0].currency) {
+                currency = accRows[0].currency;
+            }
+        }
+
+        // Run full publish validation
+        const valErrors = validateCampaign(req.body, true, currency);
+        
         // Duplicate Check Query for idempotency
         if (cleanAccountId && cleanCampaignGroupId && campaignName) {
             const [dups] = await pool.query(
@@ -1127,13 +1144,6 @@ exports.createLinkedInCampaign = async (req, res) => {
                 message: 'Please fix validation errors.',
                 validationErrors: valErrors
             });
-        }
-
-        // Fetch currency code
-        let currency = 'USD';
-        const [accRows] = await pool.query('SELECT currency FROM linkedin_accounts WHERE id = ?', [cleanAccountId]);
-        if (accRows.length > 0 && accRows[0].currency) {
-            currency = accRows[0].currency;
         }
 
         // Build RESTli payload
@@ -1273,6 +1283,155 @@ exports.createLinkedInCampaign = async (req, res) => {
     } catch (error) {
         console.error('[LinkedIn Controller] Error in createLinkedInCampaign:', error);
         res.status(500).json({ success: false, message: 'Failed to create campaign: ' + error.message });
+    }
+};
+
+const redisConnection = require('../../config/redis');
+
+const FACET_MAPPING = {
+    location: 'urn:li:adTargetingFacet:locations',
+    industry: 'urn:li:adTargetingFacet:industries',
+    jobfunction: 'urn:li:adTargetingFacet:jobFunctions',
+    skill: 'urn:li:adTargetingFacet:skills',
+    language: 'urn:li:adTargetingFacet:interfaceLocales',
+    seniority: 'urn:li:adTargetingFacet:seniorities'
+};
+
+exports.searchTargetingFacets = async (req, res) => {
+    const { type, q } = req.query;
+
+    if (!type) {
+        return res.status(400).json({ success: false, message: '"type" query parameter is required.' });
+    }
+
+    const normalizedType = type.toLowerCase();
+
+    if (normalizedType === 'company') {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Company targeting will not be implemented in this phase.' 
+        });
+    }
+
+    const facetUrn = FACET_MAPPING[normalizedType];
+    if (!facetUrn) {
+        return res.status(400).json({ 
+            success: false, 
+            message: `Unsupported targeting type: ${type}. Supported types are: ${Object.keys(FACET_MAPPING).join(', ')}` 
+        });
+    }
+
+    // If q is missing or less than 2 characters, return []
+    if (!q || q.trim().length < 2) {
+        return res.status(200).json([]);
+    }
+
+    const searchQuery = q.trim();
+    const cacheKey = `linkedin:targeting:${normalizedType}:${searchQuery.toLowerCase()}`;
+
+    // 1. Try reading from existing Redis configuration
+    try {
+        if (redisConnection && redisConnection.status === 'ready') {
+            const cached = await redisConnection.get(cacheKey);
+            if (cached) {
+                console.log(`[Targeting Search] Cache hit for key: ${cacheKey}`);
+                return res.status(200).json(JSON.parse(cached));
+            }
+        }
+    } catch (cacheErr) {
+        console.warn('[Targeting Search] Redis read error:', cacheErr.message);
+    }
+
+    // 2. Resolve request using either LinkedIn APIs or local static sets
+    try {
+        const { callLinkedInAPI } = require('../../services/linkedin.service');
+        let formatted = [];
+
+        if (normalizedType === 'location' || normalizedType === 'industry' || normalizedType === 'skill') {
+            // Live typeahead query
+            const encodedFacet = encodeURIComponent(facetUrn);
+            const encodedQuery = encodeURIComponent(searchQuery);
+            const apiRes = await callLinkedInAPI('https://api.linkedin.com/v2/adTargetingEntities', {
+                q: 'typeahead',
+                facet: encodedFacet,
+                query: encodedQuery
+            });
+
+            const elements = apiRes.elements || [];
+            formatted = elements.map(el => ({
+                name: el.name,
+                urn: el.urn,
+                type: normalizedType
+            }));
+
+        } else if (normalizedType === 'jobfunction') {
+            // Live functions search, filter elements locally
+            const apiRes = await callLinkedInAPI('https://api.linkedin.com/v2/functions');
+            const elements = apiRes.elements || [];
+            const queryLower = searchQuery.toLowerCase();
+            
+            formatted = elements
+                .map(el => ({
+                    name: el.name?.localized?.en_US || String(el.id),
+                    urn: el.$URN || `urn:li:function:${el.id}`,
+                    type: 'jobfunction'
+                }))
+                .filter(item => item.name.toLowerCase().includes(queryLower));
+
+        } else if (normalizedType === 'seniority') {
+            // Live seniorities search, filter elements locally
+            const apiRes = await callLinkedInAPI('https://api.linkedin.com/v2/seniorities');
+            const elements = apiRes.elements || [];
+            const queryLower = searchQuery.toLowerCase();
+
+            formatted = elements
+                .map(el => ({
+                    name: el.name?.localized?.en_US || String(el.id),
+                    urn: el.$URN || `urn:li:seniority:${el.id}`,
+                    type: 'seniority'
+                }))
+                .filter(item => item.name.toLowerCase().includes(queryLower));
+
+        } else if (normalizedType === 'language') {
+            // Static languages list matching URN mapping expectation
+            const LANGUAGES = [
+                { name: 'English', urn: 'urn:li:locale:en_US', type: 'language' },
+                { name: 'Spanish', urn: 'urn:li:locale:es_ES', type: 'language' },
+                { name: 'French', urn: 'urn:li:locale:fr_FR', type: 'language' },
+                { name: 'German', urn: 'urn:li:locale:de_DE', type: 'language' },
+                { name: 'Hindi', urn: 'urn:li:locale:hi_IN', type: 'language' },
+                { name: 'Japanese', urn: 'urn:li:locale:ja_JP', type: 'language' },
+                { name: 'Chinese', urn: 'urn:li:locale:zh_CN', type: 'language' },
+                { name: 'Portuguese', urn: 'urn:li:locale:pt_BR', type: 'language' },
+                { name: 'Italian', urn: 'urn:li:locale:it_IT', type: 'language' },
+                { name: 'Russian', urn: 'urn:li:locale:ru_RU', type: 'language' },
+                { name: 'Arabic', urn: 'urn:li:locale:ar_AE', type: 'language' },
+                { name: 'Korean', urn: 'urn:li:locale:ko_KR', type: 'language' },
+                { name: 'Dutch', urn: 'urn:li:locale:nl_NL', type: 'language' },
+                { name: 'Turkish', urn: 'urn:li:locale:tr_TR', type: 'language' }
+            ];
+            const queryLower = searchQuery.toLowerCase();
+            formatted = LANGUAGES.filter(item => item.name.toLowerCase().includes(queryLower));
+        }
+
+        // 3. Write to existing Redis cache if online
+        try {
+            if (redisConnection && redisConnection.status === 'ready') {
+                await redisConnection.set(cacheKey, JSON.stringify(formatted), 'EX', 86400); // 24 Hours
+                console.log(`[Targeting Search] Cache write success for key: ${cacheKey}`);
+            }
+        } catch (cacheErr) {
+            console.warn('[Targeting Search] Redis write error:', cacheErr.message);
+        }
+
+        return res.status(200).json(formatted);
+
+    } catch (error) {
+        console.error('[Targeting Search] Search query failed safely:', error.response?.status, error.response?.data || error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to fetch targeting facets from LinkedIn. Please verify account connectivity and permissions.'
+        });
     }
 };
 
