@@ -28,6 +28,7 @@ import WAAnalytics from './components/whatsapp/WAAnalytics';
 import WACampaigns from './components/whatsapp/WACampaigns';
 import WASchedules from './components/whatsapp/WASchedules';
 import WAChatWindow from './components/whatsapp/WAChatWindow';
+import WAExternalTracker from './components/whatsapp/WAExternalTracker';
 
 import UserManagement from './components/UserManagement';
 import AllLeads from './components/AllLeads';
@@ -348,6 +349,16 @@ function App() {
                                 <ProtectedRoute>
                                     <PermissionRoute permission="whatsapp_access">
                                         <WASchedules />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/wa-external" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="whatsapp_access">
+                                        <WAExternalTracker />
                                     </PermissionRoute>
                                 </ProtectedRoute>
                             } 

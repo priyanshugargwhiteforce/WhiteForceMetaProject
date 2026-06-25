@@ -273,6 +273,42 @@ const initSchema = async () => {
         `);
         console.log(' - whatsapp_message_logs table created/verified');
 
+        // Migrations: Add external tracking columns to whatsapp_message_logs
+        try {
+            await pool.query("ALTER TABLE whatsapp_message_logs ADD COLUMN source_app VARCHAR(50) DEFAULT NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE whatsapp_message_logs ADD COLUMN source_user_id VARCHAR(100) DEFAULT NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE whatsapp_message_logs ADD COLUMN source_user_name VARCHAR(255) DEFAULT NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE whatsapp_message_logs ADD COLUMN source_reference_id VARCHAR(255) DEFAULT NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE whatsapp_message_logs ADD COLUMN message_type VARCHAR(50) DEFAULT 'template'");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE whatsapp_message_logs ADD COLUMN direction VARCHAR(50) DEFAULT 'outgoing'");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE whatsapp_message_logs ADD COLUMN template_language VARCHAR(50) DEFAULT NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE whatsapp_message_logs ADD COLUMN template_params_json JSON DEFAULT NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE whatsapp_message_logs ADD COLUMN meta_response_json JSON DEFAULT NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE whatsapp_message_logs ADD COLUMN received_message_text TEXT DEFAULT NULL");
+        } catch (e) { /* Column might exist */ }
+        try {
+            await pool.query("ALTER TABLE whatsapp_message_logs ADD COLUMN reply_to_message_id VARCHAR(255) DEFAULT NULL");
+        } catch (e) { /* Column might exist */ }
+
+
         // 11. Meta Creatives Table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS meta_creatives (
@@ -483,6 +519,13 @@ const initSchema = async () => {
         try {
             await pool.query("ALTER TABLE whatsapp_message_logs ADD INDEX idx_wml_sent_at (sent_at)");
         } catch (e) { /* Index might exist */ }
+        try {
+            await pool.query("ALTER TABLE whatsapp_message_logs ADD INDEX idx_wml_source_app_user (source_app, source_user_id)");
+        } catch (e) { /* Index might exist */ }
+        try {
+            await pool.query("ALTER TABLE whatsapp_message_logs ADD INDEX idx_wml_direction (direction)");
+        } catch (e) { /* Index might exist */ }
+
 
 
         // --- Sprint 6 Mappings Table and Migration ---

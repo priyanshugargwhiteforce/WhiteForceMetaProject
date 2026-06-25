@@ -158,6 +158,30 @@ const deleteMetaTemplate = async (name, configId = null) => {
  */
 const updateMessageStatus = async (messageId, status, errorMessage = null) => {
     try {
+        // 0. Prevent duplicate and out-of-order webhook status updates
+        const [[existingLog]] = await pool.query(
+            'SELECT status FROM whatsapp_message_logs WHERE message_id = ? LIMIT 1',
+            [messageId]
+        );
+
+        if (existingLog) {
+            const statusPriority = {
+                'failed': 99,
+                'replied': 4,
+                'read': 3,
+                'delivered': 2,
+                'sent': 1,
+                'queued': 0
+            };
+            const currentPriority = statusPriority[String(existingLog.status).toLowerCase()] || 0;
+            const newPriority = statusPriority[String(status).toLowerCase()] || 0;
+
+            if (currentPriority >= newPriority && newPriority !== 99) {
+                console.log(`[Webhook Status] Message ID ${messageId} is already at status "${existingLog.status}" (priority ${currentPriority}). Skipping duplicate or late update to "${status}" (priority ${newPriority}).`);
+                return;
+            }
+        }
+
         // 1. Update the message status in the main logs table
         await pool.query(
             `UPDATE whatsapp_message_logs 
@@ -485,13 +509,23 @@ const useTemplateMapping = async (templateId, mappingId) => {
 };
 
 const handleIncomingMessage = async (msgData) => {
-    const { fromPhone, messageId, timestamp, type, body, senderName, phoneId } = msgData;
+    const { fromPhone, messageId, timestamp, type, body, senderName, phoneId, replyToMessageId } = msgData;
 
     try {
         // 1. Normalize the phone number
         const normalized = String(fromPhone).replace(/[^0-9]/g, '');
         if (!normalized || normalized.length < 10) {
             console.warn(`[Webhook] Invalid phone number received: ${fromPhone}`);
+            return;
+        }
+
+        // 1b. Prevent duplicate incoming reply processing
+        const [[existingLog]] = await pool.query(
+            'SELECT id FROM whatsapp_message_logs WHERE message_id = ? LIMIT 1',
+            [messageId]
+        );
+        if (existingLog) {
+            console.log(`[Webhook] Duplicate incoming reply message detected (Message ID: ${messageId}). Skipping processing.`);
             return;
         }
 
@@ -534,23 +568,80 @@ const handleIncomingMessage = async (msgData) => {
         );
         const campaignId = lastCampaign ? lastCampaign.campaign_id : null;
 
+        // 3b. Reply Linking Rule: Match to latest outgoing message within a 7-day time window
+        let linkedMsg = null;
+        if (replyToMessageId) {
+            const [[matchedMsg]] = await pool.query(
+                'SELECT source_app, source_user_id, source_user_name, source_reference_id FROM whatsapp_message_logs WHERE message_id = ? LIMIT 1',
+                [replyToMessageId]
+            );
+            if (matchedMsg) {
+                linkedMsg = matchedMsg;
+            }
+        }
+
+        if (!linkedMsg) {
+            const [[matchedMsg]] = await pool.query(
+                `SELECT source_app, source_user_id, source_user_name, source_reference_id 
+                 FROM whatsapp_message_logs 
+                 WHERE recipient_number = ? AND direction = 'outgoing' AND sent_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                 ORDER BY sent_at DESC LIMIT 1`,
+                [normalized]
+            );
+            if (matchedMsg) {
+                linkedMsg = matchedMsg;
+            }
+        }
+
+        // 3c. Save reply to whatsapp_message_logs
+        await pool.query(
+            `INSERT INTO whatsapp_message_logs 
+                (phone_number_id, recipient_number, template_name, status, message_id, sent_by, error_message,
+                 source_app, source_user_id, source_user_name, source_reference_id, message_type, direction,
+                 received_message_text, reply_to_message_id)
+             VALUES (?, ?, ?, 'replied', ?, NULL, NULL, ?, ?, ?, ?, 'reply', 'incoming', ?, ?)`,
+            [
+                phoneId || 'N/A',
+                normalized,
+                'Customer Reply',
+                messageId,
+                linkedMsg?.source_app || null,
+                linkedMsg?.source_user_id || null,
+                linkedMsg?.source_user_name || null,
+                linkedMsg?.source_reference_id || null,
+                body || '',
+                replyToMessageId || null
+            ]
+        );
+
         // 4. Log the reply in whatsapp_contact_activity
         const eventTimestamp = timestamp
             ? new Date(timestamp * 1000).toISOString().slice(0, 19).replace('T', ' ')
             : new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-        const [insertRes] = await pool.query(
+        const activityMetadata = {
+            body,
+            type,
+            raw_phone: fromPhone,
+            waba_phone_id: phoneId,
+            source_app: linkedMsg?.source_app || null,
+            source_user_id: linkedMsg?.source_user_id || null,
+            source_reference_id: linkedMsg?.source_reference_id || null
+        };
+
+        const [activityRes] = await pool.query(
             `INSERT INTO whatsapp_contact_activity (contact_id, campaign_id, message_id, event_type, metadata, event_timestamp)
              VALUES (?, ?, ?, 'replied', ?, ?)`,
             [
                 contactId,
                 campaignId,
                 messageId,
-                JSON.stringify({ body, type, raw_phone: fromPhone, waba_phone_id: phoneId }),
+                JSON.stringify(activityMetadata),
                 eventTimestamp
             ]
         );
-        const activityId = insertRes.insertId;
+        const activityId = activityRes.insertId;
+
 
         // 5. If there is a campaign associated, update its recipient record to 'replied'
         if (campaignId) {

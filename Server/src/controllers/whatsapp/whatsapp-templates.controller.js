@@ -180,6 +180,8 @@ exports.receiveWebhook = async (req, res) => {
 
                     console.log(`Webhook Trigger: Incoming message from ${fromPhone} (Name: ${senderName}): "${body}"`);
 
+                    const replyToMessageId = msg.context?.id || null;
+
                     await whatsappTemplatesService.handleIncomingMessage({
                         fromPhone,
                         messageId,
@@ -187,7 +189,8 @@ exports.receiveWebhook = async (req, res) => {
                         type,
                         body,
                         senderName,
-                        phoneId: value.metadata?.phone_number_id
+                        phoneId: value.metadata?.phone_number_id,
+                        replyToMessageId
                     });
                 }
             }

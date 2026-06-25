@@ -33,6 +33,7 @@ app.use('/api/whatsapp', require('./routes/whatsapp/whatsapp.routes'));
 app.use('/api/youtube-ads', protect, require('./routes/youtubeAd.routes'));
 app.use('/api/linkedin', require('./routes/linkedin/linkedin.routes'));
 app.use('/api/linkedin/ads', require('./routes/linkedin/ads.routes'));
+
 app.use('/api/tasks', protect, require('./routes/task.routes'));;
 
 // Phase 4 - Media Library, Assets, and Creatives Router Registry
