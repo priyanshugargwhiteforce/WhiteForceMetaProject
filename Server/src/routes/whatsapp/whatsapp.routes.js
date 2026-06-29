@@ -23,10 +23,9 @@ const validateExternalApiKey = (req, res, next) => {
     }
     
     const sourceApp = req.body?.source_app || req.query?.source_app;
-    // const allowedApps = ['website', 'crm', 'job_portal', 'wira_ai', 'ats'];
-    // if (!sourceApp || !allowedApps.includes(sourceApp)) {
-    //     return res.status(400).json({ success: false, message: 'Invalid or missing source_app.' });
-    // }
+    if (!sourceApp) {
+        return res.status(400).json({ success: false, message: 'Invalid or missing source_app.' });
+    }
     
     next();
 };
@@ -164,6 +163,8 @@ router.post('/analytics/pricing/sync', whatsappAnalyticsController.syncWabaPrici
 // --- Dashboard UI External Tracker routes (Requires JWT Auth protect) ---
 router.get('/dashboard/external-messages', whatsappExternalController.getDashboardExternalMessages);
 router.get('/dashboard/external-conversation/:phone', whatsappExternalController.getDashboardExternalConversation);
+router.get('/dashboard/external-apps', whatsappExternalController.getDashboardExternalApps);
+router.get('/dashboard/external-templates', whatsappExternalController.getDashboardExternalTemplates);
 
 module.exports = router;
 

@@ -45,14 +45,43 @@ const WAExternalTracker = () => {
     const [loadingChat, setLoadingChat] = useState(false);
     const [showChatModal, setShowChatModal] = useState(false);
 
-    // Allowed applications
-    const allowedApps = [
-        { id: 'website', label: 'Website' },
-        { id: 'crm', label: 'CRM' },
-        { id: 'job_portal', label: 'Job Portal' },
-        { id: 'wira_ai', label: 'WIRA AI' },
-        { id: 'ats', label: 'ATS' }
-    ];
+    // Dynamic applications state
+    const [allowedApps, setAllowedApps] = useState([]);
+
+    const fetchApps = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get('/api/whatsapp/dashboard/external-apps', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.data.success) {
+                const mappedApps = (response.data.apps || []).map(app => ({
+                    id: app,
+                    label: app.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                }));
+                setAllowedApps(mappedApps);
+            }
+        } catch (err) {
+            console.error('Error fetching dynamic apps:', err);
+        }
+    };
+
+    // Dynamic templates state
+    const [allowedTemplates, setAllowedTemplates] = useState([]);
+
+    const fetchTemplates = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get('/api/whatsapp/dashboard/external-templates', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.data.success) {
+                setAllowedTemplates(response.data.templates || []);
+            }
+        } catch (err) {
+            console.error('Error fetching dynamic templates:', err);
+        }
+    };
 
     const fetchMessages = async () => {
         try {
@@ -91,8 +120,13 @@ const WAExternalTracker = () => {
     };
 
     useEffect(() => {
+        fetchApps();
+        fetchTemplates();
+    }, []);
+
+    useEffect(() => {
         fetchMessages();
-    }, [page, sourceApp, status]);
+    }, [page, sourceApp, status, templateName]);
 
     const handleSearchSubmit = (e) => {
         e.preventDefault();
@@ -165,11 +199,31 @@ const WAExternalTracker = () => {
             wira_ai: 'bg-purple-500/10 text-purple-500 border-purple-500/10',
             ats: 'bg-rose-500/10 text-rose-500 border-rose-500/10'
         };
-        const currentStyle = apps[String(app).toLowerCase()] || 'bg-slate-500/10 text-slate-500 border-slate-500/10';
+        
+        let currentStyle = apps[String(app).toLowerCase()];
+        
+        if (!currentStyle) {
+            // String hash color selector for dynamic/new applications
+            const colors = [
+                'bg-pink-500/10 text-pink-500 border-pink-500/10',
+                'bg-indigo-500/10 text-indigo-500 border-indigo-500/10',
+                'bg-cyan-500/10 text-cyan-500 border-cyan-500/10',
+                'bg-orange-500/10 text-orange-500 border-orange-500/10',
+                'bg-teal-500/10 text-teal-500 border-teal-500/10',
+                'bg-lime-500/10 text-lime-500 border-lime-500/10'
+            ];
+            let hash = 0;
+            const str = String(app || '');
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const index = Math.abs(hash) % colors.length;
+            currentStyle = colors[index];
+        }
 
         return (
             <span className={`px-2 py-0.5 rounded-lg text-xs font-semibold border ${currentStyle}`}>
-                {app ? app.replace('_', ' ').toUpperCase() : 'N/A'}
+                {app ? app.replace(/_/g, ' ').toUpperCase() : 'N/A'}
             </span>
         );
     };
@@ -273,16 +327,16 @@ const WAExternalTracker = () => {
                     {/* Template Name Filter */}
                     <div className="flex flex-col space-y-1">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Template Name</label>
-                        <div className="relative">
-                            <MessageCircle className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="Search template..."
-                                value={templateName}
-                                onChange={(e) => setTemplateName(e.target.value)}
-                                className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-3 py-2 w-full text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-700 dark:text-slate-200"
-                            />
-                        </div>
+                        <select
+                            value={templateName}
+                            onChange={(e) => setTemplateName(e.target.value)}
+                            className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-700 dark:text-slate-200"
+                        >
+                            <option value="" className="bg-white dark:bg-slate-900">All Templates</option>
+                            {allowedTemplates.map(tmpl => (
+                                <option key={tmpl} value={tmpl} className="bg-white dark:bg-slate-900">{tmpl}</option>
+                            ))}
+                        </select>
                     </div>
 
                     {/* Date From */}

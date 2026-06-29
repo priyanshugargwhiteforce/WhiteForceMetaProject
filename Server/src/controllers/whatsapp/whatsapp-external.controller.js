@@ -404,3 +404,54 @@ exports.getDashboardExternalConversation = async (req, res) => {
         });
     }
 };
+
+/**
+ * GET /api/whatsapp/dashboard/external-apps
+ * Secured with JWT protect session. For dashboard users to fetch all distinct source_apps in logs.
+ */
+exports.getDashboardExternalApps = async (req, res) => {
+    try {
+        const [rows] = await pool.query(
+            `SELECT DISTINCT source_app FROM whatsapp_message_logs 
+             WHERE source_app IS NOT NULL AND source_app != '' 
+             ORDER BY source_app ASC`
+        );
+        const apps = rows.map(r => r.source_app);
+        return res.status(200).json({
+            success: true,
+            apps
+        });
+    } catch (error) {
+        console.error('Error fetching dashboard external apps:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+/**
+ * GET /api/whatsapp/dashboard/external-templates
+ * Secured with JWT protect session. For dashboard users to fetch all distinct template_names in logs.
+ */
+exports.getDashboardExternalTemplates = async (req, res) => {
+    try {
+        const [rows] = await pool.query(
+            `SELECT DISTINCT template_name FROM whatsapp_message_logs 
+             WHERE template_name IS NOT NULL AND template_name != '' 
+             ORDER BY template_name ASC`
+        );
+        const templates = rows.map(r => r.template_name);
+        return res.status(200).json({
+            success: true,
+            templates
+        });
+    } catch (error) {
+        console.error('Error fetching dashboard external templates:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
