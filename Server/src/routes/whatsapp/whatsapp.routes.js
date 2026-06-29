@@ -23,10 +23,10 @@ const validateExternalApiKey = (req, res, next) => {
     }
     
     const sourceApp = req.body?.source_app || req.query?.source_app;
-    const allowedApps = ['website', 'crm', 'job_portal', 'wira_ai', 'ats'];
-    if (!sourceApp || !allowedApps.includes(sourceApp)) {
-        return res.status(400).json({ success: false, message: 'Invalid or missing source_app.' });
-    }
+    // const allowedApps = ['website', 'crm', 'job_portal', 'wira_ai', 'ats'];
+    // if (!sourceApp || !allowedApps.includes(sourceApp)) {
+    //     return res.status(400).json({ success: false, message: 'Invalid or missing source_app.' });
+    // }
     
     next();
 };

@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const axios = require('axios');
+const { formatMetaError } = require('../utils/meta-error');
 
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL
 
@@ -113,7 +114,7 @@ const syncWabaDetails = async (configId = null) => {
         return data;
     } catch (error) {
         console.error('Error syncing WABA Details:', error.response?.data || error.message);
-        throw new Error(error.response?.data?.error?.message || error.message);
+        throw formatMetaError(error);
     }
 };
 
@@ -173,7 +174,7 @@ const syncTemplates = async (configId = null) => {
         return data;
     } catch (error) {
         console.error('Error syncing WhatsApp templates:', error.response?.data || error.message);
-        throw new Error(error.response?.data?.error?.message || error.message);
+        throw formatMetaError(error);
     }
 };
 

@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const axios = require('axios');
+const { formatMetaError } = require('../utils/meta-error');
 
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes cache lifetime
 
@@ -86,7 +87,7 @@ const syncAdAccounts = async (configId = null) => {
         return [];
     } catch (error) {
         console.error('Error syncing Meta Ad Accounts:', error.response?.data || error.message);
-        throw new Error(error.response?.data?.error?.message || error.message);
+        throw formatMetaError(error);
     }
 };
 
@@ -175,7 +176,7 @@ const syncAccountInsights = async (accountId, datePreset = 'lifetime', configId 
         return data;
     } catch (error) {
         console.error(`Error syncing insights for ${accountId}:`, error.response?.data || error.message);
-        throw new Error(error.response?.data?.error?.message || error.message);
+        throw formatMetaError(error);
     }
 };
 
@@ -287,7 +288,7 @@ const syncAccountDetails = async (accountId, configId = null) => {
         return data;
     } catch (error) {
         console.error(`Error syncing details for ${accountId}:`, error.response?.data || error.message);
-        throw new Error(error.response?.data?.error?.message || error.message);
+        throw formatMetaError(error);
     }
 };
 
@@ -418,7 +419,7 @@ const syncLeadFormData = async (formId, configId = null) => {
         return data;
     } catch (error) {
         console.error(`Error syncing lead form ${formId}:`, error.response?.data || error.message);
-        throw new Error(error.response?.data?.error?.message || error.message);
+        throw formatMetaError(error);
     }
 };
 
@@ -488,7 +489,7 @@ const syncCreativeData = async (creativeId, configId = null) => {
         return data;
     } catch (error) {
         console.error(`Error syncing creative ${creativeId}:`, error.response?.data || error.message);
-        throw new Error(error.response?.data?.error?.message || error.message);
+        throw formatMetaError(error);
     }
 };
 
@@ -557,7 +558,7 @@ const syncSingleAdInsights = async (adId, configId = null) => {
         return data;
     } catch (error) {
         console.error(`Error syncing daily insights for Ad ${adId}:`, error.response?.data || error.message);
-        throw new Error(error.response?.data?.error?.message || error.message);
+        throw formatMetaError(error);
     }
 };
 
@@ -669,7 +670,7 @@ const syncAdLeads = async (adId, configId = null) => {
         return data;
     } catch (error) {
         console.error(`Error syncing leads for Ad ${adId}:`, error.response?.data || error.message);
-        throw new Error(error.response?.data?.error?.message || error.message);
+        throw formatMetaError(error);
     }
 };
 

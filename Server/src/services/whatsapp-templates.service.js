@@ -1,6 +1,7 @@
 const { pool } = require('../config/db');
 const axios = require('axios');
 const { processAndSaveTemplateVariables, resolveWhatsAppConfig } = require('./whatsapp.service');
+const { formatMetaError } = require('../utils/meta-error');
 
 /**
  * Map named variables like {{first_name}} to sequential numbered variables like {{1}}
@@ -88,7 +89,7 @@ const createMetaTemplate = async (templateData, configId = null) => {
         const response = await axios.post(url, {
             name: templateData.name.toLowerCase().trim().replace(/\s+/g, '_'),
             category: templateData.category || 'MARKETING',
-            language: templateData.language || 'en_US',
+            language: templateData.language || 'en',
             components: mappedComponents
         }, {
             headers: {
@@ -112,7 +113,7 @@ const createMetaTemplate = async (templateData, configId = null) => {
                 wabaId,
                 templateData.name.toLowerCase().trim().replace(/\s+/g, '_'),
                 'PENDING', // Default state on submit is PENDING
-                templateData.language || 'en_US',
+                templateData.language || 'en',
                 templateData.category || 'MARKETING',
                 JSON.stringify(mappedComponents),
                 JSON.stringify(varNames)
@@ -124,7 +125,7 @@ const createMetaTemplate = async (templateData, configId = null) => {
         return response.data;
     } catch (error) {
         console.error('Error creating template on Meta:', error.response?.data || error.message);
-        throw new Error(error.response?.data?.error?.message || error.message);
+        throw formatMetaError(error);
     }
 };
 
@@ -149,7 +150,7 @@ const deleteMetaTemplate = async (name, configId = null) => {
         return { success: true };
     } catch (error) {
         console.error('Error deleting template from Meta:', error.response?.data || error.message);
-        throw new Error(error.response?.data?.error?.message || error.message);
+        throw formatMetaError(error);
     }
 };
 

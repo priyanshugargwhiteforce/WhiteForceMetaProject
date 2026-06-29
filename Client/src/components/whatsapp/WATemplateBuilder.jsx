@@ -35,7 +35,7 @@ const WATemplateBuilder = () => {
   // Form State
   const [name, setName] = useState('');
   const [category, setCategory] = useState('MARKETING');
-  const [language, setLanguage] = useState('en_US');
+  const [language, setLanguage] = useState('en');
 
   // Header State
   const [headerType, setHeaderType] = useState('NONE'); // NONE, TEXT, IMAGE, DOCUMENT
@@ -85,7 +85,7 @@ const WATemplateBuilder = () => {
       const t = location.state.cloneTemplate;
       setName(`clone_${t.name}`);
       setCategory(t.category || 'MARKETING');
-      setLanguage(t.language || 'en_US');
+      setLanguage(t.language === 'en_US' ? 'en' : (t.language || 'en'));
 
       if (t.components && Array.isArray(t.components)) {
         const header = t.components.find(c => c.type === 'HEADER');
@@ -124,7 +124,7 @@ const WATemplateBuilder = () => {
     } else if (type === 'URL') {
       setButtons([...buttons, { type: 'URL', text: 'Visit Website', url: 'https://white-force.com' }]);
     } else if (type === 'PHONE') {
-      setButtons([...buttons, { type: 'PHONE', text: 'Call Support', phone_number: '+1234567890' }]);
+      setButtons([...buttons, { type: 'PHONE', text: 'Call Support', phone_number: '+911234567890' }]);
     }
   };
 
@@ -231,7 +231,8 @@ const WATemplateBuilder = () => {
         }, 1500);
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message);
+      setError(err.response?.data?.message || err.message || 'An error occurred while creating template.');
+      console.error('Create template error:', err.response?.data || err);
     } finally {
       setLoading(false);
     }
