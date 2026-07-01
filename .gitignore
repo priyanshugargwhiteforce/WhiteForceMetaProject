@@ -40,6 +40,14 @@ oauth_token.json
 
 # Scratch directories
 Server/scratch/
+# Runtime files
+uploads/
+public/uploads/
+Server/uploads/
+Server/public/uploads/
+Server/logs/
+logs/
+*.log
 
 # Editor/OS files
 .vscode/*
