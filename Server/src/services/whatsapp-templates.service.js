@@ -1,5 +1,7 @@
 const { pool } = require('../config/db');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const { processAndSaveTemplateVariables, resolveWhatsAppConfig } = require('./whatsapp.service');
 const { formatMetaError } = require('../utils/meta-error');
 
@@ -72,6 +74,94 @@ const mapNameVariablesToNumbers = (components) => {
 /**
  * Create a message template in Meta WABA
  */
+/**
+ * Helper to upload a template header media to Meta WABA Resumable Upload API and return its handle.
+ */
+const getOrCreateMetaMediaHandle = async (token, component) => {
+    let fileBuffer;
+    let fileName;
+    let fileType;
+    let fileSize;
+
+    try {
+        // 1. Fetch App ID dynamically using debug_token
+        console.log("Retrieving Meta App ID via debug_token...");
+        const debugRes = await axios.get(`https://graph.facebook.com/debug_token?input_token=${token}&access_token=${token}`);
+        const appId = debugRes.data?.data?.app_id;
+        if (!appId) {
+            throw new Error("Could not extract Meta App ID from access token.");
+        }
+        console.log(`Resolved Meta App ID: ${appId}`);
+
+        // 2. Load file data if media_asset_uuid is provided
+        if (component.media_asset_uuid) {
+            const [[asset]] = await pool.query(
+                'SELECT * FROM media_library WHERE uuid = ? AND is_deleted = 0 LIMIT 1',
+                [component.media_asset_uuid]
+            );
+            if (asset && fs.existsSync(asset.local_path)) {
+                fileBuffer = fs.readFileSync(asset.local_path);
+                fileName = asset.original_filename;
+                fileType = asset.mime_type;
+                fileSize = asset.file_size;
+                console.log(`Using database asset: ${fileName} (${fileSize} bytes)`);
+            }
+        }
+
+        // 3. Fallback to public dummy assets if local file not found or not provided
+        if (!fileBuffer) {
+            const fallbackUrl = component.format === 'IMAGE'
+                ? "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80"
+                : "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+            
+            console.log(`Downloading fallback mock file from: ${fallbackUrl}`);
+            const downloadRes = await axios.get(fallbackUrl, { responseType: 'arraybuffer' });
+            fileBuffer = Buffer.from(downloadRes.data);
+            fileName = component.format === 'IMAGE' ? 'sample_header.jpg' : 'sample_header.pdf';
+            fileType = component.format === 'IMAGE' ? 'image/jpeg' : 'application/pdf';
+            fileSize = fileBuffer.length;
+            console.log(`Fallback mock file downloaded (${fileSize} bytes)`);
+        }
+
+        // 4. Create upload session in Meta WABA
+        const uploadSessionUrl = `https://graph.facebook.com/v24.0/${appId}/uploads?file_name=${encodeURIComponent(fileName)}&file_length=${fileSize}&file_type=${fileType}&access_token=${token}`;
+        console.log("Creating resumable upload session on Meta WABA...");
+        const sessionRes = await axios.post(uploadSessionUrl);
+        const uploadSessionId = sessionRes.data?.id;
+        if (!uploadSessionId) {
+            throw new Error("Failed to create Meta resumable upload session.");
+        }
+        console.log(`Meta Upload Session ID: ${uploadSessionId}`);
+
+        // 5. Upload binary bytes to Meta session
+        console.log("Uploading file bytes to Meta resumable session...");
+        const uploadRes = await axios.post(
+            `https://graph.facebook.com/v24.0/${uploadSessionId}`,
+            fileBuffer,
+            {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'file_offset': '0',
+                    'Content-Type': 'application/octet-stream'
+                }
+            }
+        );
+        const handle = uploadRes.data?.h;
+        if (!handle) {
+            throw new Error("Failed to get file handle from Meta resumable upload.");
+        }
+        console.log(`Successfully obtained Meta media handle: ${handle}`);
+        return handle;
+
+    } catch (err) {
+        console.error("Failed to generate WABA media header handle:", err.response?.data || err.message);
+        throw err;
+    }
+};
+
+/**
+ * Create a message template in Meta WABA
+ */
 const createMetaTemplate = async (templateData, configId = null) => {
     const { token, wabaId } = await resolveWhatsAppConfig(configId);
 
@@ -81,8 +171,32 @@ const createMetaTemplate = async (templateData, configId = null) => {
 
     const url = `https://graph.facebook.com/v24.0/${wabaId}/message_templates`;
 
+    // Process and resolve handles for media headers (IMAGE / DOCUMENT) before sequential variables mapping
+    const components = templateData.components || [];
+    for (const comp of components) {
+        if (comp.type === 'HEADER' && (comp.format === 'IMAGE' || comp.format === 'DOCUMENT')) {
+            try {
+                const handle = await getOrCreateMetaMediaHandle(token, comp);
+                comp.example = {
+                    header_handle: [handle]
+                };
+            } catch (err) {
+                console.error("Failed to dynamically obtain WABA media handle. Falling back to default URL example parameter.", err.message);
+                comp.example = {
+                    header_handle: [
+                        comp.format === 'IMAGE'
+                            ? "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80"
+                            : "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+                    ]
+                };
+            }
+            // Clear temp media selector variables so they are not sent to WABA API
+            delete comp.media_asset_uuid;
+        }
+    }
+
     // Map named variables to sequential numbers (e.g. {{name}} -> {{1}}) for Meta template submit
-    const { mappedComponents, varNames } = mapNameVariablesToNumbers(templateData.components || []);
+    const { mappedComponents, varNames } = mapNameVariablesToNumbers(components);
 
     try {
         console.log(`Creating template "${templateData.name}" on Meta WABA...`);
@@ -120,7 +234,7 @@ const createMetaTemplate = async (templateData, configId = null) => {
             ]
         );
 
-        await processAndSaveTemplateVariables(templateId, mappedComponents, templateData.components || []);
+        await processAndSaveTemplateVariables(templateId, mappedComponents, components);
 
         return response.data;
     } catch (error) {

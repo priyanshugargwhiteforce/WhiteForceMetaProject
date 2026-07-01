@@ -14,7 +14,8 @@ const {
     updateMetaConfig,
     deleteMetaConfig,
     updateAdOwner,
-    getTeamMembers
+    getTeamMembers,
+    getFacebookPages
 } = require('../controllers/meta.controller');
 
 const { authorizeMeta } = require('../middlewares/auth.middleware');
@@ -32,6 +33,7 @@ router.get('/team', getTeamMembers);
 router.post('/ads/owner', updateAdOwner);
 
 // Ad account and analytics routes
+router.get('/fb-pages', getFacebookPages);
 router.get('/accounts', getAdAccounts);
 router.get('/accounts/:accountId', getAccountDetails);
 router.get('/insights/:accountId', getAccountInsights);

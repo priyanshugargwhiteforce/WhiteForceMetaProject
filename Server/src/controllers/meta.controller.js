@@ -301,3 +301,23 @@ exports.getTeamMembers = async (req, res) => {
         });
     }
 };
+
+// @desc    Get Facebook Pages connected to current config
+// @route   GET /api/meta/fb-pages
+// @access  Private
+exports.getFacebookPages = async (req, res) => {
+    try {
+        const configId = req.headers['x-meta-config-id'] || req.query.configId;
+        const pages = await metaService.getFacebookPages(configId);
+        res.status(200).json({
+            success: true,
+            data: pages.data || []
+        });
+    } catch (error) {
+        console.error('getFacebookPages Controller Error:', error.message);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};

@@ -142,8 +142,8 @@ const MediaLibrary = ({ onSelectAsset, selectMode = false }) => {
             )}
 
             {/* Filter and search bar */}
-            <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-5 shadow-sm space-y-4">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-3.5 shadow-sm space-y-3">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                     {/* Search Form */}
                     <form onSubmit={handleSearchSubmit} className="flex-1 flex gap-2">
                         <div className="relative flex-1">
@@ -153,12 +153,12 @@ const MediaLibrary = ({ onSelectAsset, selectMode = false }) => {
                                 placeholder="Search assets by name..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-250 dark:border-white/5 rounded-2xl pl-11 pr-4 py-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-250 dark:border-white/5 rounded-xl pl-11 pr-4 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                             />
                         </div>
                         <button
                             type="submit"
-                            className="px-4 py-2.5 bg-slate-800 dark:bg-white/5 hover:bg-slate-900 text-white rounded-2xl font-bold text-xs transition-all"
+                            className="px-4 py-2 bg-slate-800 dark:bg-white/5 hover:bg-slate-900 text-white rounded-xl font-bold text-xs transition-all"
                         >
                             Search
                         </button>
@@ -169,7 +169,7 @@ const MediaLibrary = ({ onSelectAsset, selectMode = false }) => {
                         <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
-                            className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-white cursor-pointer"
+                            className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-slate-800 dark:text-white cursor-pointer"
                         >
                             <option value="newest">Sort: Newest First</option>
                             <option value="oldest">Sort: Oldest First</option>
@@ -180,7 +180,7 @@ const MediaLibrary = ({ onSelectAsset, selectMode = false }) => {
                         {selectMode && (
                             <button
                                 onClick={() => setIsUploadOpen(true)}
-                                className="flex items-center space-x-1 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl font-bold text-xs shadow-lg"
+                                className="flex items-center space-x-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-bold text-xs shadow-lg"
                             >
                                 <Upload className="w-4 h-4 mr-1" />
                                 <span>Upload</span>
@@ -190,7 +190,7 @@ const MediaLibrary = ({ onSelectAsset, selectMode = false }) => {
                 </div>
 
                 {/* Tab select bar */}
-                <div className="flex items-center space-x-1.5 overflow-x-auto pb-2 border-t border-slate-100 dark:border-white/5 pt-4 scrollbar-thin">
+                <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 border-t border-slate-100 dark:border-white/5 pt-3 scrollbar-thin">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
@@ -198,7 +198,7 @@ const MediaLibrary = ({ onSelectAsset, selectMode = false }) => {
                                 setActiveTab(tab.id);
                                 setPage(1);
                             }}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
                                 activeTab === tab.id
                                     ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
                                     : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-800'

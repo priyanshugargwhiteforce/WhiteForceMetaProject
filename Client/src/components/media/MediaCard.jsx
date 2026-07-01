@@ -58,7 +58,7 @@ const MediaCard = ({ asset, onPreview, onDelete, onUse }) => {
     const previewUrl = `/api/media/${asset.uuid}/preview`;
 
     return (
-        <div className="group bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-300 flex flex-col">
+        <div className="group bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg hover:scale-[1.01] transition-all duration-300 flex flex-col">
             {/* Visual Preview */}
             <div className="relative aspect-[16/10] bg-slate-50 dark:bg-slate-950 flex items-center justify-center overflow-hidden border-b border-slate-100 dark:border-white/5">
                 {asset.asset_type === 'IMAGE' || asset.asset_type === 'LOGO' || asset.asset_type === 'BRAND' ? (
@@ -79,15 +79,15 @@ const MediaCard = ({ asset, onPreview, onDelete, onUse }) => {
                         preload="metadata"
                     />
                 ) : (
-                    <div className="flex flex-col items-center justify-center p-6 text-slate-400">
+                    <div className="flex flex-col items-center justify-center p-4 text-slate-400">
                         {getIcon()}
-                        <span className="text-[10px] font-bold uppercase tracking-wider mt-2">{asset.extension} Document</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider mt-1">{asset.extension} Document</span>
                     </div>
                 )}
 
                 {/* Status Badges */}
-                <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                    <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase border ${
+                <div className="absolute top-2 right-2 flex items-center gap-1">
+                    <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase border ${
                         asset.processing_status === 'AVAILABLE'
                             ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
                             : asset.processing_status === 'FAILED'
@@ -100,10 +100,10 @@ const MediaCard = ({ asset, onPreview, onDelete, onUse }) => {
                 </div>
 
                 {/* Action Hover Overlays */}
-                <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-xs">
+                <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2.5 backdrop-blur-xs">
                     <button
                         onClick={() => onPreview(asset)}
-                        className="p-3 bg-white hover:bg-slate-100 text-slate-900 rounded-full font-bold shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-300"
+                        className="p-2.5 bg-white hover:bg-slate-100 text-slate-900 rounded-full font-bold shadow-lg transform translate-y-3 group-hover:translate-y-0 transition-all duration-300"
                         title="Quick View"
                     >
                         <Eye className="w-4 h-4" />
@@ -111,7 +111,7 @@ const MediaCard = ({ asset, onPreview, onDelete, onUse }) => {
                     {onUse && asset.processing_status === 'AVAILABLE' && (
                         <button
                             onClick={() => onUse(asset)}
-                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold text-xs shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-300"
+                            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold text-xs shadow-lg transform translate-y-3 group-hover:translate-y-0 transition-all duration-300"
                         >
                             Select Asset
                         </button>
@@ -120,40 +120,34 @@ const MediaCard = ({ asset, onPreview, onDelete, onUse }) => {
             </div>
 
             {/* Info details */}
-            <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+            <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2.5">
                 <div>
-                    <div className="flex items-center space-x-1.5 mb-1.5">
+                    <div className="flex items-center space-x-1 mb-1">
                         {getIcon()}
-                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{asset.asset_type}</span>
+                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{asset.asset_type}</span>
                     </div>
-                    <h4 className="text-xs font-extrabold text-slate-800 dark:text-white line-clamp-1" title={asset.asset_name}>
+                    <h4 className="text-xs font-bold text-slate-800 dark:text-white line-clamp-1" title={asset.asset_name}>
                         {asset.asset_name}
                     </h4>
-                    <p className="text-[10px] text-slate-400 mt-0.5 truncate">{asset.original_filename}</p>
+                    <p className="text-[9.5px] text-slate-400 mt-0.5 truncate">{asset.original_filename}</p>
                 </div>
 
-                {/* Meta Attributes */}
-                <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-500 border-t border-slate-100 dark:border-white/5 pt-3">
-                    <div>
-                        <span className="text-slate-400">File Size:</span>
-                        <div className="font-bold text-slate-700 dark:text-slate-300 mt-0.5">{formatBytes(asset.file_size)}</div>
-                    </div>
-                    <div>
-                        <span className="text-slate-400">Used Count:</span>
-                        <div className="font-bold text-slate-700 dark:text-slate-300 mt-0.5">{asset.used_count || 0} times</div>
-                    </div>
+                {/* Meta Attributes Inline */}
+                <div className="flex justify-between items-center text-[10px] text-slate-500 border-t border-slate-100 dark:border-white/5 pt-2">
+                    <span>File Size: <strong className="font-bold text-slate-700 dark:text-slate-300">{formatBytes(asset.file_size)}</strong></span>
+                    <span>Used: <strong className="font-bold text-slate-700 dark:text-slate-300">{asset.used_count || 0} times</strong></span>
                 </div>
 
                 {/* Copiers and delete */}
-                <div className="border-t border-slate-100 dark:border-white/5 pt-3.5 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
+                <div className="border-t border-slate-100 dark:border-white/5 pt-2 flex items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-1">
                         {/* Copy ID */}
                         <button
                             onClick={handleCopyId}
-                            className="flex items-center gap-1 px-2 py-1 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg text-[9px] font-bold text-slate-600 dark:text-slate-300 transition-all"
+                            className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 rounded text-[8.5px] font-bold text-slate-600 dark:text-slate-300 transition-all border border-slate-100 dark:border-transparent"
                             title="Copy File ID"
                         >
-                            {copiedId ? <Check className="w-2.5 h-2.5 text-emerald-500" /> : <Copy className="w-2.5 h-2.5" />}
+                            {copiedId ? <Check className="w-2 h-2 text-emerald-500" /> : <Copy className="w-2 h-2" />}
                             <span>ID</span>
                         </button>
 
@@ -161,24 +155,24 @@ const MediaCard = ({ asset, onPreview, onDelete, onUse }) => {
                         <button
                             onClick={handleCopyUrn}
                             disabled={!asset.linkedin_asset_urn}
-                            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold transition-all ${
+                            className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8.5px] font-bold transition-all border ${
                                 asset.linkedin_asset_urn
-                                    ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20'
-                                    : 'bg-slate-100/50 dark:bg-white/5 text-slate-300 dark:text-slate-600 cursor-not-allowed'
+                                    ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-100/30 dark:border-transparent hover:bg-blue-100 dark:hover:bg-blue-500/20'
+                                    : 'bg-slate-100/50 dark:bg-white/5 text-slate-300 dark:text-slate-600 border-transparent cursor-not-allowed'
                             }`}
                             title={asset.linkedin_asset_urn ? 'Copy LinkedIn Asset URN' : 'Asset not registered on LinkedIn'}
                         >
-                            {copiedUrn ? <Check className="w-2.5 h-2.5 text-emerald-500" /> : <Copy className="w-2.5 h-2.5" />}
+                            {copiedUrn ? <Check className="w-2 h-2 text-emerald-500" /> : <Copy className="w-2 h-2" />}
                             <span>URN</span>
                         </button>
 
                         {/* Copy URL */}
                         <button
                             onClick={handleCopyUrl}
-                            className="flex items-center gap-1 px-2 py-1 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg text-[9px] font-bold text-slate-600 dark:text-slate-300 transition-all"
+                            className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 rounded text-[8.5px] font-bold text-slate-600 dark:text-slate-300 transition-all border border-slate-100 dark:border-transparent"
                             title="Copy Shareable Preview URL"
                         >
-                            {copiedUrl ? <Check className="w-2.5 h-2.5 text-emerald-500" /> : <Copy className="w-2.5 h-2.5" />}
+                            {copiedUrl ? <Check className="w-2 h-2 text-emerald-500" /> : <Copy className="w-2 h-2" />}
                             <span>URL</span>
                         </button>
                     </div>
@@ -186,7 +180,7 @@ const MediaCard = ({ asset, onPreview, onDelete, onUse }) => {
                     {onDelete && (
                         <button
                             onClick={() => onDelete(asset.id)}
-                            className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-500/5 rounded-xl transition-all"
+                            className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/5 rounded-lg transition-all"
                             title="Delete Asset"
                         >
                             <Trash2 className="w-3.5 h-3.5" />

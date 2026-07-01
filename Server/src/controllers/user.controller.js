@@ -328,9 +328,37 @@ exports.getDashboardStats = async (req, res) => {
             });
         } else {
             // Admin role
+            // 1. Total users
+            const [[userCountRow]] = await pool.query('SELECT COUNT(*) as count FROM users');
+            const totalUsers = userCountRow ? userCountRow.count : 0;
+
+            // 2. Tasks stats
+            const [taskStatusRows] = await pool.query(
+                `SELECT status, COUNT(*) as count 
+                 FROM tasks 
+                 GROUP BY status`
+            );
+
+            const tasksStats = {
+                total: 0,
+                pending: 0,
+                in_progress: 0,
+                completed: 0,
+                cancelled: 0,
+                on_hold: 0
+            };
+            for (const row of taskStatusRows) {
+                if (tasksStats[row.status] !== undefined) {
+                    tasksStats[row.status] = row.count;
+                }
+                tasksStats.total += row.count;
+            }
+
             return res.status(200).json({
                 success: true,
-                role
+                role,
+                totalUsers,
+                tasksStats
             });
         }
 

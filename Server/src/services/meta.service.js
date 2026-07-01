@@ -674,6 +674,54 @@ const syncAdLeads = async (adId, configId = null) => {
     }
 };
 
+const getFacebookPages = async (configId = null) => {
+    let token = process.env.META_ACCESS_TOKEN;
+    const configIdVal = configId ? parseInt(configId) : 0;
+    if (configIdVal > 0) {
+        const [[config]] = await pool.query('SELECT access_token FROM meta_configs WHERE id = ?', [configIdVal]);
+        if (config) {
+            token = config.access_token;
+        } else {
+            throw new Error(`Meta configuration with ID ${configIdVal} not found.`);
+        }
+    }
+
+    if (!token) {
+        throw new Error('Meta Access Token is missing.');
+    }
+
+    try {
+        console.log('Fetching Facebook Pages from FB Graph API...');
+        const response = await axios.get(
+            `https://graph.facebook.com/v24.0/me/accounts?fields=id,name,category,fan_count,followers_count,link,picture,instagram_business_account&access_token=${token}`
+        );
+        
+        const pages = response.data.data || [];
+
+        // Fetch detailed Instagram information for connected accounts in parallel
+        await Promise.all(
+            pages.map(async (page) => {
+                if (page.instagram_business_account && page.instagram_business_account.id) {
+                    try {
+                        const url = `https://graph.facebook.com/v24.0/${page.id}?fields=instagram_business_account{id,username,followers_count,follows_count,media_count,biography,website,profile_picture_url}&access_token=${token}`;
+                        const instaRes = await axios.get(url);
+                        if (instaRes.data && instaRes.data.instagram_business_account) {
+                            page.instagram_business_account = instaRes.data.instagram_business_account;
+                        }
+                    } catch (instaError) {
+                        console.error(`Error fetching detailed Instagram stats for page ${page.id}:`, instaError.response?.data || instaError.message);
+                    }
+                }
+            })
+        );
+
+        return { data: pages };
+    } catch (error) {
+        console.error('Error fetching Facebook Pages:', error.response?.data || error.message);
+        throw formatMetaError(error);
+    }
+};
+
 module.exports = {
     getAdAccounts,
     getAccountInsights,
@@ -682,5 +730,6 @@ module.exports = {
     getCreativeData,
     getSingleAdInsights,
     getLeads,
-    syncAdLeads
+    syncAdLeads,
+    getFacebookPages
 };

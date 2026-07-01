@@ -41,72 +41,97 @@ const Overview = () => {
    ADMIN OVERVIEW (Original Meta Ads Overview)
    ========================================== */
 const AdminOverview = ({ navigate }) => {
-  const [adAccounts, setAdAccounts] = useState([]);
+  const [pages, setPages] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [configs, setConfigs] = useState([]);
+  const [selectedConfigId, setSelectedConfigId] = useState(localStorage.getItem('selectedMetaConfigId') || '');
 
+  // Fetch configs once on mount
   useEffect(() => {
-    const fetchAggregateData = async () => {
+    const fetchConfigs = async () => {
       try {
         const token = localStorage.getItem('token');
-        const configId = localStorage.getItem('selectedMetaConfigId') || '';
         const headers = { 'Authorization': `Bearer ${token}` };
-        if (configId) headers['X-Meta-Config-Id'] = configId;
-
-        const response = await fetch(`/api/meta/accounts`, {
-          headers
-        });
-        const data = await response.json();
-        if (data.adaccounts && data.adaccounts.data) {
-          setAdAccounts(data.adaccounts.data);
+        const res = await fetch('/api/meta/configs', { headers });
+        const data = await res.json();
+        if (data.success && data.configs) {
+          setConfigs(data.configs);
+          if (!selectedConfigId && data.configs.length > 0) {
+            const firstId = String(data.configs[0].id);
+            setSelectedConfigId(firstId);
+            localStorage.setItem('selectedMetaConfigId', firstId);
+          }
         }
-      } catch (error) {
-        console.error("Error fetching overview data:", error);
+      } catch (err) {
+        console.error("Failed to load meta configurations:", err);
+      }
+    };
+    fetchConfigs();
+  }, []);
+
+  // Fetch dashboard stats and pages whenever selectedConfigId changes
+  useEffect(() => {
+    const fetchAdminOverviewData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const token = localStorage.getItem('token');
+        const headers = { 'Authorization': `Bearer ${token}` };
+        if (selectedConfigId) headers['X-Meta-Config-Id'] = selectedConfigId;
+
+        // Fetch pages and dashboard stats in parallel
+        const [pagesRes, statsRes] = await Promise.all([
+          fetch('/api/meta/fb-pages', { headers }),
+          fetch('/api/users/dashboard/stats', { headers })
+        ]);
+
+        const pagesData = await pagesRes.json();
+        const statsData = await statsRes.json();
+
+        if (pagesData.success) {
+          setPages(pagesData.data || []);
+        } else {
+          console.error("Failed to fetch Facebook Pages:", pagesData.message);
+          setPages([]);
+        }
+
+        if (statsData.success) {
+          setStats(statsData);
+        } else {
+          console.error("Failed to fetch dashboard stats:", statsData.message);
+        }
+      } catch (err) {
+        console.error("Error fetching admin overview data:", err);
+        setError("Error loading live dashboard metrics.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAggregateData();
-  }, []);
+    fetchAdminOverviewData();
+  }, [selectedConfigId]);
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(amount / 100);
-  };
-
-  const totalSpend = adAccounts.reduce((sum, acc) => sum + parseInt(acc.amount_spent || 0), 0);
-  const activeAccounts = adAccounts.filter(acc => acc.account_status === 1).length;
-  const totalImpressions = adAccounts.reduce((sum, acc) => sum + parseInt(acc.insights?.data?.[0]?.impressions || 0), 0);
-
-  const StatCard = ({ title, value, icon: Icon, color, trend }) => {
-    const colorMap = {
-      blue: 'from-blue-500 to-indigo-600 shadow-blue-500/20 text-blue-500',
-      emerald: 'from-emerald-500 to-teal-600 shadow-emerald-500/20 text-emerald-500',
-      purple: 'from-purple-500 to-pink-600 shadow-purple-500/20 text-purple-500',
-      amber: 'from-amber-500 to-orange-600 shadow-amber-500/20 text-amber-500'
+  const StatCard = ({ title, value, icon: Icon, color }) => {
+    const gradientClass = {
+      blue: 'from-blue-500 to-indigo-600',
+      emerald: 'from-emerald-500 to-teal-600',
+      amber: 'from-amber-500 to-orange-600',
+      rose: 'from-rose-500 to-red-600',
+      purple: 'from-purple-500 to-indigo-600'
     };
 
     return (
-      <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-6 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 transition-all duration-300">
-        <div className={`absolute -right-6 -top-6 w-24 h-24 opacity-[0.03] group-hover:scale-110 transition-transform duration-500 bg-gradient-to-br ${colorMap[color].split(' ')[0]} rounded-full blur-xl`}></div>
+      <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 transition-all duration-300 flex items-center space-x-3.5 shadow-sm">
+        <div className={`absolute -right-6 -top-6 w-20 h-20 opacity-[0.02] group-hover:scale-110 transition-transform duration-500 bg-gradient-to-br ${gradientClass[color]} rounded-full blur-xl`}></div>
 
-        <div className="flex justify-between items-start mb-6 relative z-10">
-          <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${colorMap[color].split(' ').slice(0, 2).join(' ')} flex items-center justify-center shadow-lg ${colorMap[color].split(' ')[2]}`}>
-            <Icon className="w-6 h-6 text-white" />
-          </div>
-          {trend && (
-            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${trend.startsWith('+') ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-              {trend}
-            </span>
-          )}
+        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradientClass[color]} flex items-center justify-center flex-shrink-0 shadow-md shadow-slate-200 dark:shadow-none`}>
+          <Icon className="w-5 h-5 text-white" />
         </div>
-
-        <div className="relative z-10">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">{title}</p>
-          <h3 className="text-3xl font-bold text-slate-900 dark:text-white group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-slate-800 group-hover:to-slate-500 dark:group-hover:from-white dark:group-hover:to-slate-400 transition-all">
+        <div>
+          <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest leading-none">{title}</p>
+          <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1 transition-all leading-none">
             {value}
           </h3>
         </div>
@@ -116,141 +141,314 @@ const AdminOverview = ({ navigate }) => {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">Platform Overview</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">High-level executive summary of your Meta Ads ecosystem.</p>
+      {/* Header section */}
+      <div className="flex items-center justify-between mb-6">
+        <div className='flex flex-col items-start'>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mb-1">Platform Admin Overview</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-xs">System-wide user & task statistics and live Facebook Pages intelligence.</p>
         </div>
-        <button
-          onClick={() => navigate('/insights')}
-          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 transition-all flex items-center group"
-        >
-          View Deep Insights
-          <ArrowUpRight className="w-4 h-4 ml-2 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-        </button>
+        <div className="flex items-center space-x-3">
+          {configs.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <label htmlFor="metaConfigSelect" className="text-xs font-bold text-slate-500 dark:text-slate-400">Meta Account:</label>
+              <select
+                id="metaConfigSelect"
+                value={selectedConfigId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedConfigId(val);
+                  localStorage.setItem('selectedMetaConfigId', val);
+                }}
+                className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                {configs.map((config) => (
+                  <option key={config.id} value={config.id}>
+                    {config.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {/* <button
+            onClick={() => navigate('/settings/meta')}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center group"
+          >
+            Manage Meta Configs
+            <ArrowUpRight className="w-3.5 h-3.5 ml-1.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+          </button> */}
+        </div>
       </div>
 
+      {error && (
+        <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-2xl flex items-center space-x-3">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <span className="text-sm font-semibold">{error}</span>
+        </div>
+      )}
+
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-6 h-40 animate-pulse"></div>
-          ))}
+        <div className="flex flex-col items-center justify-center py-28 space-y-4">
+          <div className="w-12 h-12 border-4 border-blue-500/25 border-t-blue-500 rounded-full animate-spin"></div>
+          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest animate-pulse">
+            Loading live dashboard metrics...
+          </p>
         </div>
       ) : (
-        <div className="fade-in space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        <div className="fade-in space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <StatCard
-              title="Total Ad Spend (Lifetime)"
-              value={formatCurrency(totalSpend)}
-              icon={CreditCard}
+              title="Total Users"
+              value={stats?.totalUsers || 0}
+              icon={Users}
               color="blue"
-              trend="+12.5%"
             />
             <StatCard
-              title="Active Ad Accounts"
-              value={activeAccounts}
-              icon={Activity}
-              color="emerald"
-            />
-            <StatCard
-              title="Total Impressions"
-              value={totalImpressions.toLocaleString('en-IN')}
-              icon={Eye}
+              title="Total Tasks"
+              value={stats?.tasksStats?.total || 0}
+              icon={ListTodo}
               color="purple"
             />
             <StatCard
-              title="Avg ROAS (Stub)"
-              value="3.4x"
-              icon={TrendingUp}
+              title="Pending Tasks"
+              value={stats?.tasksStats?.pending || 0}
+              icon={Clock}
               color="amber"
-              trend="+0.2"
+            />
+            <StatCard
+              title="In Progress Tasks"
+              value={stats?.tasksStats?.in_progress || 0}
+              icon={Activity}
+              color="blue"
+            />
+            <StatCard
+              title="Completed Tasks"
+              value={stats?.tasksStats?.completed || 0}
+              icon={CheckCircle}
+              color="emerald"
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-8">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Connected Channels</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-2xl">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                      <Globe className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-900 dark:text-white">Meta Ads</h4>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Active & Synced</p>
-                    </div>
-                  </div>
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50"></div>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-2xl">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
-                      <Globe className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-900 dark:text-white">LinkedIn Ads</h4>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Synced</p>
-                    </div>
-                  </div>
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50"></div>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-2xl">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500">
-                      <Camera className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-900 dark:text-white">Google & YouTube Ads</h4>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Active</p>
-                    </div>
-                  </div>
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50"></div>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-2xl">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500">
-                      <MessageCircle className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-900 dark:text-white">WhatsApp Manager</h4>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Setup Required</p>
-                    </div>
-                  </div>
-                  <div className="w-2 h-2 rounded-full bg-amber-500 shadow-lg shadow-amber-500/50"></div>
-                </div>
-              </div>
+          {/* Detailed Task Distribution Bar */}
+          <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4">
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Task Status Distribution</h4>
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                Total Tasks: {stats?.tasksStats?.total || 0} | On Hold: {stats?.tasksStats?.on_hold || 0} | Cancelled: {stats?.tasksStats?.cancelled || 0}
+              </span>
             </div>
-
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 dark:from-white/[0.02] dark:to-white/[0.01] border border-slate-800 dark:border-white/10 rounded-3xl p-8 flex flex-col justify-between">
+            {stats?.tasksStats?.total > 0 ? (
               <div>
-                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Weekly Tip</span>
-                <h4 className="text-xl font-bold text-white mt-2 mb-4">Minimize Overlapping Audiences</h4>
-                <p className="text-slate-400 text-sm leading-relaxed">Having multiple active ad sets targeting similar custom audiences increases bidding costs and fatigues users quickly. Keep them distinct.</p>
+                <div className="w-full h-2.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden flex">
+                  <div
+                    style={{ width: `${((stats?.tasksStats?.completed || 0) / stats.tasksStats.total) * 100}%` }}
+                    className="bg-emerald-500 h-full"
+                    title={`Completed: ${stats?.tasksStats?.completed}`}
+                  ></div>
+                  <div
+                    style={{ width: `${((stats?.tasksStats?.in_progress || 0) / stats.tasksStats.total) * 100}%` }}
+                    className="bg-blue-500 h-full"
+                    title={`In Progress: ${stats?.tasksStats?.in_progress}`}
+                  ></div>
+                  <div
+                    style={{ width: `${((stats?.tasksStats?.pending || 0) / stats.tasksStats.total) * 100}%` }}
+                    className="bg-amber-500 h-full"
+                    title={`Pending: ${stats?.tasksStats?.pending}`}
+                  ></div>
+                  <div
+                    style={{ width: `${((stats?.tasksStats?.on_hold || 0) / stats.tasksStats.total) * 100}%` }}
+                    className="bg-purple-500 h-full"
+                    title={`On Hold: ${stats?.tasksStats?.on_hold}`}
+                  ></div>
+                  <div
+                    style={{ width: `${((stats?.tasksStats?.cancelled || 0) / stats.tasksStats.total) * 100}%` }}
+                    className="bg-rose-500 h-full"
+                    title={`Cancelled: ${stats?.tasksStats?.cancelled}`}
+                  ></div>
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2.5 text-[11px]">
+                  <span className="flex items-center"><span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5"></span>Completed ({stats?.tasksStats?.completed || 0})</span>
+                  <span className="flex items-center"><span className="w-2 h-2 rounded-full bg-blue-500 mr-1.5"></span>In Progress ({stats?.tasksStats?.in_progress || 0})</span>
+                  <span className="flex items-center"><span className="w-2 h-2 rounded-full bg-amber-500 mr-1.5"></span>Pending ({stats?.tasksStats?.pending || 0})</span>
+                  <span className="flex items-center"><span className="w-2 h-2 rounded-full bg-purple-500 mr-1.5"></span>On Hold ({stats?.tasksStats?.on_hold || 0})</span>
+                  <span className="flex items-center"><span className="w-2 h-2 rounded-full bg-rose-500 mr-1.5"></span>Cancelled ({stats?.tasksStats?.cancelled || 0})</span>
+                </div>
               </div>
-              <button
-                onClick={() => navigate('/ad-accounts')}
-                className="mt-8 w-full py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-sm font-semibold transition-all border border-white/10"
-              >
-                Go to Ad Accounts
-              </button>
-            </div>
+            ) : (
+              <p className="text-xs text-slate-500 dark:text-slate-400">No tasks created in the system yet.</p>
+            )}
           </div>
 
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-10 flex items-center justify-between relative overflow-hidden shadow-2xl shadow-blue-500/20">
-            <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-            <div className="relative z-10 max-w-xl">
-              <h3 className="text-2xl font-bold text-white mb-2">Ready to optimize your campaigns?</h3>
-              <p className="text-blue-100 text-sm">Use our advanced AI Analyzer to generate strategic insights, cut wasted spend, and scale your best-performing ads instantly.</p>
+          {/* Facebook Pages grid */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-white/10 pb-3">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
+                <Globe className="w-5 h-5 mr-2 text-blue-500" />
+                Connected Facebook Pages
+              </h3>
+              <span className="px-2.5 py-0.5 text-[11px] font-bold bg-blue-500/10 text-blue-500 rounded-full">
+                {pages.length} Connected
+              </span>
             </div>
-            <div className="relative z-10">
-              <button onClick={() => navigate('/ad-analyzer')} className="px-6 py-3 bg-white text-blue-600 rounded-xl font-bold hover:scale-105 transition-transform shadow-xl">
-                Open Ad Analyzer
-              </button>
-            </div>
+
+            {pages.length === 0 ? (
+              <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-8 text-center flex flex-col items-center justify-center">
+                <Globe className="w-12 h-12 text-slate-300 dark:text-white/20 mb-3 animate-pulse" />
+                <h4 className="text-base font-bold text-slate-900 dark:text-white mb-1.5">No Connected Facebook Pages Found</h4>
+                <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm mb-4">
+                  Verify that your current Meta account configuration is configured with access to pages under the Meta Settings.
+                </p>
+                <button
+                  onClick={() => navigate('/settings/meta')}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition-all shadow-sm"
+                >
+                  Configure Meta Accounts
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {pages.map((page) => (
+                  <div
+                    key={page.id}
+                    className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 hover:shadow-md dark:hover:shadow-white/[0.01] transition-all duration-300 flex flex-col justify-between"
+                  >
+                    <div>
+                      {/* Top row: Profile & External Link */}
+                      <div className="flex justify-between items-start mb-3 pb-3 border-b border-slate-100 dark:border-white/5">
+                        <div className="flex items-center space-x-2.5 min-w-0">
+                          {page.picture?.data?.url ? (
+                            <img
+                              src={page.picture.data.url}
+                              alt={page.name}
+                              className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-white/10 flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-white/5 dark:to-white/10 flex items-center justify-center text-slate-400 font-bold text-sm flex-shrink-0">
+                              {page.name.charAt(0)}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors leading-tight truncate max-w-[140px]" title={page.name}>
+                              {page.name}
+                            </h4>
+                            <span className="inline-block mt-0.5 text-[9px] font-extrabold px-1.5 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded capitalize">
+                              {page.category}
+                            </span>
+                          </div>
+                        </div>
+                        {page.link && (
+                          <a
+                            href={page.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all flex-shrink-0"
+                            title="Visit Facebook Page"
+                          >
+                            <ArrowUpRight className="w-4 h-4" />
+                          </a>
+                        )}
+                      </div>
+
+                      {/* FB Stats Row */}
+                      <div className="flex justify-between items-center my-2.5 px-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                        <span>Likes: <strong className="text-slate-900 dark:text-white font-bold">{page.fan_count?.toLocaleString('en-IN') || 0}</strong></span>
+                        <span>Followers: <strong className="text-slate-900 dark:text-white font-bold">{page.followers_count?.toLocaleString('en-IN') || 0}</strong></span>
+                      </div>
+
+                      {/* Instagram Linked Section */}
+                      {page.instagram_business_account?.id ? (
+                        <div className="p-2.5 bg-gradient-to-tr from-purple-500/5 via-pink-500/5 to-orange-500/5 border border-pink-500/10 rounded-xl space-y-1.5 mt-2">
+                          <div className="flex items-center justify-between text-[10.5px]">
+                            <span className="font-bold text-pink-500 flex items-center">
+                              <Camera className="w-3.5 h-3.5 mr-1" />
+                              Instagram
+                            </span>
+                            {page.instagram_business_account.username && (
+                              <a
+                                href={`https://instagram.com/${page.instagram_business_account.username}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-bold text-purple-600 dark:text-purple-400 hover:underline"
+                              >
+                                @{page.instagram_business_account.username}
+                              </a>
+                            )}
+                          </div>
+
+                          {/* Instagram Profile info if live detailed query succeeded */}
+                          {page.instagram_business_account.username && (
+                            <div className="space-y-1.5 pt-0.5">
+                              <div className="flex items-center space-x-2">
+                                {page.instagram_business_account.profile_picture_url ? (
+                                  <img
+                                    src={page.instagram_business_account.profile_picture_url}
+                                    alt={page.instagram_business_account.username}
+                                    className="w-6 h-6 rounded-full object-cover border border-pink-500/20 flex-shrink-0"
+                                  />
+                                ) : (
+                                  <div className="w-6 h-6 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500 font-bold text-[8px] flex-shrink-0">
+                                    IG
+                                  </div>
+                                )}
+                                {page.instagram_business_account.biography && (
+                                  <p className="text-[9px] text-slate-500 dark:text-slate-400 italic line-clamp-1 truncate leading-tight">
+                                    {page.instagram_business_account.biography}
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Insta stats */}
+                              <div className="grid grid-cols-3 gap-1 text-center py-1 bg-white/50 dark:bg-black/20 rounded-lg text-[9px] border border-slate-100 dark:border-white/5 font-medium">
+                                <div>
+                                  <span className="block text-[7.5px] text-slate-400 uppercase">Followers</span>
+                                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                                    {page.instagram_business_account.followers_count?.toLocaleString('en-IN') || 0}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="block text-[7.5px] text-slate-400 uppercase">Following</span>
+                                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                                    {page.instagram_business_account.follows_count?.toLocaleString('en-IN') || 0}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="block text-[7.5px] text-slate-400 uppercase">Posts</span>
+                                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                                    {page.instagram_business_account.media_count?.toLocaleString('en-IN') || 0}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {!page.instagram_business_account.username && (
+                            <div className="flex justify-between items-center text-[10px] text-slate-400">
+                              <span>Linked ID:</span>
+                              <span className="font-mono font-semibold">{page.instagram_business_account.id}</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500 italic mt-2.5 pl-0.5">
+                          No connected Instagram account
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer row */}
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px]">
+                      <span className="text-slate-400 font-mono">ID: {page.id}</span>
+                      <button
+                        onClick={() => navigate('/ad-accounts')}
+                        className="text-blue-500 hover:text-blue-400 font-bold transition-all hover:underline"
+                      >
+                        Campaigns &rarr;
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
