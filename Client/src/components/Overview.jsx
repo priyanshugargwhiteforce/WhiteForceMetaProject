@@ -457,6 +457,277 @@ const AdminOverview = ({ navigate }) => {
 };
 
 /* ==========================================
+   SHARED META PAGES & INSTAGRAM OVERVIEW SECTION
+   ========================================== */
+const MetaOverviewSection = ({ navigate }) => {
+  const [pages, setPages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [configs, setConfigs] = useState([]);
+  const [selectedConfigId, setSelectedConfigId] = useState(localStorage.getItem('selectedMetaConfigId') || '');
+
+  // Fetch configs once on mount
+  useEffect(() => {
+    const fetchConfigs = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = { 'Authorization': `Bearer ${token}` };
+        const res = await fetch('/api/meta/configs', { headers });
+        const data = await res.json();
+        if (data.success && data.configs) {
+          setConfigs(data.configs);
+          if (!selectedConfigId && data.configs.length > 0) {
+            const firstId = String(data.configs[0].id);
+            setSelectedConfigId(firstId);
+            localStorage.setItem('selectedMetaConfigId', firstId);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load meta configurations:", err);
+      }
+    };
+    fetchConfigs();
+  }, []);
+
+  // Fetch Facebook Pages whenever selectedConfigId changes
+  useEffect(() => {
+    const fetchPagesData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const token = localStorage.getItem('token');
+        const headers = { 'Authorization': `Bearer ${token}` };
+        if (selectedConfigId) headers['X-Meta-Config-Id'] = selectedConfigId;
+
+        const res = await fetch('/api/meta/fb-pages', { headers });
+        const pagesData = await res.json();
+
+        if (pagesData.success) {
+          setPages(pagesData.data || []);
+        } else {
+          console.error("Failed to fetch Facebook Pages:", pagesData.message);
+          setPages([]);
+          setError(pagesData.message || "Failed to load connected pages.");
+        }
+      } catch (err) {
+        console.error("Error fetching pages data:", err);
+        setError("Error loading live page metrics.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPagesData();
+  }, [selectedConfigId]);
+
+  return (
+    <div className="mt-8 space-y-6">
+      {/* Header section with Meta Account Selector */}
+      <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-3">
+        <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center">
+          <Globe className="w-5 h-5 mr-2.5 text-blue-500" />
+          Connected Facebook Pages & Instagram
+        </h3>
+        
+        <div className="flex items-center space-x-3">
+          {configs.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <label htmlFor="metaOverviewConfigSelect" className="text-xs font-bold text-slate-500 dark:text-slate-400">Meta Account:</label>
+              <select
+                id="metaOverviewConfigSelect"
+                value={selectedConfigId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedConfigId(val);
+                  localStorage.setItem('selectedMetaConfigId', val);
+                }}
+                className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                {configs.map((config) => (
+                  <option key={config.id} value={config.id}>
+                    {config.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <span className="px-2.5 py-0.5 text-[11px] font-bold bg-blue-500/10 text-blue-500 rounded-full">
+            {pages.length} Connected
+          </span>
+        </div>
+      </div>
+
+      {error && (
+        <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-2xl flex items-center space-x-3">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <span className="text-sm font-semibold">{error}</span>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-16 space-y-3 bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl">
+          <div className="w-10 h-10 border-4 border-blue-500/25 border-t-blue-500 rounded-full animate-spin"></div>
+          <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest animate-pulse">
+            Loading live page metrics...
+          </p>
+        </div>
+      ) : pages.length === 0 ? (
+        <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-8 text-center flex flex-col items-center justify-center">
+          <Globe className="w-12 h-12 text-slate-300 dark:text-white/20 mb-3" />
+          <h4 className="text-base font-bold text-slate-900 dark:text-white mb-1.5">No Connected Facebook Pages Found</h4>
+          <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm">
+            Verify that your Meta account configuration has active access tokens with permission scopes to manage pages.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {pages.map((page) => (
+            <div
+              key={page.id}
+              className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 hover:shadow-md dark:hover:shadow-white/[0.01] transition-all duration-300 flex flex-col justify-between"
+            >
+              <div>
+                {/* Top row: Profile & External Link */}
+                <div className="flex justify-between items-start mb-3 pb-3 border-b border-slate-100 dark:border-white/5">
+                  <div className="flex items-center space-x-2.5 min-w-0">
+                    {page.picture?.data?.url ? (
+                      <img
+                        src={page.picture.data.url}
+                        alt={page.name}
+                        className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-white/10 flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-white/5 dark:to-white/10 flex items-center justify-center text-slate-400 font-bold text-sm flex-shrink-0">
+                        {page.name.charAt(0)}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors leading-tight truncate max-w-[140px]" title={page.name}>
+                        {page.name}
+                      </h4>
+                      <span className="inline-block mt-0.5 text-[9px] font-extrabold px-1.5 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded capitalize">
+                        {page.category}
+                      </span>
+                    </div>
+                  </div>
+                  {page.link && (
+                    <a
+                      href={page.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all flex-shrink-0"
+                      title="Visit Facebook Page"
+                    >
+                      <ArrowUpRight className="w-4 h-4" />
+                    </a>
+                  )}
+                </div>
+
+                {/* FB Stats Row */}
+                <div className="flex justify-between items-center my-2.5 px-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                  <span>Likes: <strong className="text-slate-900 dark:text-white font-bold">{page.fan_count?.toLocaleString('en-IN') || 0}</strong></span>
+                  <span>Followers: <strong className="text-slate-900 dark:text-white font-bold">{page.followers_count?.toLocaleString('en-IN') || 0}</strong></span>
+                </div>
+
+                {/* Instagram Linked Section */}
+                {page.instagram_business_account?.id ? (
+                  <div className="p-2.5 bg-gradient-to-tr from-purple-500/5 via-pink-500/5 to-orange-500/5 border border-pink-500/10 rounded-xl space-y-1.5 mt-2">
+                    <div className="flex items-center justify-between text-[10.5px]">
+                      <span className="font-bold text-pink-500 flex items-center">
+                        <Camera className="w-3.5 h-3.5 mr-1" />
+                        Instagram
+                      </span>
+                      {page.instagram_business_account.username && (
+                        <a
+                          href={`https://instagram.com/${page.instagram_business_account.username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-bold text-purple-600 dark:text-purple-400 hover:underline"
+                        >
+                          @{page.instagram_business_account.username}
+                        </a>
+                      )}
+                    </div>
+
+                    {/* Instagram Profile info if live detailed query succeeded */}
+                    {page.instagram_business_account.username && (
+                      <div className="space-y-1.5 pt-0.5">
+                        <div className="flex items-center space-x-2">
+                          {page.instagram_business_account.profile_picture_url ? (
+                            <img
+                              src={page.instagram_business_account.profile_picture_url}
+                              alt={page.instagram_business_account.username}
+                              className="w-6 h-6 rounded-full object-cover border border-pink-500/20 flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500 font-bold text-[8px] flex-shrink-0">
+                              IG
+                            </div>
+                          )}
+                          {page.instagram_business_account.biography && (
+                            <p className="text-[9px] text-slate-500 dark:text-slate-400 italic line-clamp-1 truncate leading-tight">
+                              {page.instagram_business_account.biography}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Insta stats */}
+                        <div className="grid grid-cols-3 gap-1 text-center py-1 bg-white/50 dark:bg-black/20 rounded-lg text-[9px] border border-slate-100 dark:border-white/5 font-medium">
+                          <div>
+                            <span className="block text-[7.5px] text-slate-400 uppercase">Followers</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200">
+                              {page.instagram_business_account.followers_count?.toLocaleString('en-IN') || 0}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block text-[7.5px] text-slate-400 uppercase">Following</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200">
+                              {page.instagram_business_account.follows_count?.toLocaleString('en-IN') || 0}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block text-[7.5px] text-slate-400 uppercase">Posts</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200">
+                              {page.instagram_business_account.media_count?.toLocaleString('en-IN') || 0}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {!page.instagram_business_account.username && (
+                      <div className="flex justify-between items-center text-[10px] text-slate-400">
+                        <span>Linked ID:</span>
+                        <span className="font-mono font-semibold">{page.instagram_business_account.id}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-[10px] text-slate-400 dark:text-slate-500 italic mt-2.5 pl-0.5">
+                    No connected Instagram account
+                  </div>
+                )}
+              </div>
+
+              {/* Footer row */}
+              <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px]">
+                <span className="text-slate-400 font-mono">ID: {page.id}</span>
+                <button
+                  onClick={() => navigate('/ad-accounts')}
+                  className="text-blue-500 hover:text-blue-400 font-bold transition-all hover:underline"
+                >
+                  Campaigns &rarr;
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ==========================================
    MANAGER OVERVIEW
    ========================================== */
 const ManagerOverview = ({ user, navigate }) => {
@@ -499,23 +770,21 @@ const ManagerOverview = ({ user, navigate }) => {
 
   const StatCard = ({ title, value, subtitle, icon: Icon, color }) => {
     const colorMap = {
-      blue: 'from-blue-500 to-indigo-600 shadow-blue-500/20 text-blue-500 bg-blue-500/10',
-      emerald: 'from-emerald-500 to-teal-600 shadow-emerald-500/20 text-emerald-500 bg-emerald-500/10',
-      amber: 'from-amber-500 to-orange-600 shadow-amber-500/20 text-amber-500 bg-amber-500/10',
-      purple: 'from-purple-500 to-pink-600 shadow-purple-500/20 text-purple-500 bg-purple-500/10'
+      blue: 'from-blue-500 to-indigo-600 text-blue-500 bg-blue-500/10 dark:bg-blue-500/5',
+      emerald: 'from-emerald-500 to-teal-600 text-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/5',
+      amber: 'from-amber-500 to-orange-600 text-amber-500 bg-amber-500/10 dark:bg-amber-500/5',
+      purple: 'from-purple-500 to-pink-600 text-purple-500 bg-purple-500/10 dark:bg-purple-500/5'
     };
 
     return (
-      <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-6 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 transition-all duration-300">
-        <div className="flex justify-between items-start mb-4 relative z-10">
-          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${colorMap[color]}`}>
-            <Icon className="w-6 h-6" />
-          </div>
+      <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 transition-all duration-300 flex items-center space-x-3.5 shadow-sm">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${colorMap[color]}`}>
+          <Icon className="w-5 h-5" />
         </div>
-        <div className="relative z-10">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">{title}</p>
-          <h3 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">{value}</h3>
-          {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{subtitle}</p>}
+        <div>
+          <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest leading-none">{title}</p>
+          <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1.5 transition-all leading-none">{value}</h3>
+          {subtitle && <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 mt-1 leading-tight">{subtitle}</p>}
         </div>
       </div>
     );
@@ -539,31 +808,31 @@ const ManagerOverview = ({ user, navigate }) => {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">Team & Progress Overview</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Dashboard summary of your team size, employee statuses, and work checklists.</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mb-1">Team & Progress Overview</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-xs">Dashboard summary of your team size, employee statuses, and work checklists.</p>
         </div>
         <button
           onClick={() => navigate('/tasks')}
-          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 transition-all flex items-center group"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center group"
         >
           Manage All Tasks
-          <ArrowUpRight className="w-4 h-4 ml-2 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+          <ArrowUpRight className="w-3.5 h-3.5 ml-1.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
         </button>
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-6 h-40 animate-pulse"></div>
+            <div key={i} className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4 h-24 animate-pulse"></div>
           ))}
         </div>
       ) : (
-        <div className="fade-in space-y-8">
+        <div className="fade-in space-y-6">
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <StatCard
               title="Team Size"
               value={stats?.teamStats?.total || 0}
@@ -587,11 +856,11 @@ const ManagerOverview = ({ user, navigate }) => {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {/* Team Directory (60% width) */}
-            <div className="lg:col-span-2 bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-8">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center">
+            <div className="lg:col-span-2 bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-5 shadow-sm">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
                   <UserCheck className="w-5 h-5 mr-2.5 text-blue-500" />
                   My Team Members
                 </h3>
@@ -660,9 +929,9 @@ const ManagerOverview = ({ user, navigate }) => {
             </div>
 
             {/* Manager's own tasks (40% width) */}
-            <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-8">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center">
+            <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-5 shadow-sm">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
                   <ListTodo className="w-5 h-5 mr-2.5 text-emerald-500" />
                   My Assigned Tasks
                 </h3>
@@ -675,11 +944,11 @@ const ManagerOverview = ({ user, navigate }) => {
                   <p className="text-xs text-slate-500 mt-1">Excellent job keeping a clear plate!</p>
                 </div>
               ) : (
-                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
                   {tasks.slice(0, 10).map((task) => (
                     <div
                       key={task.id}
-                      className="p-4 bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-2xl space-y-3 group hover:border-slate-200 dark:hover:border-white/10 transition-all cursor-pointer"
+                      className="p-3 bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-xl space-y-2 group hover:border-slate-200 dark:hover:border-white/10 transition-all cursor-pointer shadow-sm"
                       onClick={() => navigate('/tasks')}
                     >
                       <div className="flex justify-between items-start">
@@ -719,6 +988,11 @@ const ManagerOverview = ({ user, navigate }) => {
               )}
             </div>
           </div>
+
+          {/* Connected Facebook Pages & Instagram accounts for Manager with meta_access */}
+          {Boolean(user?.meta_access) && (
+            <MetaOverviewSection navigate={navigate} />
+          )}
         </div>
       )}
     </div>
@@ -761,22 +1035,20 @@ const EmployeeOverview = ({ user, navigate }) => {
 
   const StatCard = ({ title, value, icon: Icon, color }) => {
     const colorMap = {
-      blue: 'from-blue-500 to-indigo-600 shadow-blue-500/20 text-blue-500 bg-blue-500/10',
-      emerald: 'from-emerald-500 to-teal-600 shadow-emerald-500/20 text-emerald-500 bg-emerald-500/10',
-      amber: 'from-amber-500 to-orange-600 shadow-amber-500/20 text-amber-500 bg-amber-500/10',
-      rose: 'from-rose-500 to-red-600 shadow-rose-500/20 text-rose-500 bg-rose-500/10'
+      blue: 'from-blue-500 to-indigo-600 text-blue-500 bg-blue-500/10 dark:bg-blue-500/5',
+      emerald: 'from-emerald-500 to-teal-600 text-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/5',
+      amber: 'from-amber-500 to-orange-600 text-amber-500 bg-amber-500/10 dark:bg-amber-500/5',
+      rose: 'from-rose-500 to-red-600 text-rose-500 bg-rose-500/10 dark:bg-rose-500/5'
     };
 
     return (
-      <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-6 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 transition-all duration-300">
-        <div className="flex justify-between items-start mb-4 relative z-10">
-          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${colorMap[color]}`}>
-            <Icon className="w-6 h-6" />
-          </div>
+      <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 transition-all duration-300 flex items-center space-x-3.5 shadow-sm">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${colorMap[color]}`}>
+          <Icon className="w-5 h-5" />
         </div>
-        <div className="relative z-10">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">{title}</p>
-          <h3 className="text-3xl font-bold text-slate-900 dark:text-white">{value}</h3>
+        <div>
+          <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest leading-none">{title}</p>
+          <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1.5 transition-all leading-none">{value}</h3>
         </div>
       </div>
     );
@@ -802,31 +1074,31 @@ const EmployeeOverview = ({ user, navigate }) => {
   const pendingCount = (stats?.myTasksStats?.pending || 0) + (stats?.myTasksStats?.in_progress || 0);
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">My Task Board</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Personal workspace. Track and update status of your assigned projects.</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mb-1">My Task Board</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-xs">Personal workspace. Track and update status of your assigned projects.</p>
         </div>
         <button
           onClick={() => navigate('/tasks')}
-          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/20 transition-all flex items-center group"
+          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center group"
         >
           View Full Task Table
-          <ArrowUpRight className="w-4 h-4 ml-2 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+          <ArrowUpRight className="w-3.5 h-3.5 ml-1.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
         </button>
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-6 h-40 animate-pulse"></div>
+            <div key={i} className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4 h-24 animate-pulse"></div>
           ))}
         </div>
       ) : (
-        <div className="fade-in space-y-8">
+        <div className="fade-in space-y-6">
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <StatCard
               title="Total Assigned"
               value={stats?.myTasksStats?.total || 0}
@@ -854,9 +1126,9 @@ const EmployeeOverview = ({ user, navigate }) => {
           </div>
 
           {/* Detailed Task List */}
-          <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-8">
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center">
-              <Activity className="w-5 h-5 mr-2.5 text-blue-500" />
+          <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-5 shadow-sm">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center">
+              <Activity className="w-4 h-4 mr-2 text-blue-500" />
               Active Checklists
             </h3>
 
@@ -867,11 +1139,11 @@ const EmployeeOverview = ({ user, navigate }) => {
                 <p className="text-xs text-slate-500 mt-1">No tasks are currently assigned to your account.</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {tasks.map((task) => (
                   <div
                     key={task.id}
-                    className="p-5 bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-2xl hover:border-slate-200 dark:hover:border-white/10 transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4 cursor-pointer"
+                    className="p-3.5 bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-xl hover:border-slate-200 dark:hover:border-white/10 transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-3 cursor-pointer shadow-sm"
                     onClick={() => navigate('/tasks')}
                   >
                     <div className="space-y-2 flex-1">
@@ -911,10 +1183,10 @@ const EmployeeOverview = ({ user, navigate }) => {
                           e.stopPropagation();
                           navigate('/tasks');
                         }}
-                        className="px-4 py-2 bg-slate-200/50 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-white rounded-xl text-xs font-bold transition-all flex items-center"
+                        className="px-3 py-1.5 bg-slate-200/50 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-white rounded-lg text-[11px] font-bold transition-all flex items-center shadow-sm"
                       >
                         Update Remarks
-                        <ArrowUpRight className="w-4 h-4 ml-1.5" />
+                        <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
                       </button>
                     </div>
                   </div>
@@ -922,6 +1194,11 @@ const EmployeeOverview = ({ user, navigate }) => {
               </div>
             )}
           </div>
+
+          {/* Connected Facebook Pages & Instagram accounts for Employee with meta_access */}
+          {Boolean(user?.meta_access) && (
+            <MetaOverviewSection navigate={navigate} />
+          )}
         </div>
       )}
     </div>
