@@ -1,62 +1,58 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# Dependency directories
-node_modules/
-Client/node_modules/
-Server/node_modules/
-md_folder/
-
-# Build & Output directories
-dist/
-dist-ssr/
-Client/dist/
-Client/dist-ssr/
-Server/dist/
-
-# Environmental variables & Secrets
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-Client/.env
-Client/.env.*
-Server/.env
-Server/.env.*
-*.env
-*.json.local
 
 # API credentials and secrets
-Server/client_secret_*.json
+# Build & Output directories
+Client/dist/
+Client/dist-ssr/
+Client/.env
+Client/.env.*
+Client/node_modules/
 client_secret_*.json
-oauth_token.json
-
-# Scratch directories
-Server/scratch/
-# Runtime files
-uploads/
-public/uploads/
-Server/uploads/
-Server/public/uploads/
-Server/logs/
-logs/
-*.log
-
-# Editor/OS files
-.vscode/*
-!.vscode/extensions.json
-.idea/
+# Dependency directories
+dist/
+dist-ssr/
 .DS_Store
-*.suo
-*.ntvs*
+# Editor/OS files
+*.env
+.env
+.env.development.local
+# Environmental variables & Secrets
+.env.local
+.env.production.local
+.env.test.local
+.idea/
+*.json.local
+lerna-debug.log*
+*.log
+logs
+logs/
+# Logs
+md_folder/
 *.njsproj
+node_modules/
+npm-debug.log*
+*.ntvs*
+oauth_token.json
+pnpm-debug.log*
+public/uploads/
+# Runtime files
+# Scratch directories
+Server/client_secret_*.json
+Server/dist/
+Server/.env
+Server/.env.*
+Server/logs
+Server/logs/
+Server/node_modules/
+Server/public/uploads/
+Server/scratch/
+Server/uploads
+Server/uploads/
 *.sln
+*.suo
 *.sw?
 Thumbs.db
+uploads/
+.vscode/*
+!.vscode/extensions.json
+yarn-debug.log*
+yarn-error.log*
