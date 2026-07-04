@@ -15,6 +15,8 @@ const startServer = async () => {
 
     // Initialize Queue Worker
     require('./src/services/whatsapp-queue.service');
+    const { recoverQueuedJobs } = require('./src/services/meta-queue.service');
+    recoverQueuedJobs();
 
     // Start listening
     app.listen(PORT, () => {

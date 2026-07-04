@@ -49,6 +49,7 @@ import MediaLibrary from './components/media/MediaLibrary';
 import LinkedInAssetManager from './components/linkedin/LinkedInAssetManager';
 import CreativeBuilder from './components/linkedin/CreativeBuilder';
 import CreativeLibrary from './components/linkedin/CreativeLibrary';
+import MetaPosting from './components/MetaPosting';
 import './App.css';
 
 import Layout from './components/Layout';
@@ -168,6 +169,16 @@ function App() {
                                 <ProtectedRoute>
                                     <PermissionRoute permission="meta_access">
                                         <MetaDashboard />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/meta-posting" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="meta_publish">
+                                        <MetaPosting />
                                     </PermissionRoute>
                                 </ProtectedRoute>
                             } 

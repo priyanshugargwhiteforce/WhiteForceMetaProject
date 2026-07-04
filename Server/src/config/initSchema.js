@@ -1170,12 +1170,17 @@ const initSchema = async () => {
                     linked_platforms JSON DEFAULT NULL,
                     metadata JSON DEFAULT NULL,
                     error_message TEXT DEFAULT NULL,
+                    facebook_variant VARCHAR(255) DEFAULT NULL,
+                    instagram_variant VARCHAR(255) DEFAULT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
                 )
             `);
             console.log(' - media_library table created/verified');
+
+            try { await pool.query("ALTER TABLE media_library ADD COLUMN facebook_variant VARCHAR(255) DEFAULT NULL"); } catch (e) {}
+            try { await pool.query("ALTER TABLE media_library ADD COLUMN instagram_variant VARCHAR(255) DEFAULT NULL"); } catch (e) {}
 
             // Create linkedin_creatives table
             await pool.query(`
@@ -1229,8 +1234,58 @@ const initSchema = async () => {
             await runSafeQuery("ALTER TABLE linkedin_creatives ADD INDEX idx_lc_camp_id (campaign_id)");
             await runSafeQuery("ALTER TABLE linkedin_ad_drafts ADD INDEX idx_lad_created_by (created_by)");
             console.log(' - LinkedIn Ads Phase 4 and 5 columns and indexes verified/added');
+
+            // 0e. Meta Posting Jobs & Targets
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS meta_post_jobs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    config_id INT NOT NULL,
+                    tenant_id INT DEFAULT 1,
+                    created_by INT NOT NULL,
+                    caption TEXT,
+                    content_type VARCHAR(20) DEFAULT 'TEXT',
+                    media_asset_id INT DEFAULT NULL,
+                    status VARCHAR(50) DEFAULT 'draft',
+                    scheduled_at TIMESTAMP NULL DEFAULT NULL,
+                    idempotency_key VARCHAR(255) DEFAULT NULL,
+                    total_targets INT DEFAULT 0,
+                    successful_targets INT DEFAULT 0,
+                    failed_targets INT DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    started_at TIMESTAMP NULL DEFAULT NULL,
+                    completed_at TIMESTAMP NULL DEFAULT NULL,
+                    UNIQUE KEY uq_meta_post_idempotency (tenant_id, idempotency_key)
+                )
+            `);
+            console.log(' - meta_post_jobs table created/verified');
+
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS meta_post_targets (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    post_job_id INT NOT NULL,
+                    platform VARCHAR(50) NOT NULL,
+                    target_id VARCHAR(64) NOT NULL,
+                    target_name VARCHAR(255) NOT NULL,
+                    linked_page_id VARCHAR(64) DEFAULT NULL,
+                    status VARCHAR(50) DEFAULT 'queued',
+                    remote_post_id VARCHAR(128) DEFAULT NULL,
+                    remote_media_id VARCHAR(128) DEFAULT NULL,
+                    container_id VARCHAR(128) DEFAULT NULL,
+                    permalink VARCHAR(1000) DEFAULT NULL,
+                    attempt_count INT DEFAULT 0,
+                    error_code INT DEFAULT NULL,
+                    error_subcode INT DEFAULT NULL,
+                    error_message TEXT,
+                    meta_trace_id VARCHAR(255) DEFAULT NULL,
+                    published_at TIMESTAMP NULL DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    UNIQUE KEY uq_meta_post_target (post_job_id, platform, target_id)
+                )
+            `);
+            console.log(' - meta_post_targets table created/verified');
         } catch (migErr) {
-            console.error('[Migration Error] LinkedIn Phase 2/3/4 database schema initialization failed:', migErr.message);
+            console.error('[Migration Error] database schema initialization failed:', migErr.message);
             throw migErr;
         }
 
