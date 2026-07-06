@@ -134,7 +134,18 @@ router.get('/:id/preview', async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Media asset not found.' });
         }
 
-        const resolvedPath = path.resolve(finalAsset.local_path);
+        let mediaPath = finalAsset.local_path;
+        let mimeType = finalAsset.mime_type;
+
+        if (req.query.variant === 'facebook' && finalAsset.facebook_variant) {
+            mediaPath = path.join(UPLOADS_DIR, '..', finalAsset.facebook_variant);
+            mimeType = 'image/jpeg';
+        } else if (req.query.variant === 'instagram' && finalAsset.instagram_variant) {
+            mediaPath = path.join(UPLOADS_DIR, '..', finalAsset.instagram_variant);
+            mimeType = 'image/jpeg';
+        }
+
+        const resolvedPath = path.resolve(mediaPath);
         const resolvedUploadsDir = path.resolve(UPLOADS_DIR);
 
         // Path Traversal Prevention
@@ -146,7 +157,7 @@ router.get('/:id/preview', async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Physical file not found.' });
         }
 
-        res.setHeader('Content-Type', finalAsset.mime_type);
+        res.setHeader('Content-Type', mimeType);
         fs.createReadStream(resolvedPath).pipe(res);
     } catch (error) {
         next(error);

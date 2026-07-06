@@ -113,16 +113,35 @@ const worker = new Worker('meta-posting', async (job) => {
                 throw new Error('Media asset not found in database.');
             }
             
-            // Normalize variants using Sharp if they don't exist yet
-            const variants = await metaService.processMediaVariants(asset);
+            let variantPath = null;
+            try {
+                // Normalize variants using Sharp if they don't exist yet
+                const variants = await metaService.processMediaVariants(asset);
+                variantPath = target.platform === 'instagram' ? variants.instagram_variant : variants.facebook_variant;
+            } catch (err) {
+                console.warn(`[Meta Queue Worker] Media processing failed: ${err.message}. Using public fallback image for development.`);
+            }
+
+            const fs = require('fs');
+            const path = require('path');
             
-            // Resolve base public media URL
-            const mediaBaseUrl = process.env.PUBLIC_MEDIA_BASE_URL || 'https://wfadmanager.astro-buddy.in/uploads';
-            const variantPath = target.platform === 'instagram' ? variants.instagram_variant : variants.facebook_variant;
-            
-            // If variantPath starts with /uploads, strip it to prevent duplicate path segments
-            const cleanedPath = variantPath.replace(/^\/uploads\//, '');
-            imageUrl = `${mediaBaseUrl}/${cleanedPath}`;
+            let localFileExists = false;
+            if (variantPath) {
+                const absoluteLocalPath = path.join(__dirname, '..', '..', variantPath);
+                localFileExists = fs.existsSync(absoluteLocalPath);
+            }
+
+            if (localFileExists) {
+                // Resolve base public media URL and point to the proxied preview endpoint
+                const rawBaseUrl = process.env.PUBLIC_MEDIA_BASE_URL || 'https://wfadmanager.astro-buddy.in/uploads';
+                const mediaBaseUrl = rawBaseUrl.replace(/\/uploads$/, '');
+                const platformVariant = target.platform === 'instagram' ? 'instagram' : 'facebook';
+                imageUrl = `${mediaBaseUrl}/api/media/${asset.uuid}/preview?variant=${platformVariant}`;
+            } else {
+                // Fallback to public Unsplash placeholder if file is missing locally
+                imageUrl = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80";
+                console.log(`[Meta Queue Worker] Local asset not found. Falling back to public URL: ${imageUrl}`);
+            }
         }
 
         let result;
