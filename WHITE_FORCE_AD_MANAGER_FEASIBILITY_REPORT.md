@@ -321,8 +321,8 @@ The table below compares estimated monthly subscription fees for third-party pla
 | **Meta Ads Automation & AI Audit** | $100 - $250 (AdEspresso / Smartly.io) | $0 (Integrated local AI controller) | 100% savings |
 | **LinkedIn Assets Management** | $80 - $150 (Third-party asset sync) | $0 (Local Media Library CDN) | 100% savings |
 | **Team Tasks Collaboration** | $50 - $120 (Asana / Trello premium) | $0 (Built-in Relational Board) | 100% savings |
-| **Database & Queue Infrastructure** | $0 (Hidden in SaaS subscriptions) | $45 - $90 (AWS RDS + ElastiCache Redis) | Internal infrastructure overhead |
-| **TOTAL ESTIMATED MONTHLY COST** | **$380 - $870 / Month** | **$45 - $90 / Month** | **~88% Net Monthly Savings** |
+| **Database & Queue Infrastructure** | $0 (Hidden in SaaS subscriptions) | $0 (Hosted locally on existing VPS) | 100% savings (runs on internal VPS) |
+| **TOTAL ESTIMATED MONTHLY COST** | **$380 - $870 / Month** | **$0 / Month (Overhead included in VPS)** | **100% Net Software/DB Monthly Savings** |
 
 ### 6.2 Pricing & Conversation Cost Tracking Integration
 * The system integrates **WABA Pricing Analytics** via the `/configs/:id/pricing/sync` endpoints.
@@ -422,9 +422,9 @@ The feasibility audit confirms that the **White Force Ad Manager** is a technica
 4. **Financial Viability:** Eliminating recurring license fees for external marketing platforms reduces software overhead costs.
 
 ### Technical Recommendations for Audit Approval:
-* Approve the system deployment using a containerized environment (e.g., Docker) on AWS or GCP.
-* Allocate a dedicated Redis node (such as AWS ElastiCache) to support BullMQ campaign queuing.
-* Standardize on MySQL v8.0 to support JSON columns and queries for contact segments.
+* Approve the system deployment on the existing company VPS, where the Node.js API, frontend static files, MySQL DB, and Redis are hosted locally.
+* Utilize the local Redis service instance running on the VPS to support BullMQ campaign queuing without external subscription costs.
+* Standardize on MySQL v8.0 (configured locally on the VPS) to support JSON columns and queries for contact segments.
 
 ---
 **Prepared & Submitted for Review:**  

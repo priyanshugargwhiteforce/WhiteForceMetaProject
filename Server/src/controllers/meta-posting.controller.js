@@ -122,7 +122,7 @@ exports.publishPost = async (req, res) => {
             await metaPostingQueue.add(
                 'post-to-target',
                 { targetId: targetItem.targetRowId },
-                { jobId: `meta-post-target:${targetItem.targetRowId}` }
+                { jobId: `meta-post-target-${targetItem.targetRowId}` }
             );
         }
 

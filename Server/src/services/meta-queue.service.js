@@ -275,7 +275,7 @@ const recoverQueuedJobs = async () => {
         );
 
         for (const target of strandedTargets) {
-            const jobId = `meta-post-target:${target.id}`;
+            const jobId = `meta-post-target-${target.id}`;
             const existingJob = await metaPostingQueue.getJob(jobId);
             if (!existingJob) {
                 console.log(`[Meta Queue Recovery] Recovering stranded target ID ${target.id}, adding job to queue...`);
