@@ -1155,7 +1155,7 @@ const initSchema = async () => {
                     cdn_url VARCHAR(255) DEFAULT NULL,
                     thumbnail_url VARCHAR(255) DEFAULT NULL,
                     preview_url VARCHAR(255) DEFAULT NULL,
-                    hash VARCHAR(64) NOT NULL UNIQUE,
+                    hash VARCHAR(255) NOT NULL UNIQUE,
                     linkedin_asset_urn VARCHAR(255) DEFAULT NULL,
                     meta_asset_id VARCHAR(255) DEFAULT NULL,
                     google_asset_id VARCHAR(255) DEFAULT NULL,
@@ -1181,6 +1181,7 @@ const initSchema = async () => {
 
             try { await pool.query("ALTER TABLE media_library ADD COLUMN facebook_variant VARCHAR(255) DEFAULT NULL"); } catch (e) {}
             try { await pool.query("ALTER TABLE media_library ADD COLUMN instagram_variant VARCHAR(255) DEFAULT NULL"); } catch (e) {}
+            try { await pool.query("ALTER TABLE media_library MODIFY COLUMN hash VARCHAR(255) NOT NULL"); } catch (e) {}
 
             // Create linkedin_creatives table
             await pool.query(`

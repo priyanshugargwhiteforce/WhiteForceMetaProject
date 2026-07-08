@@ -256,10 +256,44 @@ const deleteAsset = async (id, userId = null) => {
         throw new Error('Media asset not found or already deleted.');
     }
 
-    await pool.query('UPDATE media_library SET is_deleted = 1 WHERE id = ?', [id]);
+    // 1. Delete physical files from disk
+    if (asset.local_path && fs.existsSync(asset.local_path)) {
+        try {
+            fs.unlinkSync(asset.local_path);
+        } catch (err) {
+            console.error('[deleteAsset] Error deleting physical file:', err.message);
+        }
+    }
 
-    // Delete physically if required, but local requirement suggests standard soft delete is enough.
-    // Let's also log
+    if (asset.facebook_variant) {
+        const fbPath = path.join(UPLOADS_DIR, '..', asset.facebook_variant);
+        if (fs.existsSync(fbPath)) {
+            try {
+                fs.unlinkSync(fbPath);
+            } catch (err) {
+                console.error('[deleteAsset] Error deleting facebook variant file:', err.message);
+            }
+        }
+    }
+
+    if (asset.instagram_variant) {
+        const igPath = path.join(UPLOADS_DIR, '..', asset.instagram_variant);
+        if (fs.existsSync(igPath)) {
+            try {
+                fs.unlinkSync(igPath);
+            } catch (err) {
+                console.error('[deleteAsset] Error deleting instagram variant file:', err.message);
+            }
+        }
+    }
+
+    // 2. Mark as soft-deleted and suffix the hash to avoid unique key conflicts
+    await pool.query(
+        'UPDATE media_library SET is_deleted = 1, hash = CONCAT(hash, "-deleted-", uuid) WHERE id = ?',
+        [id]
+    );
+
+    // 3. Log event
     await logSystemWrite(userId, 'MEDIA_DELETED', { id }, asset, 'SUCCESS');
     return true;
 };
