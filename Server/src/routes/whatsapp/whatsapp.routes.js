@@ -7,9 +7,10 @@ const whatsappContactsController = require('../../controllers/whatsapp/whatsapp-
 const whatsappCampaignsController = require('../../controllers/whatsapp/whatsapp-campaigns.controller');
 const { protect, authorizeWhatsapp } = require('../../middlewares/auth.middleware');
 
-// Public Webhook endpoints (No protect middleware)
-router.get('/webhook', whatsappTemplatesController.verifyWebhook);
-router.post('/webhook', whatsappTemplatesController.receiveWebhook);
+// Public Webhook endpoints (No protect middleware) - Handled by Webhook Dispatcher
+const whatsappWebhookController = require('../../controllers/whatsapp/whatsapp-webhook.controller');
+router.get('/webhook', whatsappWebhookController.verifyWebhook);
+router.post('/webhook', whatsappWebhookController.receiveWebhook);
 
 // --- External In-House App Tracking APIs (x-internal-api-key) ---
 const whatsappExternalController = require('../../controllers/whatsapp/whatsapp-external.controller');

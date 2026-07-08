@@ -320,10 +320,27 @@ async function processAndSaveTemplateVariables(templateId, components, originalC
     }
 }
 
+const isKnownWfadmPhoneNumber = async (phoneId) => {
+    if (!phoneId) return false;
+    if (phoneId === process.env.PHONE_NUMBER_ID) return true;
+    
+    try {
+        const [configs] = await pool.query('SELECT 1 FROM whatsapp_configs WHERE phone_number_id = ? LIMIT 1', [phoneId]);
+        if (configs.length > 0) return true;
+
+        const [details] = await pool.query('SELECT 1 FROM whatsapp_phone_details WHERE phone_number_id = ? LIMIT 1', [phoneId]);
+        return details.length > 0;
+    } catch (err) {
+        console.error('[WhatsApp Service] Phone ID lookup failed:', err.message);
+        throw err; // Propagate connection/query errors
+    }
+};
+
 module.exports = {
     resolveWhatsAppConfig,
     getWabaDetails,
     getTemplates,
     logSentMessage,
-    processAndSaveTemplateVariables
+    processAndSaveTemplateVariables,
+    isKnownWfadmPhoneNumber
 };
