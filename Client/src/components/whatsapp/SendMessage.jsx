@@ -251,7 +251,7 @@ const SendMessage = () => {
     const templateObj = templates.find(t => t.name === selectedTemplate);
     const payload = {
       templateName: selectedTemplate,
-      languageCode: templateObj?.language || "en_US"
+      languageCode: templateObj?.language || "en"
     };
 
     if (recipientMode === 'manual') {

@@ -56,6 +56,16 @@ const authorizeMeta = (req, res, next) => {
     next();
 };
 
+const authorizeMetaPublish = (req, res, next) => {
+    if (!req.user || (req.user.role !== 'admin' && req.user.meta_publish !== 1)) {
+        return res.status(403).json({
+            success: false,
+            message: 'Forbidden: You do not have permission to publish to Meta'
+        });
+    }
+    next();
+};
+
 const authorizeGoogle = (req, res, next) => {
     if (!req.user || (req.user.role !== 'admin' && req.user.google_access !== 1)) {
         return res.status(403).json({
@@ -90,6 +100,7 @@ module.exports = {
     protect, 
     authorize,
     authorizeMeta,
+    authorizeMetaPublish,
     authorizeGoogle,
     authorizeWhatsapp,
     authorizeLinkedin

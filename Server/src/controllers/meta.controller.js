@@ -1,5 +1,6 @@
 const metaService = require('../services/meta.service');
 const { pool } = require('../config/db');
+const { encrypt } = require('../utils/crypto');
 
 // Configs CRUD
 exports.getMetaConfigs = async (req, res) => {
@@ -17,7 +18,8 @@ exports.createMetaConfig = async (req, res) => {
         if (!name || !accessToken) {
             return res.status(400).json({ success: false, message: 'Name and Access Token are required.' });
         }
-        const [result] = await pool.query('INSERT INTO meta_configs (name, access_token) VALUES (?, ?)', [name, accessToken]);
+        const encryptedToken = encrypt(accessToken);
+        const [result] = await pool.query('INSERT INTO meta_configs (name, access_token) VALUES (?, ?)', [name, encryptedToken]);
         res.status(201).json({ success: true, message: 'Meta Account Config created.', configId: result.insertId });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -28,7 +30,8 @@ exports.updateMetaConfig = async (req, res) => {
     try {
         const { id } = req.params;
         const { name, accessToken } = req.body;
-        await pool.query('UPDATE meta_configs SET name = ?, access_token = ? WHERE id = ?', [name, accessToken, id]);
+        const encryptedToken = encrypt(accessToken);
+        await pool.query('UPDATE meta_configs SET name = ?, access_token = ? WHERE id = ?', [name, encryptedToken, id]);
         res.json({ success: true, message: 'Meta Account Config updated.' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -295,6 +298,26 @@ exports.getTeamMembers = async (req, res) => {
         });
     } catch (error) {
         console.error('getTeamMembers Controller Error:', error.message);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// @desc    Get Facebook Pages connected to current config
+// @route   GET /api/meta/fb-pages
+// @access  Private
+exports.getFacebookPages = async (req, res) => {
+    try {
+        const configId = req.headers['x-meta-config-id'] || req.query.configId;
+        const pages = await metaService.getFacebookPages(configId);
+        res.status(200).json({
+            success: true,
+            data: pages.data || []
+        });
+    } catch (error) {
+        console.error('getFacebookPages Controller Error:', error.message);
         res.status(500).json({
             success: false,
             message: error.message

@@ -222,8 +222,8 @@ exports.sendFreeTextChat = async (req, res) => {
 
         // 4. Log the sent message
         await pool.query(
-            `INSERT INTO whatsapp_message_logs (phone_number_id, recipient_number, template_name, status, message_id)
-             VALUES (?, ?, ?, ?, ?)`,
+            `INSERT INTO whatsapp_message_logs (phone_number_id, recipient_number, template_name, status, message_id, source_app, message_type, direction)
+             VALUES (?, ?, ?, ?, ?, 'whatsapp_module', 'text', 'outgoing')`,
             [phoneId, recipient.trim(), 'Free-Text Chat', 'sent', messageId]
         );
 

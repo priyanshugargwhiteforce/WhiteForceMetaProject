@@ -42,6 +42,7 @@ const UserManagement = () => {
         google_access: false,
         whatsapp_access: false,
         linkedin_access: false,
+        meta_publish: false,
         manager_id: ''
     });
 
@@ -129,6 +130,7 @@ const UserManagement = () => {
             google_access: !!u.google_access,
             whatsapp_access: !!u.whatsapp_access,
             linkedin_access: !!u.linkedin_access,
+            meta_publish: !!u.meta_publish,
             manager_id: u.manager_id || ''
         });
         setIsEditModalOpen(true);
@@ -145,6 +147,7 @@ const UserManagement = () => {
             google_access: false,
             whatsapp_access: false,
             linkedin_access: false,
+            meta_publish: false,
             manager_id: ''
         });
         setIsCreateModalOpen(true);
@@ -159,6 +162,7 @@ const UserManagement = () => {
                 google_access: formData.google_access,
                 whatsapp_access: formData.whatsapp_access,
                 linkedin_access: formData.linkedin_access,
+                meta_publish: formData.meta_publish,
                 manager_id: formData.manager_id || null
             };
             if (formData.password) updatePayload.password = formData.password;
@@ -353,10 +357,11 @@ const UserManagement = () => {
                                                 ) : (
                                                     <>
                                                         {u.meta_access === 1 && <span className="text-[9px] bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded font-bold uppercase border border-blue-200/20">Meta</span>}
+                                                        {u.meta_publish === 1 && <span className="text-[9px] bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded font-bold uppercase border border-indigo-200/20">Publish</span>}
                                                         {u.google_access === 1 && <span className="text-[9px] bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded font-bold uppercase border border-amber-200/20">Google</span>}
                                                         {u.whatsapp_access === 1 && <span className="text-[9px] bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded font-bold uppercase border border-green-200/20">WhatsApp</span>}
                                                         {u.linkedin_access === 1 && <span className="text-[9px] bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 px-1.5 py-0.5 rounded font-bold uppercase border border-pink-200/20">LinkedIn</span>}
-                                                        {u.meta_access !== 1 && u.google_access !== 1 && u.whatsapp_access !== 1 && u.linkedin_access !== 1 && (
+                                                        {u.meta_access !== 1 && u.meta_publish !== 1 && u.google_access !== 1 && u.whatsapp_access !== 1 && u.linkedin_access !== 1 && (
                                                             <span className="text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-bold uppercase">None</span>
                                                         )}
                                                     </>
@@ -561,7 +566,20 @@ const UserManagement = () => {
                                                 onChange={handleInputChange}
                                                 className="rounded border-[var(--border-color)] text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
                                             />
-                                            <span className="text-xs whitespace-nowrap">Meta Ads</span>
+                                            <span className="text-xs whitespace-nowrap">Meta Ads Access</span>
+                                        </label>
+                                        <label className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${formData.meta_publish
+                                            ? 'border-indigo-500 bg-indigo-500/5 text-indigo-600 dark:text-indigo-400 font-semibold'
+                                            : 'border-[var(--border-color)] bg-[var(--bg-primary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                                            }`}>
+                                            <input
+                                                type="checkbox"
+                                                name="meta_publish"
+                                                checked={!!formData.meta_publish}
+                                                onChange={handleInputChange}
+                                                className="rounded border-[var(--border-color)] text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                                            />
+                                            <span className="text-xs whitespace-nowrap">Meta Publish</span>
                                         </label>
                                         <label className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${formData.google_access
                                             ? 'border-blue-500 bg-blue-500/5 text-blue-600 dark:text-blue-400 font-semibold'

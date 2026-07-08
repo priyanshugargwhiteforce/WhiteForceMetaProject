@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const redisConnection = require('../config/redis');
+const { formatMetaError } = require('../utils/meta-error');
 
 /**
  * Triggers a live query to calculate statistics using the latest status per unique message_id,
@@ -586,7 +587,7 @@ async function getLiveWabaAnalytics({ configId, start, end }) {
     return response.data;
   } catch (error) {
     console.error('Meta API Live Analytics Error:', error.response?.data || error.message);
-    throw new Error(error.response?.data?.error?.message || error.message);
+    throw formatMetaError(error);
   }
 }
 
@@ -631,7 +632,7 @@ async function syncLiveWabaPricing({ configId, start, end }) {
     return { success: true, count: dataPoints.length };
   } catch (error) {
     console.error('Meta API Pricing Analytics Sync Error:', error.response?.data || error.message);
-    throw new Error(error.response?.data?.error?.message || error.message);
+    throw formatMetaError(error);
   }
 }
 

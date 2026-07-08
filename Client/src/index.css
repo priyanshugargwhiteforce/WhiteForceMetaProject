@@ -420,3 +420,8 @@ input:focus {
   text-shadow: 0 0 15px rgba(37, 211, 102, 0.5);
 }
 
+/* Hide theme toggle buttons since theme automatically follows browser/system preferences */
+button:has(.lucide-sun), button:has(.lucide-moon) {
+  display: none !important;
+}
+

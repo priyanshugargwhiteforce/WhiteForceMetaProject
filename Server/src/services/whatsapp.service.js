@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const axios = require('axios');
+const { formatMetaError } = require('../utils/meta-error');
 
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL
 
@@ -113,7 +114,7 @@ const syncWabaDetails = async (configId = null) => {
         return data;
     } catch (error) {
         console.error('Error syncing WABA Details:', error.response?.data || error.message);
-        throw new Error(error.response?.data?.error?.message || error.message);
+        throw formatMetaError(error);
     }
 };
 
@@ -173,7 +174,7 @@ const syncTemplates = async (configId = null) => {
         return data;
     } catch (error) {
         console.error('Error syncing WhatsApp templates:', error.response?.data || error.message);
-        throw new Error(error.response?.data?.error?.message || error.message);
+        throw formatMetaError(error);
     }
 };
 
@@ -204,8 +205,8 @@ const getTemplates = async (forceSync = false, configId = null) => {
 const logSentMessage = async (phoneId, recipient, templateName, status, messageId, sentBy, errorMessage = null) => {
     try {
         await pool.query(
-            `INSERT INTO whatsapp_message_logs (phone_number_id, recipient_number, template_name, status, message_id, sent_by, error_message)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO whatsapp_message_logs (phone_number_id, recipient_number, template_name, status, message_id, sent_by, error_message, source_app, message_type, direction)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'campaign', 'template', 'outgoing')`,
             [phoneId, recipient, templateName, status, messageId, sentBy, errorMessage]
         );
     } catch (error) {

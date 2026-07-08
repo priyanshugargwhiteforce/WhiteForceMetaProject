@@ -24,6 +24,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import axios from 'axios';
+import MediaLibrary from '../media/MediaLibrary';
 
 const WATemplateBuilder = () => {
   const navigate = useNavigate();
@@ -32,10 +33,49 @@ const WATemplateBuilder = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
+  // Media Selector State
+  const [selectedMediaAsset, setSelectedMediaAsset] = useState(null);
+  const [showMediaSelector, setShowMediaSelector] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingMedia(true);
+    setError(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('category', headerType); // IMAGE or DOCUMENT
+    formData.append('name', file.name.split('.').slice(0, -1).join('.'));
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post('/api/media/upload', formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      if (res.data && res.data.data) {
+        setSelectedMediaAsset(res.data.data);
+      } else {
+        throw new Error('Upload succeeded but no asset details returned.');
+      }
+    } catch (err) {
+      console.error('File upload error:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to upload file.');
+    } finally {
+      setUploadingMedia(false);
+    }
+  };
+
   // Form State
   const [name, setName] = useState('');
   const [category, setCategory] = useState('MARKETING');
-  const [language, setLanguage] = useState('en_US');
+  const [language, setLanguage] = useState('en');
 
   // Header State
   const [headerType, setHeaderType] = useState('NONE'); // NONE, TEXT, IMAGE, DOCUMENT
@@ -85,7 +125,7 @@ const WATemplateBuilder = () => {
       const t = location.state.cloneTemplate;
       setName(`clone_${t.name}`);
       setCategory(t.category || 'MARKETING');
-      setLanguage(t.language || 'en_US');
+      setLanguage(t.language === 'en_US' ? 'en' : (t.language || 'en'));
 
       if (t.components && Array.isArray(t.components)) {
         const header = t.components.find(c => c.type === 'HEADER');
@@ -124,7 +164,7 @@ const WATemplateBuilder = () => {
     } else if (type === 'URL') {
       setButtons([...buttons, { type: 'URL', text: 'Visit Website', url: 'https://white-force.com' }]);
     } else if (type === 'PHONE') {
-      setButtons([...buttons, { type: 'PHONE', text: 'Call Support', phone_number: '+1234567890' }]);
+      setButtons([...buttons, { type: 'PHONE', text: 'Call Support', phone_number: '+911234567890' }]);
     }
   };
 
@@ -155,8 +195,31 @@ const WATemplateBuilder = () => {
       if (headerType === 'TEXT') {
         headerObj.text = headerText;
       } else {
+        if (selectedMediaAsset) {
+          headerObj.media_asset_uuid = selectedMediaAsset.uuid;
+        }
+        const hostname = window.location.hostname;
+        const isLocal = hostname === 'localhost' || 
+                        hostname === '127.0.0.1' || 
+                        hostname === '0.0.0.0' || 
+                        hostname.startsWith('192.168.') || 
+                        hostname.startsWith('10.') || 
+                        /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname) ||
+                        hostname.endsWith('.local');
+                        
+        let previewUrl;
+        if (headerType === 'IMAGE') {
+          previewUrl = (!isLocal && selectedMediaAsset)
+            ? `${window.location.protocol}//${window.location.host}/api/media/${selectedMediaAsset.uuid}/preview`
+            : "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80";
+        } else {
+          // DOCUMENT
+          previewUrl = (!isLocal && selectedMediaAsset)
+            ? `${window.location.protocol}//${window.location.host}/api/media/${selectedMediaAsset.uuid}/preview`
+            : "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+        }
         headerObj.example = {
-          header_handle: ["https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80"]
+          header_handle: [previewUrl]
         };
       }
       components.push(headerObj);
@@ -231,7 +294,8 @@ const WATemplateBuilder = () => {
         }, 1500);
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message);
+      setError(err.response?.data?.message || err.message || 'An error occurred while creating template.');
+      console.error('Create template error:', err.response?.data || err);
     } finally {
       setLoading(false);
     }
@@ -338,10 +402,81 @@ const WATemplateBuilder = () => {
             )}
 
             {(headerType === 'IMAGE' || headerType === 'DOCUMENT') && (
-              <div className="p-6 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 border-dashed rounded-xl flex flex-col items-center justify-center text-center">
-                <ImageIcon className="w-8 h-8 text-emerald-500 dark:text-emerald-400 mb-2" />
-                <p className="text-xs font-medium text-slate-700 dark:text-slate-300">Media Header Type: {headerType}</p>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 max-w-sm">Users will attach individual image URLs or PDF files during template broadcasting.</p>
+              <div className="p-5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <span className="text-xs font-bold text-slate-650 dark:text-slate-300 flex items-center">
+                    {headerType === 'IMAGE' ? <ImageIcon className="w-4 h-4 mr-1.5 text-emerald-500" /> : <FileText className="w-4 h-4 mr-1.5 text-emerald-500" />}
+                    Header Media ({headerType})
+                  </span>
+                  
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowMediaSelector(true)}
+                      className="px-3 py-1.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 rounded-lg text-xs font-bold transition-all"
+                    >
+                      Select from Media Library
+                    </button>
+                    <label className="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg text-xs font-bold cursor-pointer transition-all">
+                      Upload New File
+                      <input
+                        type="file"
+                        accept={headerType === 'IMAGE' ? 'image/*' : 'application/pdf'}
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        disabled={uploadingMedia}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Uploading indicator */}
+                {uploadingMedia && (
+                  <div className="flex items-center space-x-2 py-1 text-xs font-bold text-slate-500 animate-pulse">
+                    <div className="w-4 h-4 border-2 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+                    <span>Uploading file to Media Library...</span>
+                  </div>
+                )}
+
+                {/* Selected Asset Info */}
+                {selectedMediaAsset ? (
+                  <div className="p-3 bg-white dark:bg-black/20 border border-slate-200 dark:border-white/5 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center space-x-3 min-w-0">
+                      {headerType === 'IMAGE' ? (
+                        <img
+                          src={`/api/media/${selectedMediaAsset.uuid}/preview`}
+                          alt={selectedMediaAsset.asset_name}
+                          className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-white/10 flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 flex-shrink-0">
+                          <FileText className="w-5 h-5" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-800 dark:text-white truncate" title={selectedMediaAsset.original_filename}>
+                          {selectedMediaAsset.original_filename}
+                        </p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">
+                          Size: {(selectedMediaAsset.file_size / (1024 * 1024)).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMediaAsset(null)}
+                      className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/5 rounded-lg transition-colors"
+                      title="Deselect media"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-6 border border-dashed border-slate-200 dark:border-white/10 rounded-xl text-center text-slate-400">
+                    <p className="text-xs">No media file selected yet.</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Select a file from your library or upload a new one to proceed.</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -574,7 +709,31 @@ const WATemplateBuilder = () => {
                     <div className="font-bold text-slate-900 dark:text-white border-b border-black/5 dark:border-white/5 pb-1 mb-1 text-[13px]">
                       {headerType === 'TEXT' ? (
                         <span dangerouslySetInnerHTML={{ __html: formatWhatsAppText(headerText || 'Header Text Preview') }} />
-                      ) : `[Media Component: ${headerType}]`}
+                      ) : headerType === 'IMAGE' ? (
+                        <div className="relative aspect-[16/10] bg-slate-105 dark:bg-slate-950 rounded-lg overflow-hidden my-1 flex items-center justify-center border border-slate-200/50 dark:border-white/5">
+                          {selectedMediaAsset ? (
+                            <img
+                              src={`/api/media/${selectedMediaAsset.uuid}/preview`}
+                              alt="Header Preview"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex flex-col items-center justify-center p-4 text-slate-400">
+                              <ImageIcon className="w-6 h-6 text-slate-300" />
+                              <span className="text-[10px] mt-1">Image Preview Placeholder</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : headerType === 'DOCUMENT' ? (
+                        <div className="flex items-center space-x-2 p-2 bg-slate-100 dark:bg-black/20 border border-slate-200/50 dark:border-white/5 rounded-lg my-1">
+                          <FileText className="w-5 h-5 text-emerald-500" />
+                          <span className="text-[11px] text-slate-650 dark:text-slate-300 font-medium truncate">
+                            {selectedMediaAsset ? selectedMediaAsset.original_filename : 'Document_Header_Preview.pdf'}
+                          </span>
+                        </div>
+                      ) : (
+                        `[Media Component: ${headerType}]`
+                      )}
                     </div>
                   )}
 
@@ -634,6 +793,38 @@ const WATemplateBuilder = () => {
         </div>
       </div>
     </div>
+
+    {/* Media selector library modal overlay */}
+    {showMediaSelector && (
+      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-[#151f32] border border-slate-200 dark:border-white/10 rounded-3xl w-full max-w-5xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          {/* Modal Header */}
+          <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center">
+              <ImageIcon className="w-5 h-5 mr-2 text-blue-500" />
+              Select Media Asset from Library
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowMediaSelector(false)}
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors"
+            >
+              <Plus className="w-5 h-5 rotate-45" />
+            </button>
+          </div>
+          {/* Modal Body */}
+          <div className="flex-1 overflow-y-auto p-4 bg-slate-50/50 dark:bg-black/10">
+            <MediaLibrary
+              selectMode={true}
+              onSelectAsset={(asset) => {
+                setSelectedMediaAsset(asset);
+                setShowMediaSelector(false);
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    )}
   </div>
   );
 };

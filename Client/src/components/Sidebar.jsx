@@ -98,9 +98,9 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const metaPaths = ['/ad-accounts', '/ad-analyzer', '/single-ad-analyzer', '/insights', '/all-leads', '/ad-owners'];
+  const metaPaths = ['/ad-accounts', '/ad-analyzer', '/single-ad-analyzer', '/insights', '/all-leads', '/ad-owners', '/meta-posting'];
   const googlePaths = ['/google-dashboard', '/google-campaigns', '/google-performance', '/google-insights', '/youtube-ads', '/youtube-shorts'];
-  const waPaths = ['/whatsapp-manager', '/wa-channels', '/wa-templates', '/wa-templates/new', '/send-message', '/wa-analytics', '/wa-contacts', '/wa-campaigns', '/wa-schedules', '/wa-chats'];
+  const waPaths = ['/whatsapp-manager', '/wa-channels', '/wa-templates', '/wa-templates/new', '/send-message', '/wa-analytics', '/wa-contacts', '/wa-campaigns', '/wa-schedules', '/wa-chats', '/wa-external'];
   const settingsPaths = ['/users', '/settings/meta', '/settings/whatsapp'];
   const linkedInPaths = [
     '/linkedin-manager', '/linkedin-campaigns', '/linkedin-analytics', '/linkedin-leads',
@@ -186,55 +186,68 @@ const Sidebar = () => {
           active={isActive('/media-library')}
           onClick={() => navigate('/media-library')}
         />
-        {(user?.role === 'admin' || !!user?.meta_access) && (
+        {(user?.role === 'admin' || !!user?.meta_access || !!user?.meta_publish) && (
           <NavDropdown
             icon={MetaIcon}
             label="Meta Ads"
             open={openMeta}
             onToggle={() => setOpenMeta(!openMeta)}
           >
-            <NavItem
-              icon={Users}
-              label="All Ad Accounts"
-              active={isActive('/ad-accounts')}
-              onClick={() => navigate('/ad-accounts')}
-              isSubItem={true}
-            />
-            <NavItem
-              icon={BarChart3}
-              label="Ad Analyzer"
-              active={isActive('/ad-analyzer')}
-              onClick={() => navigate('/ad-analyzer')}
-              isSubItem={true}
-            />
-            <NavItem
-              icon={Target}
-              label="Single Ad Analyzer"
-              active={isActive('/single-ad-analyzer')}
-              onClick={() => navigate('/single-ad-analyzer')}
-              isSubItem={true}
-            />
-            <NavItem
-              icon={ChartBar}
-              label="Insights & ROI"
-              active={isActive('/insights')}
-              onClick={() => navigate('/insights')}
-              isSubItem={true}
-            />
-            <NavItem
-              icon={FileText}
-              label="All Leads"
-              active={isActive('/all-leads')}
-              onClick={() => navigate('/all-leads')}
-              isSubItem={true}
-            />
-            <NavItem
-              icon={Users}
-              label="Ad Owner"
-              active={isActive('/ad-owners')}
-              onClick={() => navigate('/ad-owners')}
-              isSubItem={true}
-            />
+            {(user?.role === 'admin' || !!user?.meta_access) && (
+              <>
+                <NavItem
+                  icon={Users}
+                  label="All Ad Accounts"
+                  active={isActive('/ad-accounts')}
+                  onClick={() => navigate('/ad-accounts')}
+                  isSubItem={true}
+                />
+                <NavItem
+                  icon={BarChart3}
+                  label="Ad Analyzer"
+                  active={isActive('/ad-analyzer')}
+                  onClick={() => navigate('/ad-analyzer')}
+                  isSubItem={true}
+                />
+                <NavItem
+                  icon={Target}
+                  label="Single Ad Analyzer"
+                  active={isActive('/single-ad-analyzer')}
+                  onClick={() => navigate('/single-ad-analyzer')}
+                  isSubItem={true}
+                />
+                <NavItem
+                  icon={ChartBar}
+                  label="Insights & ROI"
+                  active={isActive('/insights')}
+                  onClick={() => navigate('/insights')}
+                  isSubItem={true}
+                />
+                <NavItem
+                  icon={FileText}
+                  label="All Leads"
+                  active={isActive('/all-leads')}
+                  onClick={() => navigate('/all-leads')}
+                  isSubItem={true}
+                />
+                <NavItem
+                  icon={Users}
+                  label="Ad Owner"
+                  active={isActive('/ad-owners')}
+                  onClick={() => navigate('/ad-owners')}
+                  isSubItem={true}
+                />
+              </>
+            )}
+            {(user?.role === 'admin' || !!user?.meta_publish) && (
+              <NavItem
+                icon={Send}
+                label="Posting"
+                active={isActive('/meta-posting')}
+                onClick={() => navigate('/meta-posting')}
+                isSubItem={true}
+              />
+            )}
           </NavDropdown>
         )}
 
@@ -375,6 +388,14 @@ const Sidebar = () => {
               label="Analytics"
               active={isActive('/wa-analytics')}
               onClick={() => navigate('/wa-analytics')}
+              isSubItem={true}
+              colorScheme="whatsapp"
+            />
+            <NavItem
+              icon={Activity}
+              label="External Tracker"
+              active={isActive('/wa-external')}
+              onClick={() => navigate('/wa-external')}
               isSubItem={true}
               colorScheme="whatsapp"
             />

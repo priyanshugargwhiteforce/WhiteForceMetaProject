@@ -28,6 +28,7 @@ import WAAnalytics from './components/whatsapp/WAAnalytics';
 import WACampaigns from './components/whatsapp/WACampaigns';
 import WASchedules from './components/whatsapp/WASchedules';
 import WAChatWindow from './components/whatsapp/WAChatWindow';
+import WAExternalTracker from './components/whatsapp/WAExternalTracker';
 
 import UserManagement from './components/UserManagement';
 import AllLeads from './components/AllLeads';
@@ -48,6 +49,7 @@ import MediaLibrary from './components/media/MediaLibrary';
 import LinkedInAssetManager from './components/linkedin/LinkedInAssetManager';
 import CreativeBuilder from './components/linkedin/CreativeBuilder';
 import CreativeLibrary from './components/linkedin/CreativeLibrary';
+import MetaPosting from './components/MetaPosting';
 import './App.css';
 
 import Layout from './components/Layout';
@@ -167,6 +169,16 @@ function App() {
                                 <ProtectedRoute>
                                     <PermissionRoute permission="meta_access">
                                         <MetaDashboard />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/meta-posting" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="meta_publish">
+                                        <MetaPosting />
                                     </PermissionRoute>
                                 </ProtectedRoute>
                             } 
@@ -348,6 +360,16 @@ function App() {
                                 <ProtectedRoute>
                                     <PermissionRoute permission="whatsapp_access">
                                         <WASchedules />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/wa-external" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="whatsapp_access">
+                                        <WAExternalTracker />
                                     </PermissionRoute>
                                 </ProtectedRoute>
                             } 

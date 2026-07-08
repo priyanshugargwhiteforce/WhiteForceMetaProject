@@ -75,6 +75,7 @@ exports.createUser = async (req, res) => {
             google_access: google_access ? 1 : 0,
             whatsapp_access: whatsapp_access ? 1 : 0,
             linkedin_access: linkedin_access ? 1 : 0,
+            meta_publish: meta_publish ? 1 : 0,
             manager_id: finalManagerId
         };
 
@@ -92,6 +93,7 @@ exports.createUser = async (req, res) => {
                 google_access: userData.google_access,
                 whatsapp_access: userData.whatsapp_access,
                 linkedin_access: userData.linkedin_access,
+                meta_publish: userData.meta_publish,
                 manager_id: userData.manager_id
             }
         });
@@ -105,7 +107,7 @@ exports.createUser = async (req, res) => {
 // @access  Private/Admin
 exports.updateUser = async (req, res) => {
     try {
-        const { role, status, username, email, password, meta_access, google_access, whatsapp_access, linkedin_access, manager_id } = req.body;
+        const { role, status, username, email, password, meta_access, google_access, whatsapp_access, linkedin_access, meta_publish, manager_id } = req.body;
         
         const targetUser = await User.findById(req.params.id);
         if (!targetUser) {
@@ -142,6 +144,7 @@ exports.updateUser = async (req, res) => {
         if (google_access !== undefined) updateData.google_access = google_access ? 1 : 0;
         if (whatsapp_access !== undefined) updateData.whatsapp_access = whatsapp_access ? 1 : 0;
         if (linkedin_access !== undefined) updateData.linkedin_access = linkedin_access ? 1 : 0;
+        if (meta_publish !== undefined) updateData.meta_publish = meta_publish ? 1 : 0;
         if (finalManagerId !== undefined) updateData.manager_id = finalManagerId ? parseInt(finalManagerId) : null;
         
         if (password) {
@@ -328,9 +331,37 @@ exports.getDashboardStats = async (req, res) => {
             });
         } else {
             // Admin role
+            // 1. Total users
+            const [[userCountRow]] = await pool.query('SELECT COUNT(*) as count FROM users');
+            const totalUsers = userCountRow ? userCountRow.count : 0;
+
+            // 2. Tasks stats
+            const [taskStatusRows] = await pool.query(
+                `SELECT status, COUNT(*) as count 
+                 FROM tasks 
+                 GROUP BY status`
+            );
+
+            const tasksStats = {
+                total: 0,
+                pending: 0,
+                in_progress: 0,
+                completed: 0,
+                cancelled: 0,
+                on_hold: 0
+            };
+            for (const row of taskStatusRows) {
+                if (tasksStats[row.status] !== undefined) {
+                    tasksStats[row.status] = row.count;
+                }
+                tasksStats.total += row.count;
+            }
+
             return res.status(200).json({
                 success: true,
-                role
+                role,
+                totalUsers,
+                tasksStats
             });
         }
 

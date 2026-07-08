@@ -317,7 +317,7 @@ const whatsappWorker = new Worker('whatsapp-campaigns', async (job) => {
     const templatePayload = {
       name: templateObj.name,
       language: {
-        code: templateObj.language || "en_US"
+        code: templateObj.language || "en"
       }
     };
     if (componentsPayload.length > 0) {

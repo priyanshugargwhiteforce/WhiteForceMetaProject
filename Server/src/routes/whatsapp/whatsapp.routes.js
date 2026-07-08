@@ -11,7 +11,31 @@ const { protect, authorizeWhatsapp } = require('../../middlewares/auth.middlewar
 router.get('/webhook', whatsappTemplatesController.verifyWebhook);
 router.post('/webhook', whatsappTemplatesController.receiveWebhook);
 
+// --- External In-House App Tracking APIs (x-internal-api-key) ---
+const whatsappExternalController = require('../../controllers/whatsapp/whatsapp-external.controller');
+
+const validateExternalApiKey = (req, res, next) => {
+    const apiKey = req.headers['x-internal-api-key'];
+    const expectedKey = process.env.INTERNAL_API_KEY || 'company_internal_whatsapp_tracking_secret_2026';
+    
+    if (!apiKey || apiKey !== expectedKey) {
+        return res.status(401).json({ success: false, message: 'Unauthorized: Invalid API Key.' });
+    }
+    
+    const sourceApp = req.body?.source_app || req.query?.source_app;
+    if (!sourceApp) {
+        return res.status(400).json({ success: false, message: 'Invalid or missing source_app.' });
+    }
+    
+    next();
+};
+
+router.post('/track-external-message', validateExternalApiKey, whatsappExternalController.trackExternalMessage);
+router.get('/external/messages', validateExternalApiKey, whatsappExternalController.getExternalMessages);
+router.get('/external/conversation/:phone', validateExternalApiKey, whatsappExternalController.getExternalConversation);
+
 // Apply protection & authorization to all subsequent routes
+
 router.use(protect);
 router.use(authorizeWhatsapp);
 
@@ -136,7 +160,12 @@ router.get('/analytics/live', whatsappAnalyticsController.getLiveWabaAnalytics);
 router.get('/analytics/pricing', whatsappAnalyticsController.getWabaPricingAnalytics);
 router.post('/analytics/pricing/sync', whatsappAnalyticsController.syncWabaPricingAnalytics);
 
-
+// --- Dashboard UI External Tracker routes (Requires JWT Auth protect) ---
+router.get('/dashboard/external-messages', whatsappExternalController.getDashboardExternalMessages);
+router.get('/dashboard/external-conversation/:phone', whatsappExternalController.getDashboardExternalConversation);
+router.get('/dashboard/external-apps', whatsappExternalController.getDashboardExternalApps);
+router.get('/dashboard/external-templates', whatsappExternalController.getDashboardExternalTemplates);
 
 module.exports = router;
+
 
