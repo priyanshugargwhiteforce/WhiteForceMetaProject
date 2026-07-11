@@ -953,6 +953,20 @@ const initSchema = async () => {
         `);
         console.log(' - whatsapp_waba_pricing_analytics table created/verified');
 
+        // WABA Manual billing and payment ledger/history
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS whatsapp_waba_payment_history (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                config_id INT DEFAULT 0,
+                payment_date DATE NOT NULL,
+                amount DECIMAL(15, 2) DEFAULT 0.00,
+                transaction_id VARCHAR(100) DEFAULT NULL,
+                notes TEXT DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - whatsapp_waba_payment_history table created/verified');
+
         // --- Task Management Table ---
         await pool.query(`
             CREATE TABLE IF NOT EXISTS tasks (

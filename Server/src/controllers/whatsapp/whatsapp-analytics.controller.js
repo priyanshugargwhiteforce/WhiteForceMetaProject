@@ -2,7 +2,8 @@ const analyticsService = require('../../services/whatsapp-analytics.service');
 
 exports.getExecutiveDashboard = async (req, res) => {
   try {
-    const kpis = await analyticsService.getExecutiveKPIs();
+    const configId = req.headers['x-whatsapp-config-id'] || req.query.configId;
+    const kpis = await analyticsService.getExecutiveKPIs(configId);
     res.status(200).json({ success: true, ...kpis });
   } catch (error) {
     console.error('getExecutiveDashboard controller error:', error.message);
@@ -12,12 +13,14 @@ exports.getExecutiveDashboard = async (req, res) => {
 
 exports.getCampaignsPerformance = async (req, res) => {
   try {
+    const configId = req.headers['x-whatsapp-config-id'] || req.query.configId;
     const { startDate, endDate, campaignType, status } = req.query;
     const campaigns = await analyticsService.getCampaignPerformance({
       startDate,
       endDate,
       campaignType,
-      status
+      status,
+      configId
     });
     res.status(200).json({ success: true, campaigns });
   } catch (error) {
@@ -28,7 +31,8 @@ exports.getCampaignsPerformance = async (req, res) => {
 
 exports.getTemplatesPerformance = async (req, res) => {
   try {
-    const templates = await analyticsService.getTemplatePerformance();
+    const configId = req.headers['x-whatsapp-config-id'] || req.query.configId;
+    const templates = await analyticsService.getTemplatePerformance(configId);
     res.status(200).json({ success: true, templates });
   } catch (error) {
     console.error('getTemplatesPerformance controller error:', error.message);
@@ -38,7 +42,8 @@ exports.getTemplatesPerformance = async (req, res) => {
 
 exports.getSchedulesPerformance = async (req, res) => {
   try {
-    const schedules = await analyticsService.getSchedulingAnalytics();
+    const configId = req.headers['x-whatsapp-config-id'] || req.query.configId;
+    const schedules = await analyticsService.getSchedulingAnalytics(configId);
     res.status(200).json({ success: true, schedules });
   } catch (error) {
     console.error('getSchedulesPerformance controller error:', error.message);
@@ -48,6 +53,7 @@ exports.getSchedulesPerformance = async (req, res) => {
 
 exports.getTrendsData = async (req, res) => {
   try {
+    const configId = req.headers['x-whatsapp-config-id'] || req.query.configId;
     const { interval, startDate, endDate } = req.query;
     
     // Default to last 30 days if bounds are not provided
@@ -61,7 +67,8 @@ exports.getTrendsData = async (req, res) => {
     const trends = await analyticsService.getTrendsData({
       interval: interval || 'daily',
       startDate: start,
-      endDate: end
+      endDate: end,
+      configId
     });
     
     res.status(200).json({ success: true, trends });
@@ -97,12 +104,14 @@ exports.getCampaignsComparison = async (req, res) => {
 
 exports.exportCampaigns = async (req, res) => {
   try {
+    const configId = req.headers['x-whatsapp-config-id'] || req.query.configId;
     const { startDate, endDate, campaignType, status } = req.query;
     await analyticsService.exportCampaignsCSV({
       startDate,
       endDate,
       campaignType,
-      status
+      status,
+      configId
     }, res);
   } catch (error) {
     console.error('exportCampaigns controller error:', error.message);
@@ -114,7 +123,8 @@ exports.exportCampaigns = async (req, res) => {
 
 exports.exportTemplates = async (req, res) => {
   try {
-    await analyticsService.exportTemplatesCSV(res);
+    const configId = req.headers['x-whatsapp-config-id'] || req.query.configId;
+    await analyticsService.exportTemplatesCSV(configId, res);
   } catch (error) {
     console.error('exportTemplates controller error:', error.message);
     if (!res.headersSent) {
@@ -205,6 +215,57 @@ exports.syncWabaPricingAnalytics = async (req, res) => {
     res.status(200).json({ success: true, result, pricing: rows });
   } catch (error) {
     console.error('syncWabaPricingAnalytics controller error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getWabaPayments = async (req, res) => {
+  try {
+    const configId = req.headers['x-whatsapp-config-id'] || req.query.configId;
+    const data = await analyticsService.getWabaPayments(configId);
+    res.status(200).json({ success: true, ...data });
+  } catch (error) {
+    console.error('getWabaPayments controller error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.addWabaPayment = async (req, res) => {
+  try {
+    const configId = req.headers['x-whatsapp-config-id'] || req.query.configId;
+    const { paymentDate, amount, transactionId, notes } = req.body;
+    
+    if (!paymentDate || !amount) {
+      return res.status(400).json({ success: false, message: 'Payment date and amount are required.' });
+    }
+
+    const data = await analyticsService.addWabaPayment(configId, {
+      paymentDate,
+      amount: parseFloat(amount),
+      transactionId,
+      notes
+    });
+    
+    res.status(201).json({ success: true, message: 'Payment transaction logged successfully.', ...data });
+  } catch (error) {
+    console.error('addWabaPayment controller error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.deleteWabaPayment = async (req, res) => {
+  try {
+    const configId = req.headers['x-whatsapp-config-id'] || req.query.configId;
+    const paymentId = parseInt(req.params.id);
+    
+    if (isNaN(paymentId)) {
+      return res.status(400).json({ success: false, message: 'Invalid payment ID.' });
+    }
+
+    await analyticsService.deleteWabaPayment(configId, paymentId);
+    res.status(200).json({ success: true, message: 'Payment log deleted successfully.' });
+  } catch (error) {
+    console.error('deleteWabaPayment controller error:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };

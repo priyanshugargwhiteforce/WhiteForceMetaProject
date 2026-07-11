@@ -1,6 +1,9 @@
 const { pool } = require('../config/db');
 const redisConnection = require('../config/redis');
 const { formatMetaError } = require('../utils/meta-error');
+const whatsappService = require('./whatsapp.service');
+const axios = require('axios');
+
 
 /**
  * Triggers a live query to calculate statistics using the latest status per unique message_id,
@@ -120,24 +123,29 @@ async function getOrRefreshCampaignAnalytics(campaignId, status) {
 /**
  * Retrieve aggregate Executive dashboard KPIs.
  */
-async function getExecutiveKPIs() {
+async function getExecutiveKPIs(configId) {
+  const { configId: configIdVal } = await whatsappService.resolveWhatsAppConfig(configId);
+
   // First, find all active campaigns and force updates if cached records are stale
   const [activeCampaigns] = await pool.query(
-    "SELECT id, status FROM whatsapp_campaigns WHERE status IN ('draft', 'queued', 'running', 'paused')"
+    "SELECT id, status FROM whatsapp_campaigns WHERE config_id = ? AND status IN ('draft', 'queued', 'running', 'paused')",
+    [configIdVal]
   );
   for (const c of activeCampaigns) {
     await getOrRefreshCampaignAnalytics(c.id, c.status);
   }
 
-  // Sum everything from the cache table (which contains completed + updated active metrics)
+  // Sum everything from the cache table (which contains completed + updated active metrics) scoped to configIdVal
   const [[totals]] = await pool.query(`
     SELECT 
-      SUM(sent_count) as sent_count,
-      SUM(delivered_count) as delivered_count,
-      SUM(read_count) as read_count,
-      SUM(failed_count) as failed_count
-    FROM whatsapp_campaign_analytics
-  `);
+      SUM(a.sent_count) as sent_count,
+      SUM(a.delivered_count) as delivered_count,
+      SUM(a.read_count) as read_count,
+      SUM(a.failed_count) as failed_count
+    FROM whatsapp_campaign_analytics a
+    INNER JOIN whatsapp_campaigns c ON a.campaign_id = c.id
+    WHERE c.config_id = ?
+  `, [configIdVal]);
 
   const sent = parseInt(totals?.sent_count || 0);
   const delivered = parseInt(totals?.delivered_count || 0);
@@ -148,8 +156,26 @@ async function getExecutiveKPIs() {
   const readRate = sent > 0 ? (read / sent) * 100 : 0;
   const failureRate = (sent + failed) > 0 ? (failed / (sent + failed)) * 100 : 0;
 
-  // Total campaigns count
-  const [[{ totalCampaigns }]] = await pool.query('SELECT COUNT(*) as totalCampaigns FROM whatsapp_campaigns');
+  // Total campaigns count scoped to configIdVal
+  const [[{ totalCampaigns }]] = await pool.query(
+    'SELECT COUNT(*) as totalCampaigns FROM whatsapp_campaigns WHERE config_id = ?',
+    [configIdVal]
+  );
+
+  // Sum total WABA spend from pricing analytics scoped to configIdVal
+  const [[spendRow]] = await pool.query(
+    'SELECT SUM(cost) as total_spend FROM whatsapp_waba_pricing_analytics WHERE config_id = ?',
+    [configIdVal]
+  );
+  const totalSpend = parseFloat(spendRow?.total_spend || 0);
+
+  // Sum total WABA paid from manual payments table scoped to configIdVal
+  const [[paidRow]] = await pool.query(
+    'SELECT SUM(amount) as total_paid FROM whatsapp_waba_payment_history WHERE config_id = ?',
+    [configIdVal]
+  );
+  const totalPaid = parseFloat(paidRow?.total_paid || 0);
+  const totalDue = Math.max(0, totalSpend - totalPaid);
 
   return {
     totalCampaigns: totalCampaigns || 0,
@@ -159,14 +185,19 @@ async function getExecutiveKPIs() {
     totalFailed: failed,
     successRate,
     readRate,
-    failureRate
+    failureRate,
+    totalSpend,
+    totalPaid,
+    totalDue
   };
 }
 
 /**
  * Fetch list of campaigns with filtered performance analytics
  */
-async function getCampaignPerformance({ startDate, endDate, campaignType, status }) {
+async function getCampaignPerformance({ startDate, endDate, campaignType, status, configId }) {
+  const { configId: configIdVal } = await whatsappService.resolveWhatsAppConfig(configId);
+
   let query = `
     SELECT c.id, c.name, c.campaign_type, c.status, c.created_at,
            COALESCE(a.sent_count, 0) as sent_count,
@@ -175,9 +206,9 @@ async function getCampaignPerformance({ startDate, endDate, campaignType, status
            COALESCE(a.failed_count, 0) as failed_count
     FROM whatsapp_campaigns c
     LEFT JOIN whatsapp_campaign_analytics a ON c.id = a.campaign_id
-    WHERE 1=1
+    WHERE c.config_id = ?
   `;
-  const params = [];
+  const params = [configIdVal];
 
   if (startDate) {
     query += " AND c.created_at >= ?";
@@ -220,7 +251,9 @@ async function getCampaignPerformance({ startDate, endDate, campaignType, status
 /**
  * Fetch metrics grouped by template name.
  */
-async function getTemplatePerformance() {
+async function getTemplatePerformance(configId) {
+  const { phoneId } = await whatsappService.resolveWhatsAppConfig(configId);
+
   const [rows] = await pool.query(`
     SELECT 
       ml.template_name,
@@ -232,12 +265,13 @@ async function getTemplatePerformance() {
     INNER JOIN (
       SELECT message_id, MAX(id) as max_id
       FROM whatsapp_message_logs
-      WHERE message_id IS NOT NULL
+      WHERE message_id IS NOT NULL AND phone_number_id = ?
       GROUP BY message_id
     ) latest ON latest.max_id = ml.id
+    WHERE ml.phone_number_id = ?
     GROUP BY ml.template_name
     ORDER BY sent_count DESC
-  `);
+  `, [phoneId, phoneId]);
 
   return rows.map(r => {
     const sent = parseInt(r.sent_count || 0);
@@ -260,11 +294,14 @@ async function getTemplatePerformance() {
 /**
  * Retrieve execution analytics from recurring campaigns
  */
-async function getSchedulingAnalytics() {
+async function getSchedulingAnalytics(configId) {
+  const { configId: configIdVal } = await whatsappService.resolveWhatsAppConfig(configId);
+
   // Update child execution caches if running
   const [activeChildren] = await pool.query(
     `SELECT id, status FROM whatsapp_campaigns 
-     WHERE parent_campaign_id IS NOT NULL AND status IN ('draft', 'queued', 'running', 'paused')`
+     WHERE parent_campaign_id IS NOT NULL AND config_id = ? AND status IN ('draft', 'queued', 'running', 'paused')`,
+     [configIdVal]
   );
   for (const child of activeChildren) {
     await getOrRefreshCampaignAnalytics(child.id, child.status);
@@ -285,10 +322,10 @@ async function getSchedulingAnalytics() {
     FROM whatsapp_campaigns parent
     LEFT JOIN whatsapp_campaigns child ON child.parent_campaign_id = parent.id
     LEFT JOIN whatsapp_campaign_analytics analytics ON child.id = analytics.campaign_id
-    WHERE parent.campaign_type = 'recurring'
+    WHERE parent.campaign_type = 'recurring' AND parent.config_id = ?
     GROUP BY parent.id
     ORDER BY parent.created_at DESC
-  `);
+  `, [configIdVal]);
 
   return schedules;
 }
@@ -296,7 +333,8 @@ async function getSchedulingAnalytics() {
 /**
  * Trends data with interval date buckets and JS gap filling
  */
-async function getTrendsData({ interval, startDate, endDate }) {
+async function getTrendsData({ interval, startDate, endDate, configId }) {
+  const { phoneId } = await whatsappService.resolveWhatsAppConfig(configId);
   let dateField;
   if (interval === 'monthly') {
     dateField = "DATE_FORMAT(ml.sent_at, '%Y-%m-01')";
@@ -306,7 +344,7 @@ async function getTrendsData({ interval, startDate, endDate }) {
     dateField = "DATE_FORMAT(ml.sent_at, '%Y-%m-%d')"; // Daily default
   }
 
-  // Retrieve metrics inside date bounds
+  // Retrieve metrics inside date bounds and scoped to phoneId
   const [rows] = await pool.query(`
     SELECT 
         t.date_bucket,
@@ -323,13 +361,14 @@ async function getTrendsData({ interval, startDate, endDate }) {
         INNER JOIN (
             SELECT message_id, MAX(id) as max_id
             FROM whatsapp_message_logs
-            WHERE message_id IS NOT NULL AND sent_at >= ? AND sent_at <= ?
+            WHERE message_id IS NOT NULL AND sent_at >= ? AND sent_at <= ? AND phone_number_id = ?
             GROUP BY message_id
         ) latest ON latest.max_id = ml.id
+        WHERE ml.phone_number_id = ?
     ) t
     GROUP BY t.date_bucket
     ORDER BY t.date_bucket ASC
-  `, [startDate, endDate]);
+  `, [startDate, endDate, phoneId, phoneId]);
 
   // Construct map of values returned from DB
   const dbDataMap = {};
@@ -447,6 +486,8 @@ async function getCampaignsComparison(campaignIds) {
  * Stream filtered campaign data in chunks up to 50,000 rows.
  */
 async function exportCampaignsCSV(filters, res) {
+  const { configId: configIdVal } = await whatsappService.resolveWhatsAppConfig(filters.configId);
+
   try {
     res.writeHead(200, {
       'Content-Type': 'text/csv',
@@ -474,9 +515,9 @@ async function exportCampaignsCSV(filters, res) {
                COALESCE(a.failed_count, 0) as failed_count
         FROM whatsapp_campaigns c
         LEFT JOIN whatsapp_campaign_analytics a ON c.id = a.campaign_id
-        WHERE c.id > ?
+        WHERE c.id > ? AND c.config_id = ?
       `;
-      const params = [lastId];
+      const params = [lastId, configIdVal];
 
       if (filters.startDate) {
         query += " AND c.created_at >= ?";
@@ -539,7 +580,7 @@ async function exportCampaignsCSV(filters, res) {
 /**
  * Stream template metrics in CSV format.
  */
-async function exportTemplatesCSV(res) {
+async function exportTemplatesCSV(configId, res) {
   try {
     res.writeHead(200, {
       'Content-Type': 'text/csv',
@@ -551,7 +592,7 @@ async function exportTemplatesCSV(res) {
 
     res.write('Template Name,Sent,Delivered,Read,Failed,Delivery Rate (%),Read Rate (%)\n');
 
-    const templates = await getTemplatePerformance();
+    const templates = await getTemplatePerformance(configId);
     for (const t of templates) {
       const csvRow = [
         `"${t.template_name.replace(/"/g, '""')}"`,
@@ -570,8 +611,6 @@ async function exportTemplatesCSV(res) {
   }
 }
 
-const whatsappService = require('./whatsapp.service');
-const axios = require('axios');
 
 async function getLiveWabaAnalytics({ configId, start, end }) {
   const { token, wabaId } = await whatsappService.resolveWhatsAppConfig(configId);
@@ -649,6 +688,52 @@ async function getWabaPricingAnalytics({ configId, start, end }) {
   return rows;
 }
 
+async function getWabaPayments(configId) {
+  const { configId: configIdVal } = await whatsappService.resolveWhatsAppConfig(configId);
+
+  // Fetch total spend
+  const [[spendRow]] = await pool.query(
+    'SELECT SUM(cost) as total_spend FROM whatsapp_waba_pricing_analytics WHERE config_id = ?',
+    [configIdVal]
+  );
+  const totalSpend = parseFloat(spendRow?.total_spend || 0);
+
+  // Fetch payments list
+  const [rows] = await pool.query(
+    'SELECT id, payment_date, amount, transaction_id, notes, created_at FROM whatsapp_waba_payment_history WHERE config_id = ? ORDER BY payment_date DESC, id DESC',
+    [configIdVal]
+  );
+
+  const totalPaid = rows.reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0);
+  const totalDue = Math.max(0, totalSpend - totalPaid);
+
+  return {
+    totalSpend,
+    totalPaid,
+    totalDue,
+    payments: rows
+  };
+}
+
+async function addWabaPayment(configId, { paymentDate, amount, transactionId, notes }) {
+  const { configId: configIdVal } = await whatsappService.resolveWhatsAppConfig(configId);
+  const [result] = await pool.query(
+    `INSERT INTO whatsapp_waba_payment_history (config_id, payment_date, amount, transaction_id, notes)
+     VALUES (?, ?, ?, ?, ?)`,
+    [configIdVal, paymentDate, amount, transactionId || null, notes || null]
+  );
+  return { id: result.insertId };
+}
+
+async function deleteWabaPayment(configId, paymentId) {
+  const { configId: configIdVal } = await whatsappService.resolveWhatsAppConfig(configId);
+  const [result] = await pool.query(
+    'DELETE FROM whatsapp_waba_payment_history WHERE id = ? AND config_id = ?',
+    [paymentId, configIdVal]
+  );
+  return { affectedRows: result.affectedRows };
+}
+
 module.exports = {
   refreshCampaignAnalyticsSnapshot,
   getOrRefreshCampaignAnalytics,
@@ -662,5 +747,8 @@ module.exports = {
   exportTemplatesCSV,
   getLiveWabaAnalytics,
   syncLiveWabaPricing,
-  getWabaPricingAnalytics
+  getWabaPricingAnalytics,
+  getWabaPayments,
+  addWabaPayment,
+  deleteWabaPayment
 };

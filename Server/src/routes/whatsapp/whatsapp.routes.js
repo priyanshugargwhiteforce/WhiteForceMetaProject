@@ -161,6 +161,11 @@ router.get('/analytics/live', whatsappAnalyticsController.getLiveWabaAnalytics);
 router.get('/analytics/pricing', whatsappAnalyticsController.getWabaPricingAnalytics);
 router.post('/analytics/pricing/sync', whatsappAnalyticsController.syncWabaPricingAnalytics);
 
+// --- Manual Billing & Payments History Routes ---
+router.get('/analytics/payments', whatsappAnalyticsController.getWabaPayments);
+router.post('/analytics/payments', whatsappAnalyticsController.addWabaPayment);
+router.delete('/analytics/payments/:id', whatsappAnalyticsController.deleteWabaPayment);
+
 // --- Dashboard UI External Tracker routes (Requires JWT Auth protect) ---
 router.get('/dashboard/external-messages', whatsappExternalController.getDashboardExternalMessages);
 router.get('/dashboard/external-conversation/:phone', whatsappExternalController.getDashboardExternalConversation);

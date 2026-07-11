@@ -32,7 +32,9 @@ import {
   ListFilter,
   Info,
   Database,
-  Coins
+  Coins,
+  CreditCard,
+  Trash2
 } from 'lucide-react';
 import axios from 'axios';
 import { useTheme } from '../../context/ThemeContext';
@@ -48,6 +50,7 @@ const WAAnalytics = () => {
 
   const [whatsappConfigs, setWhatsappConfigs] = useState([]);
   const [selectedConfigId, setSelectedConfigId] = useState(localStorage.getItem('selectedWhatsAppConfigId') || '');
+  const [currency, setCurrency] = useState('INR');
 
 
   // Dashboard & KPIs
@@ -55,12 +58,34 @@ const WAAnalytics = () => {
   const [kpisLoading, setKpisLoading] = useState(true);
   const [kpisError, setKpisError] = useState(null);
 
+  const getCurrencySymbol = (code) => {
+    switch (code) {
+      case 'INR': return '₹';
+      case 'USD': return '$';
+      case 'EUR': return '€';
+      case 'GBP': return '£';
+      default: return code + ' ';
+    }
+  };
+
   // Trends
   const [trends, setTrends] = useState([]);
   const [trendInterval, setTrendInterval] = useState('daily');
   const [trendStartDate, setTrendStartDate] = useState('');
   const [trendEndDate, setTrendEndDate] = useState('');
   const [trendsLoading, setTrendsLoading] = useState(false);
+
+  // Payment History State
+  const [paymentsList, setPaymentsList] = useState([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [paymentsError, setPaymentsError] = useState(null);
+
+  // Log Payment Form State
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentTxId, setPaymentTxId] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [loggingPayment, setLoggingPayment] = useState(false);
 
   // Campaigns Performance
   const [campaigns, setCampaigns] = useState([]);
@@ -129,15 +154,102 @@ const WAAnalytics = () => {
     fetchConfigs();
   }, []);
 
+  const fetchWabaCurrency = async () => {
+    try {
+      const res = await axios.get('/api/whatsapp/details', {
+        headers: getHeaders()
+      });
+      if (res.data.success && res.data.data?.waba?.currency) {
+        setCurrency(res.data.data.waba.currency);
+      }
+    } catch (err) {
+      setCurrency('INR');
+    }
+  };
+
   useEffect(() => {
     fetchExecutiveKPIs();
     fetchTrendsData();
     fetchQueueHealth();
+    fetchWabaCurrency();
   }, [selectedConfigId]);
 
   useEffect(() => {
     fetchTrendsData();
   }, [trendInterval, trendStartDate, trendEndDate, selectedConfigId]);
+
+  const fetchPaymentHistory = async () => {
+    try {
+      setPaymentsLoading(true);
+      setPaymentsError(null);
+      const res = await axios.get(`${API_BASE}/analytics/payments`, { headers: getHeaders() });
+      if (res.data.success) {
+        setPaymentsList(res.data.payments || []);
+        // Dynamically align totals
+        if (kpis) {
+          setKpis(prev => prev ? ({
+            ...prev,
+            totalSpend: res.data.totalSpend,
+            totalPaid: res.data.totalPaid,
+            totalDue: res.data.totalDue
+          }) : null);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching payments:', err);
+      setPaymentsError(err.response?.data?.message || err.message);
+    } finally {
+      setPaymentsLoading(false);
+    }
+  };
+
+  const handleLogPayment = async (e) => {
+    e.preventDefault();
+    if (!paymentDate || !paymentAmount) {
+      alert('Date and Amount are required.');
+      return;
+    }
+    try {
+      setLoggingPayment(true);
+      const res = await axios.post(`${API_BASE}/analytics/payments`, {
+        paymentDate,
+        amount: parseFloat(paymentAmount),
+        transactionId: paymentTxId,
+        notes: paymentNotes
+      }, { headers: getHeaders() });
+
+      if (res.data.success) {
+        setPaymentAmount('');
+        setPaymentTxId('');
+        setPaymentNotes('');
+        alert('Payment transaction logged successfully!');
+        fetchPaymentHistory();
+        fetchExecutiveKPIs();
+      }
+    } catch (err) {
+      console.error('Error logging payment:', err);
+      alert(err.response?.data?.message || err.message || 'Failed to log payment transaction.');
+    } finally {
+      setLoggingPayment(false);
+    }
+  };
+
+  const handleDeletePayment = async (paymentId) => {
+    if (!window.confirm('Are you sure you want to delete this payment log?')) {
+      return;
+    }
+    try {
+      const res = await axios.delete(`${API_BASE}/analytics/payments/${paymentId}`, { headers: getHeaders() });
+      if (res.data.success) {
+        alert('Payment log deleted successfully.');
+        fetchPaymentHistory();
+        fetchExecutiveKPIs();
+      }
+    } catch (err) {
+      console.error('Error deleting payment:', err);
+      alert(err.response?.data?.message || err.message || 'Failed to delete payment transaction.');
+    }
+  };
 
   useEffect(() => {
     if (activeTab === 'campaigns') {
@@ -146,6 +258,8 @@ const WAAnalytics = () => {
       fetchTemplatesPerformance();
     } else if (activeTab === 'schedules') {
       fetchSchedulesPerformance();
+    } else if (activeTab === 'waba-payments') {
+      fetchPaymentHistory();
     }
   }, [activeTab, selectedConfigId]);
 
@@ -418,6 +532,7 @@ const WAAnalytics = () => {
           { id: 'templates', label: 'Template Analytics', icon: CheckCircle2 },
           { id: 'live-templates', label: 'All Template Analytics', icon: TrendingUp },
           { id: 'waba-pricing', label: 'WABA Pricing Analytics', icon: Coins },
+          { id: 'waba-payments', label: 'Payment History', icon: CreditCard },
           { id: 'schedules', label: 'Recurring Schedules', icon: Clock }
         ].map(tab => {
 
@@ -444,12 +559,25 @@ const WAAnalytics = () => {
       {activeTab === 'overview' && (
         <div className="space-y-8">
 
-          {/* Executive KPI Cards Row */}
+          {/* Executive KPI Cards Row (Partitioned) */}
           {kpisLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[1, 2, 3, 4].map(n => (
-                <div key={n} className="h-32 bg-slate-100 dark:bg-slate-900/40 animate-pulse border border-slate-200 dark:border-white/5 rounded-2xl"></div>
-              ))}
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <div className="h-4 w-48 bg-slate-100 dark:bg-slate-900/40 rounded animate-pulse"></div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {[1, 2, 3].map(n => (
+                    <div key={n} className="h-28 bg-slate-100 dark:bg-slate-900/40 animate-pulse border border-slate-200 dark:border-white/5 rounded-2xl"></div>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 w-48 bg-slate-100 dark:bg-slate-900/40 rounded animate-pulse"></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <div key={n} className="h-28 bg-slate-100 dark:bg-slate-900/40 animate-pulse border border-slate-200 dark:border-white/5 rounded-2xl"></div>
+                  ))}
+                </div>
+              </div>
             </div>
           ) : kpisError ? (
             <div className="p-6 bg-red-500/10 dark:bg-red-950/20 border border-red-500/20 rounded-2xl flex items-center space-x-3 text-red-600 dark:text-red-400">
@@ -457,35 +585,89 @@ const WAAnalytics = () => {
               <span>{kpisError}</span>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <KPICard
-                title="Total Campaigns"
-                value={kpis.totalCampaigns}
-                subtext="Created configurations"
-                icon={Layers}
-                color="indigo"
-              />
-              <KPICard
-                title="Success (Delivery) Rate"
-                value={`${(kpis.successRate || 0).toFixed(1)}%`}
-                subtext={`${kpis.totalDelivered} of ${kpis.totalSent} delivered`}
-                icon={CheckCircle}
-                color="emerald"
-              />
-              <KPICard
-                title="Read Rate"
-                value={`${(kpis.readRate || 0).toFixed(1)}%`}
-                subtext={`${kpis.totalRead} messages opened`}
-                icon={TrendingUp}
-                color="blue"
-              />
-              <KPICard
-                title="Failure Rate"
-                value={`${(kpis.failureRate || 0).toFixed(1)}%`}
-                subtext={`${kpis.totalFailed} messages undelivered`}
-                icon={XCircle}
-                color="red"
-              />
+            <div className="space-y-8 animate-in fade-in duration-300">
+              {/* Partition 1: Financial Overview */}
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-white/5 pb-2">
+                  <Coins className="w-4 h-4 text-amber-500" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Billing & WABA Cost Audit</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <KPICard
+                    title="Total WABA Spend"
+                    value={`${getCurrencySymbol(currency)}${(kpis.totalSpend || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    subtext="Total conversation costs in Meta"
+                    icon={Coins}
+                    color="indigo"
+                  />
+                  <KPICard
+                    title="Total Amount Paid"
+                    value={`${getCurrencySymbol(currency)}${(kpis.totalPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    subtext="Logged payment transactions"
+                    icon={CheckCircle}
+                    color="emerald"
+                  />
+                  <KPICard
+                    title="Amount Due"
+                    value={
+                      <span className="flex items-baseline flex-wrap gap-1.5">
+                        <span>{getCurrencySymbol(currency)}{(kpis.totalDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className="text-[10px] text-slate-550 dark:text-slate-400 font-medium whitespace-nowrap">
+                          + {getCurrencySymbol(currency)}{((kpis.totalDue || 0) * 0.18).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} estimated tax
+                        </span>
+                      </span>
+                    }
+                    subtext="Remaining outstanding balance"
+                    icon={AlertCircle}
+                    color="amber"
+                  />
+                </div>
+              </div>
+
+              {/* Partition 2: Messaging Performance Summary */}
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-white/5 pb-2">
+                  <Activity className="w-4 h-4 text-emerald-500" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Messaging & Campaign Performance</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                  <KPICard
+                    title="Total Campaigns"
+                    value={kpis.totalCampaigns}
+                    subtext="Created configurations"
+                    icon={Layers}
+                    color="indigo"
+                  />
+                  <KPICard
+                    title="Messages Delivered"
+                    value={(kpis.totalDelivered || 0).toLocaleString()}
+                    subtext="Successfully reached user"
+                    icon={MessageSquare}
+                    color="blue"
+                  />
+                  <KPICard
+                    title="Success (Delivery) Rate"
+                    value={`${(kpis.successRate || 0).toFixed(1)}%`}
+                    subtext={`${kpis.totalDelivered} of ${kpis.totalSent} sent`}
+                    icon={CheckCircle}
+                    color="emerald"
+                  />
+                  <KPICard
+                    title="Read Rate"
+                    value={`${(kpis.readRate || 0).toFixed(1)}%`}
+                    subtext={`${kpis.totalRead} messages opened`}
+                    icon={TrendingUp}
+                    color="blue"
+                  />
+                  <KPICard
+                    title="Failure Rate"
+                    value={`${(kpis.failureRate || 0).toFixed(1)}%`}
+                    subtext={`${kpis.totalFailed} messages failed`}
+                    icon={XCircle}
+                    color="red"
+                  />
+                </div>
+              </div>
             </div>
           )}
 
@@ -1023,6 +1205,219 @@ const WAAnalytics = () => {
         <WAPricingAnalytics selectedConfigId={selectedConfigId} />
       )}
 
+      {activeTab === 'waba-payments' && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          {/* Header Panel */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900/40 p-4 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm dark:shadow-md">
+            <div className="flex flex-col items-start leading-none">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center">
+                <CreditCard className="w-4.5 h-4.5 text-emerald-500 mr-2" />
+                Payment & Billing Ledger
+              </h3>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold mt-1">Manual transaction bookkeeping and remaining dues calculation for WABA</p>
+            </div>
+
+            <button
+              onClick={fetchPaymentHistory}
+              disabled={paymentsLoading}
+              className="flex items-center space-x-2 px-4 py-2 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 rounded-xl transition-all border border-emerald-500/20 font-semibold text-xs disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${paymentsLoading ? 'animate-spin' : ''}`} />
+              <span>Refresh Ledger</span>
+            </button>
+          </div>
+
+          {/* Payment Summary KPI Row */}
+          {paymentsLoading && paymentsList.length === 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3].map(n => (
+                <div key={n} className="h-28 bg-slate-100 dark:bg-slate-900/40 animate-pulse border border-slate-200 dark:border-white/5 rounded-2xl"></div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <KPICard
+                title="Total WABA Spend"
+                value={`${getCurrencySymbol(currency)}${(kpis?.totalSpend || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                subtext="Calculated WABA conversation costs"
+                icon={Coins}
+                color="indigo"
+              />
+              <KPICard
+                title="Total WABA Paid"
+                value={`${getCurrencySymbol(currency)}${(kpis?.totalPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                subtext="Total logged transaction payments"
+                icon={CheckCircle}
+                color="emerald"
+              />
+              <KPICard
+                title="Amount Due"
+                value={
+                  <span className="flex items-baseline flex-wrap gap-1.5">
+                    <span>{getCurrencySymbol(currency)}{(kpis?.totalDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="text-[10px] text-slate-550 dark:text-slate-400 font-medium whitespace-nowrap">
+                      + {getCurrencySymbol(currency)}{((kpis?.totalDue || 0) * 0.18).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} estimated tax
+                    </span>
+                  </span>
+                }
+                subtext="Remaining outstanding balance due"
+                icon={AlertCircle}
+                color="amber"
+              />
+            </div>
+          )}
+
+          {/* Form & List Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Form Column */}
+            <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-md dark:shadow-xl space-y-4">
+              <div>
+                <h4 className="text-sm font-bold text-slate-800 dark:text-white mb-1">Log WABA Payment</h4>
+                <p className="text-[10px] text-slate-500 font-medium">Record a manual transaction payment log</p>
+              </div>
+
+              <form onSubmit={handleLogPayment} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Payment Date</label>
+                  <div className="flex items-center space-x-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-xl text-xs">
+                    <Calendar className="w-3.5 h-3.5 text-slate-450" />
+                    <input
+                      type="date"
+                      required
+                      value={paymentDate}
+                      onChange={(e) => setPaymentDate(e.target.value)}
+                      className="bg-transparent text-slate-700 dark:text-slate-350 focus:outline-none w-full"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Amount Paid ({currency})</label>
+                  <div className="flex items-center space-x-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-xl text-xs">
+                    <Coins className="w-3.5 h-3.5 text-slate-455" />
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      placeholder="e.g. 500.00"
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                      className="bg-transparent text-slate-700 dark:text-slate-350 focus:outline-none w-full"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Transaction ID / Reference</label>
+                  <div className="flex items-center space-x-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-xl text-xs">
+                    <CreditCard className="w-3.5 h-3.5 text-slate-460" />
+                    <input
+                      type="text"
+                      placeholder="e.g. TXN-98725"
+                      value={paymentTxId}
+                      onChange={(e) => setPaymentTxId(e.target.value)}
+                      className="bg-transparent text-slate-700 dark:text-slate-350 focus:outline-none w-full"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Notes / Reference Remarks</label>
+                  <textarea
+                    placeholder="e.g. Bank transfer receipt attached."
+                    rows="3"
+                    value={paymentNotes}
+                    onChange={(e) => setPaymentNotes(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-xl text-xs text-slate-700 dark:text-slate-350 focus:outline-none focus:border-emerald-500 transition-all resize-none"
+                  ></textarea>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loggingPayment}
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/10 disabled:opacity-50"
+                >
+                  {loggingPayment ? 'Logging Transaction...' : 'Save Payment Entry'}
+                </button>
+              </form>
+            </div>
+
+            {/* List Column */}
+            <div className="lg:col-span-2 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-3xl shadow-sm dark:shadow-xl overflow-hidden flex flex-col justify-between">
+              <div className="p-6 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/20">
+                <h4 className="text-sm font-bold text-slate-800 dark:text-white">Payment Ledger Audit Trail</h4>
+                <p className="text-xs text-slate-500 mt-1">Audit logs of all recorded conversation payments made to date</p>
+              </div>
+
+              {paymentsList.length > 0 ? (
+                <div className="overflow-x-auto flex-1 max-h-[450px]">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 dark:bg-slate-950/40 border-b border-slate-200 dark:border-white/5 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        <th className="py-3 px-6">Payment Date</th>
+                        <th className="py-3 px-6">Transaction ID</th>
+                        <th className="py-3 px-6">Notes / Remarks</th>
+                        <th className="py-3 px-6 text-right">Amount Paid</th>
+                        <th className="py-3 px-6 text-right">GST (18%)</th>
+                        <th className="py-3 px-6 text-right">WA Amount</th>
+                        <th className="py-3 px-6 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-xs text-slate-700 dark:text-slate-400">
+                      {paymentsList.map((pay) => {
+                        const totalPaid = parseFloat(pay.amount || 0);
+                        const waAmount = totalPaid / 1.18;
+                        const gstAmount = totalPaid - waAmount;
+                        return (
+                          <tr key={pay.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.01] transition-all">
+                            <td className="py-3 px-6 font-semibold">
+                              {new Date(pay.payment_date).toLocaleDateString(undefined, {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </td>
+                            <td className="py-3 px-6 font-mono text-[10px] font-bold text-slate-650 dark:text-slate-350">
+                              {pay.transaction_id || <span className="text-slate-400 italic">N/A</span>}
+                            </td>
+                            <td className="py-3 px-6 text-slate-500 max-w-[200px] truncate" title={pay.notes}>
+                              {pay.notes || <span className="text-slate-400 italic">None</span>}
+                            </td>
+                            <td className="py-3 px-6 text-right font-extrabold text-emerald-500 dark:text-emerald-400">
+                              {getCurrencySymbol(currency)}{totalPaid.toFixed(2)}
+                            </td>
+                            <td className="py-3 px-6 text-right font-bold text-indigo-500 dark:text-indigo-400">
+                              {getCurrencySymbol(currency)}{gstAmount.toFixed(2)}
+                            </td>
+                            <td className="py-3 px-6 text-right font-bold text-blue-500 dark:text-blue-400">
+                              {getCurrencySymbol(currency)}{waAmount.toFixed(2)}
+                            </td>
+                            <td className="py-3 px-6 text-center">
+                              <button
+                                onClick={() => handleDeletePayment(pay.id)}
+                                className="text-red-500 hover:text-red-700 hover:scale-105 transition-all p-1"
+                                title="Delete Transaction Log"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-12 text-center text-slate-500 italic flex-1 flex items-center justify-center">
+                  No payment entries logged for this account configuration yet.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'schedules' && (
 
 
@@ -1149,10 +1544,11 @@ const WAAnalytics = () => {
 
 const KPICard = ({ title, value, subtext, icon: Icon, color }) => {
   const colorMap = {
-    indigo: 'from-emerald-500/10 to-emerald-500/5 text-emerald-400 border-emerald-500/10',
-    emerald: 'from-emerald-500/10 to-emerald-500/5 text-emerald-400 border-emerald-500/10',
-    blue: 'from-emerald-500/10 to-emerald-500/5 text-emerald-400 border-emerald-500/10',
-    red: 'from-red-500/10 to-red-500/5 text-red-400 border-red-500/10',
+    indigo: 'from-indigo-500/10 to-indigo-500/5 text-indigo-600 dark:text-indigo-400 border-indigo-500/10',
+    emerald: 'from-emerald-500/10 to-emerald-500/5 text-emerald-600 dark:text-emerald-400 border-emerald-500/10',
+    blue: 'from-blue-500/10 to-blue-500/5 text-blue-600 dark:text-blue-400 border-blue-500/10',
+    red: 'from-red-500/10 to-red-500/5 text-red-650 dark:text-red-400 border-red-500/10',
+    amber: 'from-amber-500/10 to-amber-500/5 text-amber-600 dark:text-amber-400 border-amber-500/10',
   };
 
   return (
