@@ -26,7 +26,8 @@ import {
   MessageSquare,
   FolderOpen,
   Video,
-  Play
+  Play,
+  X
 } from 'lucide-react';
 import logo from "../assets/white-forcelogo.png";
 
@@ -92,10 +93,14 @@ const WhatsAppIcon = ({ className }) => (
   </svg>
 );
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose }) => {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const baseNavigate = useNavigate();
+  const navigate = (path) => {
+    baseNavigate(path);
+    if (onClose) onClose();
+  };
   const location = useLocation();
 
   const metaPaths = ['/ad-accounts', '/ad-analyzer', '/single-ad-analyzer', '/insights', '/all-leads', '/ad-owners', '/meta-posting'];
@@ -108,12 +113,8 @@ const Sidebar = () => {
     '/linkedin-creatives/new', '/linkedin-creatives', '/linkedin-ads', '/linkedin-ads/new'
   ];
 
-  const [openMeta, setOpenMeta] = useState(metaPaths.includes(location.pathname) || location.pathname === '/');
-  const [openGoogle, setOpenGoogle] = useState(googlePaths.includes(location.pathname) || location.pathname.startsWith('/youtube-ad') || location.pathname === '/youtube-shorts');
+  const [openDropdown, setOpenDropdown] = useState(null);
   const [openYoutube, setOpenYoutube] = useState(location.pathname.startsWith('/youtube-'));
-  const [openWhatsApp, setOpenWhatsApp] = useState(waPaths.includes(location.pathname));
-  const [openLinkedIn, setOpenLinkedIn] = useState(linkedInPaths.includes(location.pathname) || location.pathname.startsWith('/linkedin-'));
-  const [openSettings, setOpenSettings] = useState(settingsPaths.includes(location.pathname));
 
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -134,16 +135,17 @@ const Sidebar = () => {
 
   useEffect(() => {
     const path = location.pathname;
-    if (metaPaths.includes(path)) setOpenMeta(true);
-    if (googlePaths.includes(path) || path.startsWith('/youtube-')) {
-      setOpenGoogle(true);
+    if (metaPaths.includes(path)) setOpenDropdown('meta');
+    else if (googlePaths.includes(path) || path.startsWith('/youtube-')) {
+      setOpenDropdown('google');
       if (path.startsWith('/youtube-')) {
         setOpenYoutube(true);
       }
     }
-    if (waPaths.includes(path)) setOpenWhatsApp(true);
-    if (linkedInPaths.includes(path) || path.startsWith('/linkedin-')) setOpenLinkedIn(true);
-    if (settingsPaths.includes(path)) setOpenSettings(true);
+    else if (waPaths.includes(path)) setOpenDropdown('whatsapp');
+    else if (linkedInPaths.includes(path) || path.startsWith('/linkedin-')) setOpenDropdown('linkedin');
+    else if (settingsPaths.includes(path)) setOpenDropdown('settings');
+    else setOpenDropdown(null);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -153,18 +155,41 @@ const Sidebar = () => {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <aside className="w-72 border-r border-slate-200 dark:border-white/5 bg-[var(--bg-sidebar)] backdrop-blur-3xl hidden md:flex flex-col sticky top-0 h-screen transition-colors duration-300">
-      <div className="p-8">
-        <div className="flex items-center space-x-3 mb-2">
-          <div className="flex items-center justify-center">
-            <img src={logo} alt="Logo" className="w-15 h-10 object-cover" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight leading-none transition-colors">White Force</h1>
-            <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] mt-1 transition-colors">Ad Management</p>
+    <>
+      {/* Mobile Sidebar Backdrop Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm md:hidden transition-opacity duration-300"
+          onClick={onClose}
+        />
+      )}
+
+      <aside className={`
+        w-72 border-r border-slate-200 dark:border-white/5 bg-[var(--bg-sidebar)] backdrop-blur-3xl 
+        flex flex-col fixed inset-y-0 left-0 z-[70] md:sticky md:top-0 h-screen transition-transform transition-colors duration-300
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+      `}>
+        {/* Close Button on Mobile Sidebar */}
+        <div className="flex md:hidden justify-end p-4 absolute right-2 top-2 z-50">
+          <button 
+            onClick={onClose}
+            className="p-2 bg-slate-100/50 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 rounded-xl text-slate-500 transition-all cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-8">
+          <div className="flex items-center space-x-3 mb-2">
+            <div className="flex items-center justify-center">
+              <img src={logo} alt="Logo" className="w-15 h-10 object-cover" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight leading-none transition-colors">White Force</h1>
+              <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] mt-1 transition-colors">Ad Management</p>
+            </div>
           </div>
         </div>
-      </div>
 
       <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto pt-4">
         <NavItem
@@ -190,8 +215,8 @@ const Sidebar = () => {
           <NavDropdown
             icon={MetaIcon}
             label="Meta Ads"
-            open={openMeta}
-            onToggle={() => setOpenMeta(!openMeta)}
+            open={openDropdown === 'meta'}
+            onToggle={() => setOpenDropdown(openDropdown === 'meta' ? null : 'meta')}
           >
             {(user?.role === 'admin' || !!user?.meta_access) && (
               <>
@@ -255,8 +280,8 @@ const Sidebar = () => {
           <NavDropdown
             icon={GoogleIcon}
             label="Google Ads"
-            open={openGoogle}
-            onToggle={() => setOpenGoogle(!openGoogle)}
+            open={openDropdown === 'google'}
+            onToggle={() => setOpenDropdown(openDropdown === 'google' ? null : 'google')}
           >
             <NavItem
               icon={Users}
@@ -315,8 +340,8 @@ const Sidebar = () => {
           <NavDropdown
             icon={WhatsAppIcon}
             label="WhatsApp Manager"
-            open={openWhatsApp}
-            onToggle={() => setOpenWhatsApp(!openWhatsApp)}
+            open={openDropdown === 'whatsapp'}
+            onToggle={() => setOpenDropdown(openDropdown === 'whatsapp' ? null : 'whatsapp')}
             colorScheme="whatsapp"
           >
             <NavItem
@@ -407,8 +432,8 @@ const Sidebar = () => {
           <NavDropdown
             icon={LinkedInIcon}
             label="LinkedIn Ads"
-            open={openLinkedIn}
-            onToggle={() => setOpenLinkedIn(!openLinkedIn)}
+            open={openDropdown === 'linkedin'}
+            onToggle={() => setOpenDropdown(openDropdown === 'linkedin' ? null : 'linkedin')}
           >
             <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-3 pt-2 pb-1">
               Reporting
@@ -508,8 +533,8 @@ const Sidebar = () => {
             <NavDropdown
               icon={Settings}
               label="Settings"
-              open={openSettings}
-              onToggle={() => setOpenSettings(!openSettings)}
+              open={openDropdown === 'settings'}
+              onToggle={() => setOpenDropdown(openDropdown === 'settings' ? null : 'settings')}
             >
               <NavItem
                 icon={Users}
@@ -559,6 +584,7 @@ const Sidebar = () => {
         </button>
       </div>
     </aside>
+    </>
   );
 };
 
