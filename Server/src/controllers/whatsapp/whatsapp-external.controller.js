@@ -386,13 +386,26 @@ exports.getDashboardExternalConversation = async (req, res) => {
             [normalizedPhone]
         );
 
+        const templateNames = [...new Set(rows.map(r => r.template_name).filter(Boolean))];
+        const templatesMap = {};
+        if (templateNames.length > 0) {
+            const [templates] = await pool.query(
+                `SELECT name, components FROM whatsapp_templates WHERE name IN (?)`,
+                [templateNames]
+            );
+            templates.forEach(t => {
+                templatesMap[t.name] = typeof t.components === 'string' ? JSON.parse(t.components) : t.components;
+            });
+        }
+
         return res.status(200).json({
             success: true,
             phone: normalizedPhone,
             conversation: rows.map(r => ({
                 ...r,
                 template_params_json: typeof r.template_params_json === 'string' ? JSON.parse(r.template_params_json) : r.template_params_json,
-                meta_response_json: typeof r.meta_response_json === 'string' ? JSON.parse(r.meta_response_json) : r.meta_response_json
+                meta_response_json: typeof r.meta_response_json === 'string' ? JSON.parse(r.meta_response_json) : r.meta_response_json,
+                template_components: templatesMap[r.template_name] || null
             }))
         });
 

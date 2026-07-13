@@ -602,7 +602,14 @@ const WAAnalytics = () => {
                   />
                   <KPICard
                     title="Total Amount Paid"
-                    value={`${getCurrencySymbol(currency)}${(kpis.totalPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    value={
+                      <span className="flex items-baseline flex-wrap gap-1.5">
+                        <span>{getCurrencySymbol(currency)}{((kpis.totalPaid || 0) * 0.82).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className="text-[10px] text-slate-550 dark:text-slate-400 font-medium whitespace-nowrap">
+                          ({getCurrencySymbol(currency)}{((kpis.totalPaid || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} with GST Paid Amount)
+                        </span>
+                      </span>
+                    }
                     subtext="Logged payment transactions"
                     icon={CheckCircle}
                     color="emerald"
@@ -1245,7 +1252,14 @@ const WAAnalytics = () => {
               />
               <KPICard
                 title="Total WABA Paid"
-                value={`${getCurrencySymbol(currency)}${(kpis?.totalPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                value={
+                  <span className="flex items-baseline flex-wrap gap-1.5">
+                    <span>{getCurrencySymbol(currency)}{((kpis?.totalPaid || 0) * 0.82).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="text-[10px] text-slate-550 dark:text-slate-400 font-medium whitespace-nowrap">
+                      ({getCurrencySymbol(currency)}{((kpis?.totalPaid || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} with GST Paid Amount)
+                    </span>
+                  </span>
+                }
                 subtext="Total logged transaction payments"
                 icon={CheckCircle}
                 color="emerald"
@@ -1357,16 +1371,16 @@ const WAAnalytics = () => {
                         <th className="py-3 px-6">Payment Date</th>
                         <th className="py-3 px-6">Transaction ID</th>
                         <th className="py-3 px-6">Notes / Remarks</th>
-                        <th className="py-3 px-6 text-right">Amount Paid</th>
-                        <th className="py-3 px-6 text-right">GST (18%)</th>
                         <th className="py-3 px-6 text-right">WA Amount</th>
+                        <th className="py-3 px-6 text-right">GST (18%)</th>
+                        <th className="py-3 px-6 text-right">Amount Paid</th>
                         <th className="py-3 px-6 text-center">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-xs text-slate-700 dark:text-slate-400">
                       {paymentsList.map((pay) => {
                         const totalPaid = parseFloat(pay.amount || 0);
-                        const waAmount = totalPaid / 1.18;
+                        const waAmount = totalPaid - (totalPaid * 0.18);
                         const gstAmount = totalPaid - waAmount;
                         return (
                           <tr key={pay.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.01] transition-all">
@@ -1384,14 +1398,14 @@ const WAAnalytics = () => {
                             <td className="py-3 px-6 text-slate-500 max-w-[200px] truncate" title={pay.notes}>
                               {pay.notes || <span className="text-slate-400 italic">None</span>}
                             </td>
-                            <td className="py-3 px-6 text-right font-extrabold text-emerald-500 dark:text-emerald-400">
-                              {getCurrencySymbol(currency)}{totalPaid.toFixed(2)}
-                            </td>
                             <td className="py-3 px-6 text-right font-bold text-indigo-500 dark:text-indigo-400">
-                              {getCurrencySymbol(currency)}{gstAmount.toFixed(2)}
+                              {getCurrencySymbol(currency)}{waAmount.toFixed(2)}
                             </td>
                             <td className="py-3 px-6 text-right font-bold text-blue-500 dark:text-blue-400">
-                              {getCurrencySymbol(currency)}{waAmount.toFixed(2)}
+                              {getCurrencySymbol(currency)}{gstAmount.toFixed(2)}
+                            </td>
+                            <td className="py-3 px-6 text-right font-extrabold text-emerald-500 dark:text-emerald-400">
+                              {getCurrencySymbol(currency)}{totalPaid.toFixed(2)}
                             </td>
                             <td className="py-3 px-6 text-center">
                               <button

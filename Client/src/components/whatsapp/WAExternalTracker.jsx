@@ -19,6 +19,49 @@ import {
     X
 } from 'lucide-react';
 
+const renderTemplateMessage = (templateComponents, params) => {
+    if (!templateComponents || !Array.isArray(templateComponents)) {
+        return null;
+    }
+
+    const headerComp = templateComponents.find(c => c.type === 'HEADER');
+    const bodyComp = templateComponents.find(c => c.type === 'BODY');
+    const footerComp = templateComponents.find(c => c.type === 'FOOTER');
+    const buttonComp = templateComponents.find(c => c.type === 'BUTTONS');
+
+    const replaceParams = (text) => {
+        if (!text) return '';
+        let result = text;
+        if (params) {
+            if (Array.isArray(params)) {
+                params.forEach((param, index) => {
+                    const placeholder = `{{${index + 1}}}`;
+                    const val = typeof param === 'object' && param !== null ? (param.text || JSON.stringify(param)) : String(param);
+                    result = result.replaceAll(placeholder, val);
+                });
+            } else if (typeof params === 'object') {
+                Object.entries(params).forEach(([key, param]) => {
+                    const placeholder = `{{${key}}}`;
+                    const val = typeof param === 'object' && param !== null ? (param.text || JSON.stringify(param)) : String(param);
+                    result = result.replaceAll(placeholder, val);
+                });
+            }
+        }
+        return result;
+    };
+
+    const headerText = headerComp && headerComp.format === 'TEXT' ? replaceParams(headerComp.text) : '';
+    const bodyText = bodyComp ? replaceParams(bodyComp.text) : '';
+    const footerText = footerComp ? replaceParams(footerComp.text) : '';
+
+    return {
+        headerText,
+        bodyText,
+        footerText,
+        buttons: buttonComp ? buttonComp.buttons : []
+    };
+};
+
 const WAExternalTracker = () => {
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -569,20 +612,60 @@ const WAExternalTracker = () => {
 
                                                 {/* Message content */}
                                                 {isOutgoing ? (
-                                                    <div className="space-y-1">
-                                                        <p className="font-bold text-[10px] bg-white/10 px-2 py-0.5 rounded inline-block">
-                                                            Template: {chat.template_name}
-                                                        </p>
-                                                        {chat.template_params_json && (
-                                                            <div className="bg-black/10 rounded-lg p-2 font-mono text-[10px] leading-tight space-y-0.5 text-blue-100">
-                                                                {Object.entries(chat.template_params_json).map(([k, v]) => (
-                                                                    <div key={k}>
-                                                                        <span className="font-bold">{k}:</span> {v}
+                                                    (() => {
+                                                        const rendered = renderTemplateMessage(chat.template_components, chat.template_params_json);
+                                                        if (!rendered) {
+                                                            return (
+                                                                <div className="space-y-1">
+                                                                    <p className="font-bold text-[10px] bg-white/10 px-2 py-0.5 rounded inline-block">
+                                                                        Template: {chat.template_name}
+                                                                    </p>
+                                                                    {chat.template_params_json && (
+                                                                        <div className="bg-black/10 rounded-lg p-2 font-mono text-[10px] leading-tight space-y-0.5 text-blue-100">
+                                                                            {Object.entries(chat.template_params_json).map(([k, v]) => (
+                                                                                <div key={k}>
+                                                                                    <span className="font-bold">{k}:</span> {v}
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        return (
+                                                            <div className="space-y-2">
+                                                                {rendered.headerText && (
+                                                                    <div className="font-extrabold text-[13px] border-b border-white/10 pb-1 mb-1">
+                                                                        {rendered.headerText}
                                                                     </div>
-                                                                ))}
+                                                                )}
+                                                                
+                                                                <div className="text-[12px] whitespace-pre-wrap leading-relaxed break-words font-medium">
+                                                                    {rendered.bodyText}
+                                                                </div>
+
+                                                                {rendered.footerText && (
+                                                                    <div className="text-[10px] opacity-60 italic mt-1 font-semibold">
+                                                                        {rendered.footerText}
+                                                                    </div>
+                                                                )}
+
+                                                                {rendered.buttons && rendered.buttons.length > 0 && (
+                                                                    <div className="mt-3 pt-2 border-t border-white/15 flex flex-wrap gap-1.5 justify-start">
+                                                                        {rendered.buttons.map((btn, idx) => (
+                                                                            <span 
+                                                                                key={idx} 
+                                                                                className="bg-white/20 hover:bg-white/30 text-white font-bold text-[10px] px-2.5 py-1 rounded-lg border border-white/10 flex items-center gap-1 transition-all"
+                                                                            >
+                                                                                {btn.text}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                        )}
-                                                    </div>
+                                                        );
+                                                    })()
                                                 ) : (
                                                     <p className="whitespace-pre-line">{chat.received_message_text}</p>
                                                 )}

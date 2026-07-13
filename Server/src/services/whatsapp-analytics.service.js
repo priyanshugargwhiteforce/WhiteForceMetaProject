@@ -175,7 +175,9 @@ async function getExecutiveKPIs(configId) {
     [configIdVal]
   );
   const totalPaid = parseFloat(paidRow?.total_paid || 0);
-  const totalDue = Math.max(0, totalSpend - totalPaid);
+  const netPaid = totalPaid - (totalPaid * 0.18);
+  const totalDue = Math.max(0, totalSpend - netPaid);
+  console.log(totalPaid, netPaid, totalDue, "totla dhu")
 
   return {
     totalCampaigns: totalCampaigns || 0,
@@ -705,7 +707,8 @@ async function getWabaPayments(configId) {
   );
 
   const totalPaid = rows.reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0);
-  const totalDue = Math.max(0, totalSpend - totalPaid);
+  const netPaid = totalPaid - (totalPaid * 0.18);
+  const totalDue = Math.max(0, totalSpend - netPaid);
 
   return {
     totalSpend,
