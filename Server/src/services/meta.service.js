@@ -1,5 +1,9 @@
 const { pool } = require('../config/db');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const sharp = require('sharp');
+const { metaRequest } = require('../utils/metaGraphClient');
 const { formatMetaError } = require('../utils/meta-error');
 const { decrypt } = require('../utils/crypto');
 
@@ -679,6 +683,64 @@ const getFacebookPages = async (configId = null) => {
             })
         );
 
+        // Auto-save/update monthly metrics in database for tracking
+        try {
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth() + 1; // 1-12
+            
+            for (const page of pages) {
+                // Upsert Facebook Page metrics
+                await pool.query(
+                    `INSERT INTO meta_page_monthly_metrics 
+                        (page_id, config_id, page_name, platform, followers_count, likes_count, record_year, record_month)
+                     VALUES (?, ?, ?, 'facebook', ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                        page_name = VALUES(page_name),
+                        followers_count = VALUES(followers_count),
+                        likes_count = VALUES(likes_count),
+                        recorded_at = CURRENT_TIMESTAMP`,
+                    [
+                        page.id,
+                        configIdVal,
+                        page.name || `Page ${page.id}`,
+                        page.followers_count || 0,
+                        page.fan_count || 0,
+                        currentYear,
+                        currentMonth
+                    ]
+                );
+
+                // Upsert connected Instagram Business metrics if available
+                if (page.instagram_business_account && page.instagram_business_account.id) {
+                    const ig = page.instagram_business_account;
+                    await pool.query(
+                        `INSERT INTO meta_page_monthly_metrics 
+                            (page_id, config_id, page_name, platform, instagram_username, followers_count, posts_count, record_year, record_month)
+                         VALUES (?, ?, ?, 'instagram', ?, ?, ?, ?, ?)
+                         ON DUPLICATE KEY UPDATE
+                            page_name = VALUES(page_name),
+                            instagram_username = VALUES(instagram_username),
+                            followers_count = VALUES(followers_count),
+                            posts_count = VALUES(posts_count),
+                            recorded_at = CURRENT_TIMESTAMP`,
+                        [
+                            ig.id,
+                            configIdVal,
+                            ig.username || page.name,
+                            ig.username || null,
+                            ig.followers_count || 0,
+                            ig.media_count || 0,
+                            currentYear,
+                            currentMonth
+                        ]
+                    );
+                }
+            }
+            console.log('✓ Stored/updated monthly page follower statistics in DB');
+        } catch (dbErr) {
+            console.error('Failed to store page monthly metrics during fetch:', dbErr.message);
+        }
+
         return { data: pages };
     } catch (error) {
         console.error('Error fetching Facebook Pages:', error.response?.data || error.message);
@@ -686,10 +748,7 @@ const getFacebookPages = async (configId = null) => {
     }
 };
 
-const fs = require('fs');
-const path = require('path');
-const sharp = require('sharp');
-const { metaRequest } = require('../utils/metaGraphClient');
+
 
 const getUserPermissions = async (token) => {
     try {

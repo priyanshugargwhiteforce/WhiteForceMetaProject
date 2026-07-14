@@ -1299,6 +1299,26 @@ const initSchema = async () => {
                 )
             `);
             console.log(' - meta_post_targets table created/verified');
+
+            // --- Meta Page Followers Tracker ---
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS meta_page_monthly_metrics (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    page_id VARCHAR(100) NOT NULL,
+                    config_id INT NOT NULL,
+                    page_name VARCHAR(255) NOT NULL,
+                    platform ENUM('facebook', 'instagram') NOT NULL,
+                    instagram_username VARCHAR(255) DEFAULT NULL,
+                    followers_count INT DEFAULT 0,
+                    likes_count INT DEFAULT 0,
+                    posts_count INT DEFAULT 0,
+                    record_year INT NOT NULL,
+                    record_month INT NOT NULL,
+                    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    UNIQUE KEY uq_page_platform_month (page_id, platform, record_year, record_month)
+                )
+            `);
+            console.log(' - meta_page_monthly_metrics table created/verified');
         } catch (migErr) {
             console.error('[Migration Error] database schema initialization failed:', migErr.message);
             throw migErr;

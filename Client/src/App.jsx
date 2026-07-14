@@ -29,6 +29,7 @@ import WACampaigns from './components/whatsapp/WACampaigns';
 import WASchedules from './components/whatsapp/WASchedules';
 import WAChatWindow from './components/whatsapp/WAChatWindow';
 import WAExternalTracker from './components/whatsapp/WAExternalTracker';
+import PageTracker from './components/PageTracker';
 
 import UserManagement from './components/UserManagement';
 import AllLeads from './components/AllLeads';
@@ -169,6 +170,16 @@ function App() {
                                 <ProtectedRoute>
                                     <PermissionRoute permission="meta_access">
                                         <MetaDashboard />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/page-tracker" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="meta_access">
+                                        <PageTracker />
                                     </PermissionRoute>
                                 </ProtectedRoute>
                             } 
@@ -530,13 +541,45 @@ function App() {
                                 </ProtectedRoute>
                             } 
                         />
-                        <Route path="/linkedin-ads" element={<ProtectedRoute><PermissionRoute permission="linkedin_access"><AdLibrary /></PermissionRoute></ProtectedRoute>} />
-                        <Route path="/linkedin-ads/new" element={<ProtectedRoute><PermissionRoute permission="linkedin_access"><LinkedInAdBuilder /></PermissionRoute></ProtectedRoute>} />
-                        <Route path="/linkedin-ads/:id" element={<ProtectedRoute><PermissionRoute permission="linkedin_access"><AdDetail /></PermissionRoute></ProtectedRoute>} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
-                        <Route path="/forgot-password" element={<ForgotPassword />} />
-                        <Route path="/reset-password/:token" element={<ResetPassword />} />
+                        <Route 
+                            path="/linkedin-ads" 
+                            element={<ProtectedRoute><PermissionRoute permission="linkedin_access"><AdLibrary /></PermissionRoute></ProtectedRoute>} />
+                        <Route 
+                            path="/linkedin-ads/new" 
+                            element={
+                            <ProtectedRoute>
+                                <PermissionRoute permission="linkedin_access">
+                                    <LinkedInAdBuilder />
+                                    </PermissionRoute>
+                            </ProtectedRoute>
+                            } 
+                           />
+                        <Route 
+                            path="/linkedin-ads/:id" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="linkedin_access">
+                                        <AdDetail />
+                                        </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/login" 
+                                element={<Login />} 
+                        />
+                        <Route 
+                            path="/register" 
+                            element={<Register />} 
+                        />
+                        <Route 
+                            path="/forgot-password" 
+                            element={<ForgotPassword />} 
+                        />
+                        <Route 
+                            path="/reset-password/:token" 
+                            element={<ResetPassword />} 
+                        />
                     </Routes>
                     </Router>
                 </AdBuilderProvider>

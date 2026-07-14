@@ -103,7 +103,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   };
   const location = useLocation();
 
-  const metaPaths = ['/ad-accounts', '/ad-analyzer', '/single-ad-analyzer', '/insights', '/all-leads', '/ad-owners', '/meta-posting'];
+  const metaPaths = ['/ad-accounts', '/ad-analyzer', '/single-ad-analyzer', '/insights', '/all-leads', '/ad-owners', '/meta-posting', '/page-tracker'];
   const googlePaths = ['/google-dashboard', '/google-campaigns', '/google-performance', '/google-insights', '/youtube-ads', '/youtube-shorts'];
   const waPaths = ['/whatsapp-manager', '/wa-channels', '/wa-templates', '/wa-templates/new', '/send-message', '/wa-analytics', '/wa-contacts', '/wa-campaigns', '/wa-schedules', '/wa-chats', '/wa-external'];
   const settingsPaths = ['/users', '/settings/meta', '/settings/whatsapp'];
@@ -260,6 +260,13 @@ const Sidebar = ({ isOpen, onClose }) => {
                   label="Ad Owner"
                   active={isActive('/ad-owners')}
                   onClick={() => navigate('/ad-owners')}
+                  isSubItem={true}
+                />
+                <NavItem
+                  icon={TrendingUp}
+                  label="Page Tracker"
+                  active={isActive('/page-tracker')}
+                  onClick={() => navigate('/page-tracker')}
                   isSubItem={true}
                 />
               </>
