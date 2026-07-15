@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react';
 import AdBuilderContext from '../../context/AdBuilderContext';
 import { Target, Layers, Info, AlertCircle, CheckCircle } from 'lucide-react';
+import CustomSelect from '../CustomSelect';
 
 export default function AdCampaignStep() {
   const { draft, setDraft, triggerSaveDraft } = useContext(AdBuilderContext);
@@ -132,17 +133,18 @@ export default function AdCampaignStep() {
           {loadingAccounts ? (
             <div className="h-10 bg-slate-100 dark:bg-white/5 rounded-xl animate-pulse"></div>
           ) : (
-            <select
+            <CustomSelect
               value={draft.accountId || ''}
-              onChange={handleAccountChange}
-              onBlur={handleFieldBlur}
-              className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer"
-            >
-              <option value="">-- Select Ad Account --</option>
-              {accounts.map(acc => (
-                <option key={acc.id} value={acc.id}>{acc.name} ({acc.id})</option>
-              ))}
-            </select>
+              onChange={(val) => {
+                handleAccountChange({ target: { value: val } });
+                handleFieldBlur();
+              }}
+              options={[
+                { value: "", label: "-- Select Ad Account --" },
+                ...accounts.map(acc => ({ value: acc.id, label: `${acc.name} (${acc.id})` }))
+              ]}
+              className="w-full rounded-xl px-4 py-2.5 text-xs"
+            />
           )}
         </div>
 
@@ -152,18 +154,19 @@ export default function AdCampaignStep() {
           {loadingCampaigns ? (
             <div className="h-10 bg-slate-100 dark:bg-white/5 rounded-xl animate-pulse"></div>
           ) : (
-            <select
+            <CustomSelect
               value={draft.campaignId || ''}
-              onChange={handleCampaignChange}
-              onBlur={handleFieldBlur}
+              onChange={(val) => {
+                handleCampaignChange({ target: { value: val } });
+                handleFieldBlur();
+              }}
               disabled={!draft.accountId}
-              className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer disabled:opacity-40"
-            >
-              <option value="">{draft.accountId ? '-- Select Campaign --' : 'Select an ad account first'}</option>
-              {campaigns.map(camp => (
-                <option key={camp.id} value={camp.id}>{camp.name}</option>
-              ))}
-            </select>
+              options={[
+                { value: "", label: draft.accountId ? '-- Select Campaign --' : 'Select an ad account first' },
+                ...campaigns.map(camp => ({ value: camp.id, label: camp.name }))
+              ]}
+              className="w-full rounded-xl px-4 py-2.5 text-xs"
+            />
           )}
         </div>
       </div>

@@ -40,6 +40,7 @@ import axios from 'axios';
 import { useTheme } from '../../context/ThemeContext';
 import WALiveAnalytics from './WALiveAnalytics';
 import WAPricingAnalytics from './WAPricingAnalytics';
+import CustomSelect from '../CustomSelect';
 
 
 
@@ -492,18 +493,17 @@ const WAAnalytics = () => {
 
         <div className="flex items-center space-x-3 flex-wrap gap-y-2">
           {/* Profile Select Dropdown */}
-          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 text-xs transition-colors">
+          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-1 text-xs transition-colors">
             <Database className="w-4 h-4 text-green-500" />
-            <select
+            <CustomSelect
               value={selectedConfigId}
-              onChange={handleConfigChange}
-              className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-200"
-            >
-              <option value="" className="bg-white dark:bg-slate-900">Default Server Config</option>
-              {whatsappConfigs.map(cfg => (
-                <option key={cfg.id} value={cfg.id} className="bg-white dark:bg-slate-900">{cfg.name}</option>
-              ))}
-            </select>
+              onChange={(val) => handleConfigChange({ target: { value: val } })}
+              options={[
+                { value: "", label: "Default Server Config" },
+                ...whatsappConfigs.map(cfg => ({ value: cfg.id, label: cfg.name }))
+              ]}
+              className="border-none bg-transparent py-1 text-xs px-1 min-w-[160px]"
+            />
           </div>
 
           <button
@@ -885,36 +885,38 @@ const WAAnalytics = () => {
               </div>
 
               {/* Type Filter */}
-              <div className="relative">
-                <select
+              <div className="relative flex items-center bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-white/10 px-1 py-0.5 rounded-xl transition-all">
+                <span className="text-[10px] text-slate-400 font-bold uppercase pl-2 flex items-center"><ListFilter className="w-3.5 h-3.5 text-slate-500 mr-1.5" />Type:</span>
+                <CustomSelect
                   value={campaignTypeFilter}
-                  onChange={(e) => setCampaignTypeFilter(e.target.value)}
-                  className="appearance-none bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-white/10 pl-4 pr-10 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 text-xs focus:outline-none focus:border-emerald-500 font-medium"
-                >
-                  <option value="">All Types</option>
-                  <option value="broadcast">Broadcast</option>
-                  <option value="scheduled">Scheduled</option>
-                  <option value="recurring">Recurring</option>
-                </select>
-                <ListFilter className="absolute right-3.5 top-3 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+                  onChange={setCampaignTypeFilter}
+                  options={[
+                    { value: "", label: "All Types" },
+                    { value: "broadcast", label: "Broadcast" },
+                    { value: "scheduled", label: "Scheduled" },
+                    { value: "recurring", label: "Recurring" }
+                  ]}
+                  className="border-none bg-transparent py-1.5 text-xs px-1 min-w-[110px]"
+                />
               </div>
 
               {/* Status Filter */}
-              <div className="relative">
-                <select
+              <div className="relative flex items-center bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-white/10 px-1 py-0.5 rounded-xl transition-all">
+                <span className="text-[10px] text-slate-400 font-bold uppercase pl-2 flex items-center"><Filter className="w-3.5 h-3.5 text-slate-500 mr-1.5" />Status:</span>
+                <CustomSelect
                   value={campaignStatusFilter}
-                  onChange={(e) => setCampaignStatusFilter(e.target.value)}
-                  className="appearance-none bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-white/10 pl-4 pr-10 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 text-xs focus:outline-none focus:border-emerald-500 font-medium"
-                >
-                  <option value="">All Statuses</option>
-                  <option value="draft">Draft</option>
-                  <option value="queued">Queued</option>
-                  <option value="running">Running</option>
-                  <option value="completed">Completed</option>
-                  <option value="failed">Failed</option>
-                  <option value="paused">Paused</option>
-                </select>
-                <Filter className="absolute right-3.5 top-3 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+                  onChange={setCampaignStatusFilter}
+                  options={[
+                    { value: "", label: "All Statuses" },
+                    { value: "draft", label: "Draft" },
+                    { value: "queued", label: "Queued" },
+                    { value: "running", label: "Running" },
+                    { value: "completed", label: "Completed" },
+                    { value: "failed", label: "Failed" },
+                    { value: "paused", label: "Paused" }
+                  ]}
+                  className="border-none bg-transparent py-1.5 text-xs px-1 min-w-[120px]"
+                />
               </div>
 
               {/* Date Filters */}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import CustomSelect from '../CustomSelect';
 import {
     Database,
     Calendar,
@@ -306,33 +307,33 @@ const WAExternalTracker = () => {
                     {/* Source App Filter */}
                     <div className="flex flex-col space-y-1">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Source App</label>
-                        <select
+                        <CustomSelect
                             value={sourceApp}
-                            onChange={(e) => setSourceApp(e.target.value)}
-                            className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-700 dark:text-slate-200"
-                        >
-                            <option value="" className="bg-white dark:bg-slate-900">All Applications</option>
-                            {allowedApps.map(app => (
-                                <option key={app.id} value={app.id} className="bg-white dark:bg-slate-900">{app.label}</option>
-                            ))}
-                        </select>
+                            onChange={setSourceApp}
+                            options={[
+                                { value: "", label: "All Applications" },
+                                ...allowedApps.map(app => ({ value: app.id, label: app.label }))
+                            ]}
+                            className="rounded-xl px-3 py-2 text-xs"
+                        />
                     </div>
 
                     {/* Status Filter */}
                     <div className="flex flex-col space-y-1">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Delivery Status</label>
-                        <select
+                        <CustomSelect
                             value={status}
-                            onChange={(e) => setStatus(e.target.value)}
-                            className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-700 dark:text-slate-200"
-                        >
-                            <option value="" className="bg-white dark:bg-slate-900">All Statuses</option>
-                            <option value="sent" className="bg-white dark:bg-slate-900">Sent</option>
-                            <option value="delivered" className="bg-white dark:bg-slate-900">Delivered</option>
-                            <option value="read" className="bg-white dark:bg-slate-900">Read</option>
-                            <option value="failed" className="bg-white dark:bg-slate-900">Failed</option>
-                            <option value="replied" className="bg-white dark:bg-slate-900">Replied</option>
-                        </select>
+                            onChange={setStatus}
+                            options={[
+                                { value: "", label: "All Statuses" },
+                                { value: "sent", label: "Sent" },
+                                { value: "delivered", label: "Delivered" },
+                                { value: "read", label: "Read" },
+                                { value: "failed", label: "Failed" },
+                                { value: "replied", label: "Replied" }
+                            ]}
+                            className="rounded-xl px-3 py-2 text-xs"
+                        />
                     </div>
 
                     {/* Phone Number Filter */}
@@ -370,16 +371,15 @@ const WAExternalTracker = () => {
                     {/* Template Name Filter */}
                     <div className="flex flex-col space-y-1">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Template Name</label>
-                        <select
+                        <CustomSelect
                             value={templateName}
-                            onChange={(e) => setTemplateName(e.target.value)}
-                            className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-700 dark:text-slate-200"
-                        >
-                            <option value="" className="bg-white dark:bg-slate-900">All Templates</option>
-                            {allowedTemplates.map(tmpl => (
-                                <option key={tmpl} value={tmpl} className="bg-white dark:bg-slate-900">{tmpl}</option>
-                            ))}
-                        </select>
+                            onChange={setTemplateName}
+                            options={[
+                                { value: "", label: "All Templates" },
+                                ...allowedTemplates.map(tmpl => ({ value: tmpl, label: tmpl }))
+                            ]}
+                            className="rounded-xl px-3 py-2 text-xs"
+                        />
                     </div>
 
                     {/* Date From */}

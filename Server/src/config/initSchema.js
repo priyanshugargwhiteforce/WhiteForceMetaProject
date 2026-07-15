@@ -195,6 +195,28 @@ const initSchema = async () => {
         `);
         console.log(' - google_ads_snapshots table created/verified');
 
+        // 7b. Google Ads Leads
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS google_leads (
+                id VARCHAR(100) PRIMARY KEY,
+                customer_id VARCHAR(100) NOT NULL,
+                campaign_id VARCHAR(100),
+                campaign_name VARCHAR(255),
+                ad_group_id VARCHAR(100),
+                ad_group_name VARCHAR(255),
+                ad_id VARCHAR(100),
+                ad_name VARCHAR(255),
+                asset_id VARCHAR(100),
+                full_name VARCHAR(255),
+                email VARCHAR(255),
+                phone VARCHAR(50),
+                submitted_at TIMESTAMP NULL,
+                field_data JSON,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - google_leads table created/verified');
+
         // 8. WhatsApp Phone Details
         await pool.query(`
             CREATE TABLE IF NOT EXISTS whatsapp_phone_details (

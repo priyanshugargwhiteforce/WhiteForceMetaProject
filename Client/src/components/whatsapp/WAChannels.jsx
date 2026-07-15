@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import axios from 'axios';
+import CustomSelect from '../CustomSelect';
 import {
   TrendingUp,
   Plus,
@@ -581,23 +582,20 @@ const WAChannels = () => {
             <form onSubmit={handleSaveUpdate} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Select Channel</label>
-                <select
-                  required
+                <CustomSelect
                   value={updateChannelId}
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    setUpdateChannelId(id);
+                  onChange={(val) => {
+                    setUpdateChannelId(val);
                     // Autofill with latest count of newly selected channel
-                    const chan = channels.find(c => c.id === parseInt(id, 10));
+                    const chan = channels.find(c => c.id === parseInt(val, 10));
                     setUpdateMemberCount(chan ? chan.latest_member_count || "" : "");
                   }}
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-250 dark:border-slate-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-sm focus:outline-none text-slate-900 dark:text-white transition-all cursor-pointer"
-                >
-                  <option value="" disabled>-- Select Channel --</option>
-                  {channels.map(c => (
-                    <option key={c.id} value={c.id}>{c.channel_name} (managed by {c.manager_name})</option>
-                  ))}
-                </select>
+                  options={[
+                    { value: "", label: "-- Select Channel --" },
+                    ...channels.map(c => ({ value: String(c.id), label: `${c.channel_name} (managed by ${c.manager_name})` }))
+                  ]}
+                  className="w-full rounded-xl px-4 py-2.5 text-sm"
+                />
               </div>
 
               <div>

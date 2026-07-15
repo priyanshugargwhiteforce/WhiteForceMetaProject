@@ -7,6 +7,7 @@ import {
   ChevronRight, RefreshCw, BarChart2, PieChart, Sparkles, AlertCircle,
   Calendar, Search, Download
 } from 'lucide-react';
+import CustomSelect from '../CustomSelect';
 
 const LinkedInAnalytics = () => {
   const [adAccounts, setAdAccounts] = useState([]);
@@ -257,15 +258,12 @@ const LinkedInAnalytics = () => {
           </button>
 
           {/* Account Selector */}
-          <select
+          <CustomSelect
             value={selectedAccountId}
-            onChange={(e) => setSelectedAccountId(e.target.value)}
-            className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-white cursor-pointer"
-          >
-            {adAccounts.map(acc => (
-              <option key={acc.id} value={acc.id}>{acc.name}</option>
-            ))}
-          </select>
+            onChange={setSelectedAccountId}
+            options={adAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
+            className="min-w-[200px] rounded-2xl px-4 py-2.5 text-sm"
+          />
         </div>
       </div>
 
@@ -569,18 +567,19 @@ const LinkedInAnalytics = () => {
                       <span className="font-bold text-slate-800 dark:text-white">{totalRecords}</span> days
                     </span>
 
-                    <div className="flex items-center space-x-2 bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-white/5">
+                    <div className="flex items-center space-x-2 bg-slate-100 dark:bg-white/5 px-2.5 py-0.5 rounded-xl border border-slate-200 dark:border-white/5">
                       <span className="text-[9px] text-slate-400 font-bold uppercase">Show:</span>
-                      <select
+                      <CustomSelect
                         value={recordsPerPage}
-                        onChange={(e) => setRecordsPerPage(Number(e.target.value))}
-                        className="bg-transparent border-none text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-300"
-                      >
-                        <option value={5}>5</option>
-                        <option value={10}>10</option>
-                        <option value={20}>20</option>
-                        <option value={50}>50</option>
-                      </select>
+                        onChange={(val) => setRecordsPerPage(Number(val))}
+                        options={[
+                          { value: 5, label: "5" },
+                          { value: 10, label: "10" },
+                          { value: 20, label: "20" },
+                          { value: 50, label: "50" }
+                        ]}
+                        className="border-none bg-transparent py-0.5 text-xs px-1"
+                      />
                     </div>
                   </div>
 

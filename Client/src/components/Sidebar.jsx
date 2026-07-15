@@ -104,7 +104,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
 
   const metaPaths = ['/ad-accounts', '/ad-analyzer', '/single-ad-analyzer', '/insights', '/all-leads', '/ad-owners', '/meta-posting', '/page-tracker'];
-  const googlePaths = ['/google-dashboard', '/google-campaigns', '/google-performance', '/google-insights', '/youtube-ads', '/youtube-shorts'];
+  const googlePaths = ['/google-dashboard', '/google-campaigns', '/google-performance', '/google-insights', '/google-leads', '/youtube-ads', '/youtube-shorts'];
   const waPaths = ['/whatsapp-manager', '/wa-channels', '/wa-templates', '/wa-templates/new', '/send-message', '/wa-analytics', '/wa-contacts', '/wa-campaigns', '/wa-schedules', '/wa-chats', '/wa-external'];
   const settingsPaths = ['/users', '/settings/meta', '/settings/whatsapp'];
   const linkedInPaths = [
@@ -316,6 +316,13 @@ const Sidebar = ({ isOpen, onClose }) => {
               label="Insights"
               active={isActive('/google-insights')}
               onClick={() => navigate('/google-insights')}
+              isSubItem={true}
+            />
+            <NavItem
+              icon={Users}
+              label="Google Leads"
+              active={isActive('/google-leads')}
+              onClick={() => navigate('/google-leads')}
               isSubItem={true}
             />
             <SubNavDropdown

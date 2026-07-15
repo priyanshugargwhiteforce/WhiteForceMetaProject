@@ -13,6 +13,7 @@ import GoogleDashboard from './components/GoogleDashboard';
 import GoogleCampaigns from './components/GoogleCampaigns';
 import GooglePerformance from './components/GooglePerformance';
 import GoogleInsights from './components/GoogleInsights';
+import GoogleLeads from './components/GoogleLeads';
 import YoutubeAds from './components/YoutubeAds';
 import YoutubeAdDetail from './components/YoutubeAdDetail';
 import YoutubeShortsManager from './components/YoutubeShortsManager';
@@ -230,6 +231,16 @@ function App() {
                                 <ProtectedRoute>
                                     <PermissionRoute permission="google_access">
                                         <GoogleInsights />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/google-leads" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="google_access">
+                                        <GoogleLeads />
                                     </PermissionRoute>
                                 </ProtectedRoute>
                             } 

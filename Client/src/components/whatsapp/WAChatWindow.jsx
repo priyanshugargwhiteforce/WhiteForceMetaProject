@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import CustomSelect from '../CustomSelect';
 
 const WAChatWindow = () => {
   const { user } = useAuth();
@@ -334,18 +335,17 @@ const WAChatWindow = () => {
         </div>
         <div className="flex items-center space-x-3">
           {/* Config selector */}
-          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2">
+          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-1">
             <Database className="w-4 h-4 text-green-500" />
-            <select
+            <CustomSelect
               value={selectedConfigId}
-              onChange={handleConfigChange}
-              className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-200"
-            >
-              <option value="" className="bg-white dark:bg-slate-900">Default Server Config</option>
-              {whatsappConfigs.map(cfg => (
-                <option key={cfg.id} value={cfg.id} className="bg-white dark:bg-slate-900">{cfg.name}</option>
-              ))}
-            </select>
+              onChange={(val) => handleConfigChange({ target: { value: val } })}
+              options={[
+                { value: "", label: "Default Server Config" },
+                ...whatsappConfigs.map(cfg => ({ value: cfg.id, label: cfg.name }))
+              ]}
+              className="border-none bg-transparent py-1 text-xs px-1 min-w-[160px]"
+            />
           </div>
           <button
             onClick={fetchThreads}

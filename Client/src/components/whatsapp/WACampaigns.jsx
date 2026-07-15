@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import CustomSelect from '../CustomSelect';
 
 const SYNONYMS = {
   name: ['name', 'user_name', 'customer_name', 'fullname', 'full_name', 'first_name', 'last_name'],
@@ -1067,17 +1068,15 @@ const WACampaigns = () => {
                   Sender (Multi-WABA config)
                 </label>
                 <div className="relative">
-                  <select
+                  <CustomSelect
                     value={selectedConfigId}
-                    onChange={(e) => setSelectedConfigId(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 appearance-none text-slate-800 dark:text-slate-100 cursor-pointer"
-                  >
-                    <option value="">Default Server Config</option>
-                    {whatsappConfigs.map(cfg => (
-                      <option key={cfg.id} value={cfg.id}>{cfg.name} ({cfg.phone_number_id})</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    onChange={setSelectedConfigId}
+                    options={[
+                      { value: "", label: "Default Server Config" },
+                      ...whatsappConfigs.map(cfg => ({ value: cfg.id, label: `${cfg.name} (${cfg.phone_number_id})` }))
+                    ]}
+                    className="w-full rounded-2xl px-5 py-4 text-sm"
+                  />
                 </div>
               </div>
 
@@ -1086,17 +1085,15 @@ const WACampaigns = () => {
                   Target Contact List
                 </label>
                 <div className="relative">
-                  <select
+                  <CustomSelect
                     value={contactListId}
-                    onChange={(e) => setContactListId(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 appearance-none text-slate-800 dark:text-slate-100 cursor-pointer"
-                  >
-                    <option value="">Choose a contact list...</option>
-                    {contactLists.map(l => (
-                      <option key={l.id} value={l.id}>{l.name} ({l.member_count} contacts)</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    onChange={setContactListId}
+                    options={[
+                      { value: "", label: "Choose a contact list..." },
+                      ...contactLists.map(l => ({ value: l.id, label: `${l.name} (${l.member_count} contacts)` }))
+                    ]}
+                    className="w-full rounded-2xl px-5 py-4 text-sm"
+                  />
                 </div>
               </div>
             </div>
@@ -1107,17 +1104,15 @@ const WACampaigns = () => {
                 Approved Message Template
               </label>
               <div className="relative">
-                <select
+                <CustomSelect
                   value={templateId}
-                  onChange={(e) => setTemplateId(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 appearance-none text-slate-800 dark:text-slate-100 cursor-pointer"
-                >
-                  <option value="">Choose an approved template...</option>
-                  {templates.map(t => (
-                    <option key={t.id} value={t.id}>{t.name} ({t.language})</option>
-                  ))}
-                </select>
-                <ChevronDown className="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  onChange={setTemplateId}
+                  options={[
+                    { value: "", label: "Choose an approved template..." },
+                    ...templates.map(t => ({ value: t.id, label: `${t.name} (${t.language})` }))
+                  ]}
+                  className="w-full rounded-2xl px-5 py-4 text-sm"
+                />
               </div>
             </div>
 
@@ -1159,19 +1154,18 @@ const WACampaigns = () => {
                         Load Profile:
                       </label>
                       <div className="relative">
-                        <select
+                        <CustomSelect
                           value={selectedProfileId}
-                          onChange={(e) => handleProfileChange(e.target.value)}
-                          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold pr-8 appearance-none cursor-pointer text-slate-800 dark:text-slate-200"
-                        >
-                          <option value="">-- Custom / Auto-Match --</option>
-                          {savedProfiles.map(p => (
-                            <option key={p.id} value={p.id}>
-                              {p.mapping_name} {p.is_default ? '(Default)' : ''} {p.usage_count > 0 ? `(${p.usage_count}x)` : ''}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                          onChange={handleProfileChange}
+                          options={[
+                            { value: "", label: "-- Custom / Auto-Match --" },
+                            ...savedProfiles.map(p => ({
+                              value: p.id,
+                              label: `${p.mapping_name} ${p.is_default ? '(Default)' : ''} ${p.usage_count > 0 ? `(${p.usage_count}x)` : ''}`
+                            }))
+                          ]}
+                          className="rounded-xl px-3 py-1.5 text-xs"
+                        />
                       </div>
                       {selectedProfileId && (
                         <button
@@ -1200,14 +1194,15 @@ const WACampaigns = () => {
                           </div>
 
                           <div>
-                            <select
+                            <CustomSelect
                               value={rule.source}
-                              onChange={(e) => handleMappingChange(v.variable_name, 'source', e.target.value)}
-                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200"
-                            >
-                              <option value="static">Static Value</option>
-                              <option value="field">Map to Contact Attribute</option>
-                            </select>
+                              onChange={(val) => handleMappingChange(v.variable_name, 'source', val)}
+                              options={[
+                                { value: "static", label: "Static Value" },
+                                { value: "field", label: "Map to Contact Attribute" }
+                              ]}
+                              className="w-full rounded-xl px-3 py-2 text-xs"
+                            />
                           </div>
 
                           <div>
@@ -1220,20 +1215,19 @@ const WACampaigns = () => {
                                 className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder-slate-400"
                               />
                             ) : (
-                              <select
+                              <CustomSelect
                                 value={rule.value}
-                                onChange={(e) => handleMappingChange(v.variable_name, 'value', e.target.value)}
-                                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200"
-                              >
-                                <option value="name">Name</option>
-                                <option value="email">Email</option>
-                                <option value="company">Company</option>
-                                <option value="phone">Phone Number</option>
-                                <option value="tags">Tags</option>
-                                {customAttributes.map(attr => (
-                                  <option key={attr} value={`attr:${attr}`}>{attr} (Custom)</option>
-                                ))}
-                              </select>
+                                onChange={(val) => handleMappingChange(v.variable_name, 'value', val)}
+                                options={[
+                                  { value: "name", label: "Name" },
+                                  { value: "email", label: "Email" },
+                                  { value: "company", label: "Company" },
+                                  { value: "phone", label: "Phone Number" },
+                                  { value: "tags", label: "Tags" },
+                                  ...customAttributes.map(attr => ({ value: `attr:${attr}`, label: `${attr} (Custom)` }))
+                                ]}
+                                className="w-full rounded-xl px-3 py-2 text-xs"
+                              />
                             )}
                           </div>
 
@@ -1352,16 +1346,16 @@ const WACampaigns = () => {
                   Campaign Schedule Type
                 </label>
                 <div className="relative">
-                  <select
+                  <CustomSelect
                     value={campaignType}
-                    onChange={(e) => setCampaignType(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 appearance-none text-slate-800 dark:text-slate-100 cursor-pointer"
-                  >
-                    <option value="broadcast">Instant Broadcast (Immediate)</option>
-                    <option value="scheduled">Scheduled (Future Queue)</option>
-                    <option value="recurring">Recurring (Periodic Scheduler)</option>
-                  </select>
-                  <ChevronDown className="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    onChange={setCampaignType}
+                    options={[
+                      { value: "broadcast", label: "Instant Broadcast (Immediate)" },
+                      { value: "scheduled", label: "Scheduled (Future Queue)" },
+                      { value: "recurring", label: "Recurring (Periodic Scheduler)" }
+                    ]}
+                    className="w-full rounded-2xl px-5 py-4 text-sm"
+                  />
                 </div>
               </div>
 
@@ -1387,23 +1381,22 @@ const WACampaigns = () => {
                       Recurring Frequency
                     </label>
                     <div className="relative">
-                      <select
+                      <CustomSelect
                         value={recurringFrequency}
-                        onChange={(e) => {
-                          const val = e.target.value;
+                        onChange={(val) => {
                           setRecurringFrequency(val);
                           if (val === 'daily') setCronExpression('0 9 * * *');
                           else if (val === 'weekly') setCronExpression('0 9 * * 1');
                           else if (val === 'monthly') setCronExpression('0 9 1 * *');
                         }}
-                        className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 appearance-none text-slate-800 dark:text-slate-100 cursor-pointer"
-                      >
-                        <option value="daily">Daily (9:00 AM)</option>
-                        <option value="weekly">Weekly (Monday 9:00 AM)</option>
-                        <option value="monthly">Monthly (1st Day 9:00 AM)</option>
-                        <option value="custom">Custom Cron Pattern</option>
-                      </select>
-                      <ChevronDown className="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        options={[
+                          { value: "daily", label: "Daily (9:00 AM)" },
+                          { value: "weekly", label: "Weekly (Monday 9:00 AM)" },
+                          { value: "monthly", label: "Monthly (1st Day 9:00 AM)" },
+                          { value: "custom", label: "Custom Cron Pattern" }
+                        ]}
+                        className="w-full rounded-2xl px-5 py-4 text-sm"
+                      />
                     </div>
                   </div>
 

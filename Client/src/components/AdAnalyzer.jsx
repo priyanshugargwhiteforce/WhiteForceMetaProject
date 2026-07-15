@@ -23,9 +23,11 @@ import {
   PieChart,
   Target,
   Users,
-  CheckCircle
+  CheckCircle,
+  Info
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import CustomSelect from './CustomSelect';
 
 const AdAnalyzer = () => {
   const { theme, toggleTheme } = useTheme();
@@ -437,19 +439,17 @@ ${JSON.stringify(data)}`;
             <span>{syncing ? 'Syncing...' : 'Sync Realtime Data'}</span>
           </button>
 
-          <div className="flex items-center space-x-3 bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-2xl px-4 py-2 transition-all">
+          <div className="flex items-center space-x-3 bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-2xl px-4 py-1 transition-all">
             <Users className="w-4 h-4 text-blue-500" />
-            <select
+            <CustomSelect
               value={selectedAccountId}
-              onChange={(e) => setSelectedAccountId(e.target.value)}
-              className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer text-[var(--text-main)] min-w-[200px]"
-            >
-              {adAccounts.map(account => (
-                <option key={account.id} value={account.id} className="bg-[var(--bg-sidebar)] text-[var(--text-main)]">
-                  {account.name} ({account.account_id})
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedAccountId}
+              options={adAccounts.map(account => ({
+                value: account.id,
+                label: `${account.name} (${account.account_id})`
+              }))}
+              className="border-none bg-transparent py-1 text-sm px-1 min-w-[200px]"
+            />
           </div>
           <div className="flex items-center space-x-2 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-xl">
             <Calendar className="w-4 h-4 text-blue-400" />

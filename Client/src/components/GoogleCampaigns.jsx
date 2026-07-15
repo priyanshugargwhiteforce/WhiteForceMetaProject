@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Target, AlertCircle, ChevronRight, LayoutDashboard, Key, Search, Layers, IndianRupee, Eye, MousePointerClick
 } from 'lucide-react';
+import CustomSelect from './CustomSelect';
 
 const GoogleCampaigns = () => {
   const [loading, setLoading] = useState(true);
@@ -112,15 +113,13 @@ const GoogleCampaigns = () => {
 
         <div className="flex items-center space-x-3">
           {accounts.length > 0 && (
-            <select
-              value={selectedAccount || ""}
-              onChange={(e) => setSelectedAccount(e.target.value)}
-              className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-slate-100 cursor-pointer"
-            >
-              {accounts.map(acc => (
-                <option key={acc} value={acc}>Account: {acc}</option>
-              ))}
-            </select>
+            <CustomSelect
+              value={selectedAccount}
+              onChange={setSelectedAccount}
+              options={accounts}
+              prefix="Account: "
+              className="rounded-2xl px-4 py-2.5 text-sm min-w-[200px]"
+            />
           )}
         </div>
       </div>

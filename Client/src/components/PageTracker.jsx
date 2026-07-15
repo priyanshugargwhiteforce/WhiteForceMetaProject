@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import CustomSelect from './CustomSelect';
 import axios from 'axios';
 import {
   TrendingUp,
@@ -395,22 +396,15 @@ const PageTracker = () => {
           {configs.length > 0 && (
             <div className="flex items-center space-x-2">
               <label htmlFor="trackerConfigSelect" className="text-xs font-bold text-slate-500 dark:text-slate-400">Meta Account:</label>
-              <select
-                id="trackerConfigSelect"
+              <CustomSelect
                 value={selectedConfigId}
-                onChange={(e) => {
-                  const val = e.target.value;
+                onChange={(val) => {
                   setSelectedConfigId(val);
                   localStorage.setItem('selectedMetaConfigId', val);
                 }}
-                className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              >
-                {configs.map((config) => (
-                  <option key={config.id} value={config.id}>
-                    {config.name}
-                  </option>
-                ))}
-              </select>
+                options={configs.map((config) => ({ value: config.id, label: config.name }))}
+                className="rounded-xl px-3 py-2 text-xs"
+              />
             </div>
           )}
 
@@ -755,20 +749,18 @@ const PageTracker = () => {
               {/* Select Profile */}
               <div>
                 <label htmlFor="modalProfileSelect" className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">Select Profile *</label>
-                <select
-                  id="modalProfileSelect"
-                  required
+                <CustomSelect
                   value={selectedPageKey}
-                  onChange={handlePageSelectForForm}
-                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100"
-                >
-                  <option value="">-- Choose Facebook Page / Instagram Account --</option>
-                  {pagesSummary.map(p => (
-                    <option key={`${p.platform}-${p.page_id}`} value={`${p.platform}|${p.page_id}`}>
-                      [{p.platform === 'facebook' ? 'Facebook' : 'Instagram'}] {p.page_name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => handlePageSelectForForm({ target: { value: val } })}
+                  options={[
+                    { value: "", label: "-- Choose Facebook Page / Instagram Account --" },
+                    ...pagesSummary.map(p => ({
+                      value: `${p.platform}|${p.page_id}`,
+                      label: `[${p.platform === 'facebook' ? 'Facebook' : 'Instagram'}] ${p.page_name}`
+                    }))
+                  ]}
+                  className="w-full rounded-xl px-3 py-2 text-xs"
+                />
               </div>
 
               {/* Selected Profile Read-only Metadata */}

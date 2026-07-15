@@ -5,6 +5,7 @@ import {
     Heart, MessageSquare, Share2, Loader, Search, RefreshCw,
     AlertTriangle, Sparkles, Check
 } from 'lucide-react';
+import CustomSelect from './CustomSelect';
 
 const Facebook = ({ className, ...props }) => (
     <svg 
@@ -360,17 +361,15 @@ const MetaPosting = () => {
                 
                 {/* Account configuration picker */}
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <select
+                    <CustomSelect
                         value={selectedConfigId}
-                        onChange={(e) => setSelectedConfigId(e.target.value)}
-                        className="bg-[var(--bg-primary)] border border-[var(--border-color)] text-sm rounded-xl px-4 py-2 w-full sm:w-64 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-                        disabled={loadingConfigs}
-                    >
-                        <option value="">-- Choose Account Config --</option>
-                        {configs.map(cfg => (
-                            <option key={cfg.id} value={cfg.id}>{cfg.name}</option>
-                        ))}
-                    </select>
+                        onChange={setSelectedConfigId}
+                        options={[
+                            { value: "", label: "-- Choose Account Config --" },
+                            ...configs.map(cfg => ({ value: cfg.id, label: cfg.name }))
+                        ]}
+                        className="rounded-xl px-4 py-2 text-sm w-full sm:w-64 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                    />
                     
                     <button
                         onClick={() => selectedConfigId && fetchTargets(selectedConfigId)}

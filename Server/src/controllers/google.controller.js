@@ -108,3 +108,49 @@ exports.getCampaigns = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// @desc    Get Google Ads leads list
+// @route   GET /api/google/leads
+// @access  Private
+exports.getLeads = async (req, res) => {
+    try {
+        const { customerId } = req.query;
+        const targetCustomerId = customerId || process.env.GOOGLE_CUSTOMER_ID;
+
+        if (!targetCustomerId) {
+             return res.status(400).json({ success: false, missingCustomerId: true, message: "Missing Customer ID." });
+        }
+
+        const leads = await googleService.getGoogleLeadsFromDb(targetCustomerId);
+        res.json({
+            success: true,
+            data: leads
+        });
+    } catch (error) {
+        console.error('Google Ads Get Leads Error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Force Sync Google Ads leads
+// @route   POST /api/google/sync-leads
+// @access  Private
+exports.syncLeads = async (req, res) => {
+    try {
+        const { customerId } = req.body;
+        const targetCustomerId = customerId || process.env.GOOGLE_CUSTOMER_ID;
+
+        if (!targetCustomerId) {
+             return res.status(400).json({ success: false, missingCustomerId: true, message: "Missing Customer ID." });
+        }
+
+        const count = await googleService.syncGoogleLeads(targetCustomerId);
+        res.json({
+            success: true,
+            message: `Successfully synchronized ${count} Google Ads leads.`
+        });
+    } catch (error) {
+        console.error('Google Ads Sync Leads Error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

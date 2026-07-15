@@ -5,6 +5,7 @@ import {
   Plus, Trash2, Calendar, Target, Award, DollarSign, Clock, ShieldAlert
 } from 'lucide-react';
 import AsyncSearchSelect from './AsyncSearchSelect';
+import CustomSelect from '../../CustomSelect';
 
 const LinkedInCampaignWizard = () => {
   const navigate = useNavigate();
@@ -550,15 +551,12 @@ const LinkedInCampaignWizard = () => {
                 {loadingAccounts ? (
                   <div className="h-10 bg-slate-100 dark:bg-white/5 rounded-xl animate-pulse"></div>
                 ) : (
-                  <select
+                  <CustomSelect
                     value={accountId}
-                    onChange={(e) => handleFieldChange(setAccountId, e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer"
-                  >
-                    {adAccounts.map(acc => (
-                      <option key={acc.id} value={acc.id}>{acc.name} ({acc.id})</option>
-                    ))}
-                  </select>
+                    onChange={(val) => handleFieldChange(setAccountId, val)}
+                    options={adAccounts.map(acc => ({ value: acc.id, label: `${acc.name} (${acc.id})` }))}
+                    className="w-full rounded-xl px-4 py-2.5 text-xs"
+                  />
                 )}
                 {getFieldError('accountId') && (
                   <p className="text-[10px] text-red-500 font-bold">{getFieldError('accountId')}</p>
@@ -571,18 +569,18 @@ const LinkedInCampaignWizard = () => {
                 {loadingGroups ? (
                   <div className="h-10 bg-slate-100 dark:bg-white/5 rounded-xl animate-pulse"></div>
                 ) : (
-                  <select
+                  <CustomSelect
                     value={campaignGroupId}
-                    onChange={(e) => handleFieldChange(setCampaignGroupId, e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer"
-                  >
-                    <option value="">-- Select Group --</option>
-                    {campaignGroups.map(grp => (
-                      <option key={grp.id} value={grp.id}>
-                        {grp.name} ({grp.status ? grp.status.toLowerCase() : 'unknown'})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => handleFieldChange(setCampaignGroupId, val)}
+                    options={[
+                      { value: "", label: "-- Select Group --" },
+                      ...campaignGroups.map(grp => ({
+                        value: grp.id,
+                        label: `${grp.name} (${grp.status ? grp.status.toLowerCase() : 'unknown'})`
+                      }))
+                    ]}
+                    className="w-full rounded-xl px-4 py-2.5 text-xs"
+                  />
                 )}
                 {getFieldError('campaignGroupId') && (
                   <p className="text-[10px] text-red-500 font-bold">{getFieldError('campaignGroupId')}</p>
@@ -607,29 +605,31 @@ const LinkedInCampaignWizard = () => {
               {/* Status Selector */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Publish Target Status</label>
-                <select
+                <CustomSelect
                   value={campaignStatus}
-                  onChange={(e) => handleFieldChange(setCampaignStatus, e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer"
-                >
-                  <option value="ACTIVE">ACTIVE (Deliverable immediately after approval)</option>
-                  <option value="PAUSED">PAUSED (Hold in draft-like state on LinkedIn)</option>
-                </select>
+                  onChange={(val) => handleFieldChange(setCampaignStatus, val)}
+                  options={[
+                    { value: "ACTIVE", label: "ACTIVE (Deliverable immediately after approval)" },
+                    { value: "PAUSED", label: "PAUSED (Hold in draft-like state on LinkedIn)" }
+                  ]}
+                  className="w-full rounded-xl px-4 py-2.5 text-xs"
+                />
               </div>
 
               {/* Campaign Objective Selector */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Campaign Objective</label>
-                <select
+                <CustomSelect
                   value={objective}
-                  onChange={(e) => handleFieldChange(setObjective, e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer"
-                >
-                  <option value="WEBSITE_VISIT">Website Visits (WEBSITE_VISIT)</option>
-                  <option value="LEAD_GENERATION">Lead Generation (LEAD_GENERATION)</option>
-                  <option value="BRAND_AWARENESS">Brand Awareness (BRAND_AWARENESS)</option>
-                  <option value="JOB_POSTING">Job Search / Posting (JOB_POSTING)</option>
-                </select>
+                  onChange={(val) => handleFieldChange(setObjective, val)}
+                  options={[
+                    { value: "WEBSITE_VISIT", label: "Website Visits (WEBSITE_VISIT)" },
+                    { value: "LEAD_GENERATION", label: "Lead Generation (LEAD_GENERATION)" },
+                    { value: "BRAND_AWARENESS", label: "Brand Awareness (BRAND_AWARENESS)" },
+                    { value: "JOB_POSTING", label: "Job Search / Posting (JOB_POSTING)" }
+                  ]}
+                  className="w-full rounded-xl px-4 py-2.5 text-xs"
+                />
                 <div className="flex items-center space-x-1.5 text-[10px] text-amber-500 bg-amber-500/5 border border-amber-500/10 p-2 rounded-lg mt-1 font-semibold">
                   <Info className="w-3.5 h-3.5 shrink-0" />
                   <span>Important: This objective MUST match the selected Campaign Group's objective type on LinkedIn.</span>
@@ -639,16 +639,17 @@ const LinkedInCampaignWizard = () => {
               {/* Language Selector */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Target Language Code</label>
-                <select
+                <CustomSelect
                   value={language}
-                  onChange={(e) => handleFieldChange(setLanguage, e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer"
-                >
-                  <option value="en">English (en)</option>
-                  <option value="es">Spanish (es)</option>
-                  <option value="fr">French (fr)</option>
-                  <option value="de">German (de)</option>
-                </select>
+                  onChange={(val) => handleFieldChange(setLanguage, val)}
+                  options={[
+                    { value: "en", label: "English (en)" },
+                    { value: "es", label: "Spanish (es)" },
+                    { value: "fr", label: "French (fr)" },
+                    { value: "de", label: "German (de)" }
+                  ]}
+                  className="w-full rounded-xl px-4 py-2.5 text-xs"
+                />
               </div>
 
               {/* Currency Display */}
@@ -708,42 +709,45 @@ const LinkedInCampaignWizard = () => {
               {/* Bid Strategy */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Bidding Strategy</label>
-                <select
+                <CustomSelect
                   value={bidStrategy}
-                  onChange={(e) => handleFieldChange(setBidStrategy, e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer"
-                >
-                  <option value="SPONSORED_UPDATES_AUTO_BID">Automated Bid (SPONSORED_UPDATES_AUTO_BID)</option>
-                  <option value="SPONSORED_UPDATES_MAX_CPC">Maximum CPC Bid (SPONSORED_UPDATES_MAX_CPC)</option>
-                </select>
+                  onChange={(val) => handleFieldChange(setBidStrategy, val)}
+                  options={[
+                    { value: "SPONSORED_UPDATES_AUTO_BID", label: "Automated Bid (SPONSORED_UPDATES_AUTO_BID)" },
+                    { value: "SPONSORED_UPDATES_MAX_CPC", label: "Maximum CPC Bid (SPONSORED_UPDATES_MAX_CPC)" }
+                  ]}
+                  className="w-full rounded-xl px-4 py-2.5 text-xs"
+                />
               </div>
 
               {/* Optimization Goal */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Optimization Goal</label>
-                <select
+                <CustomSelect
                   value={optimizationGoal}
-                  onChange={(e) => handleFieldChange(setOptimizationGoal, e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer"
-                >
-                  <option value="WEBSITE_VISIT">Website Visits (WEBSITE_VISIT)</option>
-                  <option value="LEAD_GENERATION">Lead Generation (LEAD_GENERATION)</option>
-                  <option value="CLICKS">Clicks (CLICKS)</option>
-                  <option value="IMPRESSIONS">Impressions (IMPRESSIONS)</option>
-                </select>
+                  onChange={(val) => handleFieldChange(setOptimizationGoal, val)}
+                  options={[
+                    { value: "WEBSITE_VISIT", label: "Website Visits (WEBSITE_VISIT)" },
+                    { value: "LEAD_GENERATION", label: "Lead Generation (LEAD_GENERATION)" },
+                    { value: "CLICKS", label: "Clicks (CLICKS)" },
+                    { value: "IMPRESSIONS", label: "Impressions (IMPRESSIONS)" }
+                  ]}
+                  className="w-full rounded-xl px-4 py-2.5 text-xs"
+                />
               </div>
 
               {/* Cost Type */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Cost Type</label>
-                <select
+                <CustomSelect
                   value={costType}
-                  onChange={(e) => handleFieldChange(setCostType, e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer"
-                >
-                  <option value="CPC">CPC (Cost Per Click)</option>
-                  <option value="CPM">CPM (Cost Per Mille / Impressions)</option>
-                </select>
+                  onChange={(val) => handleFieldChange(setCostType, val)}
+                  options={[
+                    { value: "CPC", label: "CPC (Cost Per Click)" },
+                    { value: "CPM", label: "CPM (Cost Per Mille / Impressions)" }
+                  ]}
+                  className="w-full rounded-xl px-4 py-2.5 text-xs"
+                />
               </div>
 
               {/* Unit Cost (Bid amount) */}
@@ -808,15 +812,16 @@ const LinkedInCampaignWizard = () => {
               {/* Timezone */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Target Schedule Timezone</label>
-                <select
+                <CustomSelect
                   value={timezone}
-                  onChange={(e) => handleFieldChange(setTimezone, e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer"
-                >
-                  <option value="America/New_York">Eastern Time (America/New_York)</option>
-                  <option value="Asia/Kolkata">India Standard Time (Asia/Kolkata)</option>
-                  <option value="UTC">Coordinated Universal Time (UTC)</option>
-                </select>
+                  onChange={(val) => handleFieldChange(setTimezone, val)}
+                  options={[
+                    { value: "America/New_York", label: "Eastern Time (America/New_York)" },
+                    { value: "Asia/Kolkata", label: "India Standard Time (Asia/Kolkata)" },
+                    { value: "UTC", label: "Coordinated Universal Time (UTC)" }
+                  ]}
+                  className="w-full rounded-xl px-4 py-2.5 text-xs"
+                />
               </div>
             </div>
           </div>

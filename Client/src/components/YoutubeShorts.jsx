@@ -5,6 +5,7 @@ import {
   Calendar, RefreshCw, Eye, ThumbsUp, MessageSquare,
   TrendingUp, HelpCircle, IndianRupee, Search, Layers, Key
 } from 'lucide-react';
+import CustomSelect from './CustomSelect';
 
 const YoutubeShorts = () => {
   const navigate = useNavigate();
@@ -195,30 +196,26 @@ const YoutubeShorts = () => {
         <div className="flex flex-wrap items-center gap-3">
           {/* Account Selector */}
           {accounts.length > 0 && (
-            <select
-              value={selectedAccount || ""}
-              onChange={(e) => setSelectedAccount(e.target.value)}
-              className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-slate-100 cursor-pointer"
-            >
-              {accounts.map(acc => (
-                <option key={acc} value={acc}>Account: {acc}</option>
-              ))}
-            </select>
+            <CustomSelect
+              value={selectedAccount}
+              onChange={setSelectedAccount}
+              options={accounts}
+              prefix="Account: "
+              className="rounded-2xl px-4 py-2.5 text-sm min-w-[200px]"
+            />
           )}
 
           {/* Channel Selector */}
           {channels.length > 0 && (
-            <select
+            <CustomSelect
               value={selectedChannel ? JSON.stringify(selectedChannel) : ""}
-              onChange={(e) => setSelectedChannel(JSON.parse(e.target.value))}
-              className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-slate-100 cursor-pointer"
-            >
-              {channels.map((chan, idx) => (
-                <option key={chan.channel_id || idx} value={JSON.stringify(chan)}>
-                  Channel: {chan.channel_name}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedChannel(JSON.parse(val))}
+              options={channels.map((chan, idx) => ({
+                value: JSON.stringify(chan),
+                label: `Channel: ${chan.channel_name}`
+              }))}
+              className="rounded-2xl px-4 py-2.5 text-sm min-w-[200px]"
+            />
           )}
 
           <button

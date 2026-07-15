@@ -10,5 +10,7 @@ router.get('/accounts', googleController.getAccounts);
 router.get('/dashboard', googleController.getDashboardData);
 router.get('/ads', googleController.getAds);
 router.get('/campaigns', googleController.getCampaigns);
+router.get('/leads', googleController.getLeads);
+router.post('/sync-leads', googleController.syncLeads);
 
 module.exports = router;

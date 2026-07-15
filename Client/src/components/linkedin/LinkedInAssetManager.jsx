@@ -3,6 +3,7 @@ import {
     Briefcase, RefreshCw, ChevronRight, Globe, Database, Copy, 
     Check, AlertCircle, CheckCircle, ShieldAlert, Sparkles, Upload 
 } from 'lucide-react';
+import CustomSelect from '../CustomSelect';
 
 const LinkedInAssetManager = () => {
     const [adAccounts, setAdAccounts] = useState([]);
@@ -181,15 +182,12 @@ const LinkedInAssetManager = () => {
                     </button>
 
                     {/* Connected accounts select box */}
-                    <select
+                    <CustomSelect
                         value={selectedAccountId}
-                        onChange={(e) => setSelectedAccountId(e.target.value)}
-                        className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer min-w-[200px]"
-                    >
-                        {adAccounts.map(acc => (
-                            <option key={acc.id} value={acc.id}>{acc.name}</option>
-                        ))}
-                    </select>
+                        onChange={setSelectedAccountId}
+                        options={adAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
+                        className="min-w-[200px] rounded-2xl px-4 py-2.5 text-sm"
+                    />
                 </div>
             </div>
 

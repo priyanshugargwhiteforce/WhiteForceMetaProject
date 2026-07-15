@@ -12,6 +12,7 @@ import {
   Clock
 } from 'lucide-react';
 import axios from 'axios';
+import CustomSelect from './CustomSelect';
 
 const AdOwner = () => {
   const { user } = useAuth();
@@ -231,42 +232,34 @@ const AdOwner = () => {
         {/* Dropdowns Filters */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Config select */}
-          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1.5 transition-colors relative">
+          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1 transition-colors relative">
             <Database className="w-3.5 h-3.5 text-blue-500" />
-            <select
+            <CustomSelect
               value={selectedConfigId}
-              onChange={(e) => {
-                setSelectedConfigId(e.target.value);
-                localStorage.setItem('selectedMetaConfigId', e.target.value);
+              onChange={(val) => {
+                setSelectedConfigId(val);
+                localStorage.setItem('selectedMetaConfigId', val);
               }}
-              className="bg-transparent text-[11px] font-bold focus:outline-none cursor-pointer pr-6 appearance-none text-slate-700 dark:text-slate-200"
-            >
-              <option value="" className="bg-white dark:bg-slate-900">Default Server Config</option>
-              {metaConfigs.map(cfg => (
-                <option key={cfg.id} value={cfg.id} className="bg-white dark:bg-slate-900">{cfg.name}</option>
-              ))}
-            </select>
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-              <ChevronDown className="w-3 h-3" />
-            </div>
+              options={[
+                { value: "", label: "Default Server Config" },
+                ...metaConfigs.map(cfg => ({ value: cfg.id, label: cfg.name }))
+              ]}
+              className="border-none bg-transparent py-1 text-[11px] px-1 min-w-[150px]"
+            />
           </div>
 
           {/* Ad Account select */}
-          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1.5 transition-colors relative">
+          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1 transition-colors relative">
             <Activity className="w-3.5 h-3.5 text-emerald-500" />
-            <select
+            <CustomSelect
               value={selectedAccountId}
-              onChange={(e) => setSelectedAccountId(e.target.value)}
-              className="bg-transparent text-[11px] font-bold focus:outline-none cursor-pointer pr-6 appearance-none text-slate-700 dark:text-slate-200"
-            >
-              <option value="" className="bg-white dark:bg-slate-900">Choose Ad Account...</option>
-              {adAccounts.map(acc => (
-                <option key={acc.id} value={acc.id} className="bg-white dark:bg-slate-900">{acc.name}</option>
-              ))}
-            </select>
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-              <ChevronDown className="w-3 h-3" />
-            </div>
+              onChange={setSelectedAccountId}
+              options={[
+                { value: "", label: "Choose Ad Account..." },
+                ...adAccounts.map(acc => ({ value: acc.id, label: acc.name }))
+              ]}
+              className="border-none bg-transparent py-1 text-[11px] px-1 min-w-[150px]"
+            />
           </div>
         </div>
       </div>
@@ -350,18 +343,15 @@ const AdOwner = () => {
 
                       {/* Ad Owner Select Dropdown */}
                       <td className="px-4 py-2.5">
-                        <select
+                        <CustomSelect
                           value={adEdits.ownerName}
-                          onChange={(e) => handleFieldChange(ad.id, 'ownerName', e.target.value)}
-                          className="w-40 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100"
-                        >
-                          <option value="">Unassigned</option>
-                          {teamMembers.map(member => (
-                            <option key={member.id} value={member.username}>
-                              {member.username} ({member.role})
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(val) => handleFieldChange(ad.id, 'ownerName', val)}
+                          options={[
+                            { value: "", label: "Unassigned" },
+                            ...teamMembers.map(member => ({ value: member.username, label: `${member.username} (${member.role})` }))
+                          ]}
+                          className="w-40 rounded-lg px-3 py-1.5 text-xs focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100"
+                        />
                       </td>
 
                       {/* Launch Date picker */}
