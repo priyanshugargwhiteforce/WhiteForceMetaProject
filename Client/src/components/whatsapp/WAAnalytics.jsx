@@ -1382,7 +1382,7 @@ const WAAnalytics = () => {
                     <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-xs text-slate-700 dark:text-slate-400">
                       {paymentsList.map((pay) => {
                         const totalPaid = parseFloat(pay.amount || 0);
-                        const waAmount = totalPaid - (totalPaid * 0.18);
+                        const waAmount = totalPaid / 1.18;
                         const gstAmount = totalPaid - waAmount;
                         return (
                           <tr key={pay.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.01] transition-all">
