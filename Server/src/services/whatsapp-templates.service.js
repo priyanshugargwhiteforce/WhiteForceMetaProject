@@ -687,7 +687,7 @@ const handleIncomingMessage = async (msgData) => {
         let linkedMsg = null;
         if (replyToMessageId) {
             const [[matchedMsg]] = await pool.query(
-                'SELECT source_app, source_user_id, source_user_name, source_reference_id FROM whatsapp_message_logs WHERE message_id = ? LIMIT 1',
+                'SELECT template_name, source_app, source_user_id, source_user_name, source_reference_id FROM whatsapp_message_logs WHERE message_id = ? LIMIT 1',
                 [replyToMessageId]
             );
             if (matchedMsg) {
@@ -697,7 +697,7 @@ const handleIncomingMessage = async (msgData) => {
 
         if (!linkedMsg) {
             const [[matchedMsg]] = await pool.query(
-                `SELECT source_app, source_user_id, source_user_name, source_reference_id 
+                `SELECT template_name, source_app, source_user_id, source_user_name, source_reference_id 
                  FROM whatsapp_message_logs 
                  WHERE recipient_number = ? AND direction = 'outgoing' AND sent_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
                  ORDER BY sent_at DESC LIMIT 1`,
@@ -718,7 +718,7 @@ const handleIncomingMessage = async (msgData) => {
             [
                 phoneId || 'N/A',
                 normalized,
-                'Customer Reply',
+                linkedMsg?.template_name || 'Customer Reply',
                 messageId,
                 linkedMsg?.source_app || null,
                 linkedMsg?.source_user_id || null,

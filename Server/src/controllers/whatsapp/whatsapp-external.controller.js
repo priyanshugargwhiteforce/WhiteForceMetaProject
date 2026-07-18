@@ -340,6 +340,48 @@ exports.getDashboardExternalMessages = async (req, res) => {
         let countQuery = query.replace('SELECT *', 'SELECT COUNT(*) as total');
         const [[{ total }]] = await pool.query(countQuery, params);
 
+        // Fetch counts grouped by status matching current filter
+        let statusCountsQuery = 'SELECT status, COUNT(*) as count FROM whatsapp_message_logs WHERE (source_app IS NOT NULL)';
+        const statusCountsParams = [];
+        if (source_app) {
+            statusCountsQuery += ' AND source_app = ?';
+            statusCountsParams.push(source_app);
+        }
+        if (source_user_id) {
+            statusCountsQuery += ' AND source_user_id = ?';
+            statusCountsParams.push(source_user_id);
+        }
+        if (direction) {
+            statusCountsQuery += ' AND direction = ?';
+            statusCountsParams.push(direction);
+        }
+        if (status) {
+            statusCountsQuery += ' AND status = ?';
+            statusCountsParams.push(status);
+        }
+        if (template_name) {
+            statusCountsQuery += ' AND template_name = ?';
+            statusCountsParams.push(template_name);
+        }
+        if (recipient_number) {
+            statusCountsQuery += ' AND recipient_number = ?';
+            statusCountsParams.push(normalizePhone(recipient_number));
+        }
+        if (source_reference_id) {
+            statusCountsQuery += ' AND source_reference_id = ?';
+            statusCountsParams.push(source_reference_id);
+        }
+        if (date_from) {
+            statusCountsQuery += ' AND sent_at >= ?';
+            statusCountsParams.push(date_from);
+        }
+        if (date_to) {
+            statusCountsQuery += ' AND sent_at <= ?';
+            statusCountsParams.push(date_to);
+        }
+        statusCountsQuery += ' GROUP BY status';
+        const [statusCountsRows] = await pool.query(statusCountsQuery, statusCountsParams);
+
         query += ' ORDER BY sent_at DESC LIMIT ? OFFSET ?';
         params.push(limitVal, offsetVal);
 
@@ -351,6 +393,7 @@ exports.getDashboardExternalMessages = async (req, res) => {
             page: parseInt(page),
             limit: limitVal,
             totalPages: Math.ceil(total / limitVal),
+            statusCounts: statusCountsRows,
             messages: rows.map(r => ({
                 ...r,
                 template_params_json: typeof r.template_params_json === 'string' ? JSON.parse(r.template_params_json) : r.template_params_json,
@@ -461,6 +504,34 @@ exports.getDashboardExternalTemplates = async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching dashboard external templates:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+/**
+ * GET /api/whatsapp/dashboard/external-users
+ * Secured with JWT protect session. For dashboard users to fetch all distinct source_users (id & name) in logs.
+ */
+exports.getDashboardExternalUsers = async (req, res) => {
+    try {
+        const [rows] = await pool.query(
+            `SELECT DISTINCT source_user_id, source_user_name FROM whatsapp_message_logs 
+             WHERE source_user_id IS NOT NULL AND source_user_id != '' 
+             ORDER BY source_user_name ASC`
+        );
+        const users = rows.map(r => ({
+            id: r.source_user_id,
+            name: r.source_user_name || 'N/A'
+        }));
+        return res.status(200).json({
+            success: true,
+            users
+        });
+    } catch (error) {
+        console.error('Error fetching dashboard external users:', error.message);
         return res.status(500).json({
             success: false,
             message: error.message

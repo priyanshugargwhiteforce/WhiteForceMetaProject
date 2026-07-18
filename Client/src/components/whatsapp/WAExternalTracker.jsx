@@ -83,6 +83,15 @@ const WAExternalTracker = () => {
     const [totalRecords, setTotalRecords] = useState(0);
     const limit = 15;
 
+    // Status counts state
+    const [statusCounts, setStatusCounts] = useState({
+        sent: 0,
+        delivered: 0,
+        read: 0,
+        failed: 0,
+        replied: 0
+    });
+
     // Chat Modal States
     const [selectedPhone, setSelectedPhone] = useState(null);
     const [conversation, setConversation] = useState([]);
@@ -127,6 +136,23 @@ const WAExternalTracker = () => {
         }
     };
 
+    // Dynamic users state
+    const [allowedUsers, setAllowedUsers] = useState([]);
+
+    const fetchUsers = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get('/api/whatsapp/dashboard/external-users', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.data.success) {
+                setAllowedUsers(response.data.users || []);
+            }
+        } catch (err) {
+            console.error('Error fetching dynamic users:', err);
+        }
+    };
+
     const fetchMessages = async () => {
         try {
             setLoading(true);
@@ -154,6 +180,16 @@ const WAExternalTracker = () => {
                 setMessages(response.data.messages || []);
                 setTotalPages(response.data.totalPages || 1);
                 setTotalRecords(response.data.total || 0);
+
+                // Parse status counts
+                const counts = { sent: 0, delivered: 0, read: 0, failed: 0, replied: 0 };
+                if (response.data.statusCounts) {
+                    response.data.statusCounts.forEach(item => {
+                        const statusKey = String(item.status).toLowerCase();
+                        counts[statusKey] = item.count;
+                    });
+                }
+                setStatusCounts(counts);
             }
         } catch (err) {
             console.error('Error fetching external messages:', err);
@@ -166,11 +202,12 @@ const WAExternalTracker = () => {
     useEffect(() => {
         fetchApps();
         fetchTemplates();
+        fetchUsers();
     }, []);
 
     useEffect(() => {
         fetchMessages();
-    }, [page, sourceApp, status, templateName]);
+    }, [page, sourceApp, status, templateName, sourceUserId]);
 
     const handleSearchSubmit = (e) => {
         e.preventDefault();
@@ -285,11 +322,44 @@ const WAExternalTracker = () => {
                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">In-House Apps Integrations Logs</p>
                     </div>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex flex-wrap items-center gap-3">
+                    {/* Status Stats Badges */}
+                    <div className="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 px-3 py-1.5 rounded-2xl shadow-sm">
+                        {/* Total Count Badge */}
+                        <div className="flex items-center space-x-1.5 border-r border-slate-200 dark:border-white/10 pr-2.5">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total:</span>
+                            <span className="text-xs font-extrabold text-slate-900 dark:text-white font-mono">{totalRecords}</span>
+                        </div>
+                        {/* Status Stats Badges */}
+                        {Object.entries(statusCounts).map(([statusKey, count]) => {
+                            const pct = totalRecords > 0 ? ((count / totalRecords) * 100).toFixed(0) : '0';
+                            
+                            // Dot styles and label colors
+                            const statusStyles = {
+                                sent: { dot: 'bg-blue-500', text: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/5' },
+                                delivered: { dot: 'bg-indigo-500', text: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-500/5' },
+                                read: { dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/5' },
+                                failed: { dot: 'bg-rose-500', text: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-500/5' },
+                                replied: { dot: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-500/5' }
+                            };
+
+                            const style = statusStyles[statusKey] || { dot: 'bg-slate-500', text: 'text-slate-600 dark:text-slate-400', bg: 'bg-slate-500/5' };
+
+                            return (
+                                <div key={statusKey} className={`flex items-center space-x-1.5 px-2 py-0.5 rounded-lg border border-slate-200/40 dark:border-white/5 ${style.bg}`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`}></span>
+                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 capitalize">{statusKey}</span>
+                                    <span className={`text-[10px] font-extrabold font-mono ${style.text}`}>{count}</span>
+                                    <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono font-medium">({pct}%)</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+
                     <button
                         onClick={fetchMessages}
                         disabled={loading}
-                        className="p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 hover:text-green-500 transition-all"
+                        className="p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 hover:text-green-500 transition-all cursor-pointer"
                     >
                         <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
                     </button>
@@ -353,17 +423,19 @@ const WAExternalTracker = () => {
 
                     {/* User ID Filter */}
                     <div className="flex flex-col space-y-1">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Source User ID</label>
-                        <div className="relative">
-                            <User className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="E.g. 45"
-                                value={sourceUserId}
-                                onChange={(e) => setSourceUserId(e.target.value)}
-                                className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-3 py-2 w-full text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-700 dark:text-slate-200"
-                            />
-                        </div>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sender User</label>
+                        <CustomSelect
+                            value={sourceUserId}
+                            onChange={setSourceUserId}
+                            options={[
+                                { value: "", label: "All Users" },
+                                ...allowedUsers.map(usr => ({
+                                    value: usr.id,
+                                    label: `${usr.name} (${usr.id})`
+                                }))
+                            ]}
+                            className="rounded-xl px-3 py-2 text-xs"
+                        />
                     </div>
                 </div>
 

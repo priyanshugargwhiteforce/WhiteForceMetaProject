@@ -171,6 +171,7 @@ router.get('/dashboard/external-messages', whatsappExternalController.getDashboa
 router.get('/dashboard/external-conversation/:phone', whatsappExternalController.getDashboardExternalConversation);
 router.get('/dashboard/external-apps', whatsappExternalController.getDashboardExternalApps);
 router.get('/dashboard/external-templates', whatsappExternalController.getDashboardExternalTemplates);
+router.get('/dashboard/external-users', whatsappExternalController.getDashboardExternalUsers);
 
 module.exports = router;
 
