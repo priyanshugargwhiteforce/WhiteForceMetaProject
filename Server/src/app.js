@@ -30,6 +30,7 @@ app.use('/api/meta', protect, require('./routes/meta.routes'));
 app.use('/api/meta/posting', require('./routes/meta-posting.routes'));
 app.use('/api/ai', protect, require('./routes/ai.routes'));
 app.use('/api/google', protect, require('./routes/google.routes'));
+app.use('/api/reports', protect, require('./routes/reports.routes'));
 app.use('/api/whatsapp', require('./routes/whatsapp/whatsapp.routes'));
 app.use('/api/youtube-ads', protect, require('./routes/youtubeAd.routes'));
 app.use('/api/linkedin', require('./routes/linkedin/linkedin.routes'));

@@ -544,6 +544,12 @@ const Sidebar = ({ isOpen, onClose }) => {
             <div className="pt-6 pb-2 px-4">
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">System</p>
             </div>
+            <NavItem
+              icon={PieChart}
+              label="Reports"
+              active={isActive('/reports')}
+              onClick={() => navigate('/reports')}
+            />
             <NavDropdown
               icon={Settings}
               label="Settings"

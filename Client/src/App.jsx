@@ -19,6 +19,7 @@ import YoutubeAdDetail from './components/YoutubeAdDetail';
 import YoutubeShortsManager from './components/YoutubeShortsManager';
 import YoutubeShorts from './components/YoutubeShorts';
 import Overview from './components/Overview';
+import Reports from './components/Reports';
 import WhatsAppManager from './components/whatsapp/WhatsAppManager';
 import WATemplates from './components/whatsapp/WATemplates';
 import SendMessage from './components/whatsapp/SendMessage';
@@ -393,6 +394,14 @@ function App() {
                                     <PermissionRoute permission="whatsapp_access">
                                         <WAExternalTracker />
                                     </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/reports" 
+                            element={
+                                <ProtectedRoute>
+                                    <Reports />
                                 </ProtectedRoute>
                             } 
                         />

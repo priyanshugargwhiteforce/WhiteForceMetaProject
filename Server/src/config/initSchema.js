@@ -195,6 +195,22 @@ const initSchema = async () => {
         `);
         console.log(' - google_ads_snapshots table created/verified');
 
+        // 7c. Google Ads daily trend table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS google_insights_trend (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                customer_id VARCHAR(100) NOT NULL,
+                date_start DATE NOT NULL,
+                spend DECIMAL(15, 2) DEFAULT 0.00,
+                impressions INT DEFAULT 0,
+                clicks INT DEFAULT 0,
+                conversions DECIMAL(15, 2) DEFAULT 0.00,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_google_customer_date (customer_id, date_start)
+            )
+        `);
+        console.log(' - google_insights_trend table created/verified');
+
         // 7b. Google Ads Leads
         await pool.query(`
             CREATE TABLE IF NOT EXISTS google_leads (
