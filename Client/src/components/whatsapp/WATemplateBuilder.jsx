@@ -26,6 +26,8 @@ import {
 import axios from 'axios';
 import MediaLibrary from '../media/MediaLibrary';
 import CustomSelect from '../CustomSelect';
+import { SUPPORTED_LANGUAGES } from './languages';
+
 
 const WATemplateBuilder = () => {
   const navigate = useNavigate();
@@ -126,7 +128,7 @@ const WATemplateBuilder = () => {
       const t = location.state.cloneTemplate;
       setName(`clone_${t.name}`);
       setCategory(t.category || 'MARKETING');
-      setLanguage(t.language === 'en_US' ? 'en' : (t.language || 'en'));
+      setLanguage(t.language || 'en');
 
       if (t.components && Array.isArray(t.components)) {
         const header = t.components.find(c => c.type === 'HEADER');
@@ -360,14 +362,12 @@ const WATemplateBuilder = () => {
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 block">Language</label>
-              <CustomSelect
+               <CustomSelect
                 value={language}
                 onChange={setLanguage}
-                options={[
-                  { value: "en", label: "English" },
-                  { value: "hi", label: "Hindi" },
-                  { value: "es", label: "Spanish" }
-                ]}
+                options={SUPPORTED_LANGUAGES}
+                showSearch={true}
+                searchPlaceholder="Search language..."
                 className="w-full rounded-xl px-4 py-3 text-sm"
               />
             </div>
