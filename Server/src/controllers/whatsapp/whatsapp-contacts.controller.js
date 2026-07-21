@@ -157,8 +157,11 @@ exports.restoreContact = async (req, res) => {
 
 exports.getChatThreads = async (req, res) => {
     try {
-        const threads = await contactsService.getChatThreads();
-        res.status(200).json({ success: true, threads });
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const search = req.query.search || '';
+        const { threads, hasMore } = await contactsService.getChatThreads(page, limit, search);
+        res.status(200).json({ success: true, threads, hasMore });
     } catch (error) {
         console.error('Get chat threads error:', error.message);
         res.status(500).json({ success: false, message: error.message });

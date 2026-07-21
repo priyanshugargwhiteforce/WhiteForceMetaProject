@@ -295,7 +295,19 @@ const getAttributeKeys = async (listId = null) => {
     return Array.from(keys);
 };
 
-const getChatThreads = async () => {
+const getChatThreads = async (page = 1, limit = 20, search = '') => {
+    const limitVal = parseInt(limit) || 20;
+    const pageVal = parseInt(page) || 1;
+    const offset = (pageVal - 1) * limitVal;
+    const params = [];
+    
+    let searchCondition = '';
+    if (search && search.trim() !== '') {
+        const searchLike = `%${search.trim()}%`;
+        searchCondition = ` AND (c.name LIKE ? OR c.phone LIKE ?)`;
+        params.push(searchLike, searchLike);
+    }
+    
     const query = `
         SELECT c.id, c.phone, c.name, c.last_message_at, c.status, c.engagement_score,
                a.event_type, a.metadata, a.event_timestamp
@@ -309,14 +321,24 @@ const getChatThreads = async () => {
                 GROUP BY contact_id
             ) latest ON latest.max_id = ca.id
         ) a ON a.contact_id = c.id
-        WHERE c.last_message_at IS NOT NULL
+        WHERE c.last_message_at IS NOT NULL ${searchCondition}
         ORDER BY c.last_message_at DESC
+        LIMIT ? OFFSET ?
     `;
-    const [rows] = await pool.query(query);
-    return rows.map(r => ({
+    
+    params.push(limitVal + 1, offset);
+    
+    const [rows] = await pool.query(query, params);
+    
+    const hasMore = rows.length > limitVal;
+    const resultRows = hasMore ? rows.slice(0, limitVal) : rows;
+    
+    const threads = resultRows.map(r => ({
         ...r,
         metadata: typeof r.metadata === 'string' ? JSON.parse(r.metadata) : (r.metadata || {})
     }));
+    
+    return { threads, hasMore };
 };
 
 const getChatMessages = async (contactId) => {

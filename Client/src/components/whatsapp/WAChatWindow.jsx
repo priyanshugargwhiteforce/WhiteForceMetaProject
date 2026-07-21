@@ -39,24 +39,50 @@ const WAChatWindow = () => {
   const messagesEndRef = useRef(null);
   const selectedThreadRef = useRef(selectedThread);
 
+  // Pagination and search debouncing states
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  const debouncedSearchQueryRef = useRef(debouncedSearchQuery);
+
   useEffect(() => {
     selectedThreadRef.current = selectedThread;
   }, [selectedThread]);
 
   useEffect(() => {
-    fetchConfigs();
-    fetchThreads();
+    debouncedSearchQueryRef.current = debouncedSearchQuery;
+  }, [debouncedSearchQuery]);
 
-    // Event listener for config changes (updates threads)
+  // Debounce search query input (500ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Fetch configs and set window event listener
+  useEffect(() => {
+    fetchConfigs();
+
     const handleConfigChanged = (e) => {
       if (e.detail.type === 'whatsapp') {
         fetchConfigs();
-        fetchThreads();
+        setPage(1);
+        fetchThreads(1, false, debouncedSearchQueryRef.current);
       }
     };
     window.addEventListener('config-changed', handleConfigChanged);
     return () => window.removeEventListener('config-changed', handleConfigChanged);
   }, []);
+
+  // Fetch page 1 when debounced search or active config changes
+  useEffect(() => {
+    setPage(1);
+    fetchThreads(1, false, debouncedSearchQuery);
+  }, [debouncedSearchQuery, selectedConfigId]);
 
   // Establish Server-Sent Events (SSE) connection for real-time chat updates
   useEffect(() => {
@@ -88,8 +114,9 @@ const WAChatWindow = () => {
             });
           }
 
-          // 2. Refresh threads list to update sidebar message preview & sort order
-          fetchThreads();
+          // 2. Refresh page 1 of threads to place active thread at top
+          setPage(1);
+          fetchThreads(1, false, debouncedSearchQueryRef.current);
         }
 
         if (payload.type === 'status') {
@@ -134,21 +161,10 @@ const WAChatWindow = () => {
     };
   }, []);
 
+  // Update filteredThreads when threads list changes
   useEffect(() => {
-    // Filter threads on search query change
-    if (searchQuery.trim() === '') {
-      setFilteredThreads(threads);
-    } else {
-      const q = searchQuery.toLowerCase().trim();
-      setFilteredThreads(
-        threads.filter(
-          t =>
-            (t.name && t.name.toLowerCase().includes(q)) ||
-            (t.phone && t.phone.includes(q))
-        )
-      );
-    }
-  }, [searchQuery, threads]);
+    setFilteredThreads(threads);
+  }, [threads]);
 
   useEffect(() => {
     if (selectedThread) {
@@ -186,9 +202,13 @@ const WAChatWindow = () => {
     localStorage.setItem('selectedWhatsAppConfigId', val);
   };
 
-  const fetchThreads = async () => {
+  const fetchThreads = async (pageNum = 1, isAppend = false, search = '') => {
     try {
-      setLoadingThreads(true);
+      if (pageNum === 1) {
+        setLoadingThreads(true);
+      } else {
+        setLoadingMore(true);
+      }
       setError(null);
       const token = localStorage.getItem('token');
       const configId = localStorage.getItem('selectedWhatsAppConfigId') || '';
@@ -198,16 +218,42 @@ const WAChatWindow = () => {
         headers['X-WhatsApp-Config-Id'] = configId;
       }
 
-      const response = await axios.get('/api/whatsapp/chats', { headers });
+      const response = await axios.get('/api/whatsapp/chats', {
+        headers,
+        params: { page: pageNum, limit: 20, search }
+      });
+
       if (response.data.success) {
-        setThreads(response.data.threads || []);
-        setFilteredThreads(response.data.threads || []);
+        const newThreads = response.data.threads || [];
+        setHasMore(response.data.hasMore);
+        if (isAppend) {
+          setThreads(prev => {
+            const existingIds = new Set(prev.map(t => t.id));
+            const filteredNew = newThreads.filter(t => !existingIds.has(t.id));
+            return [...prev, ...filteredNew];
+          });
+        } else {
+          setThreads(newThreads);
+        }
       }
     } catch (err) {
       console.error('Error fetching chat threads:', err);
       setError(err.response?.data?.message || err.message);
     } finally {
       setLoadingThreads(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const handleScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    // Trigger when user is within 50px of the bottom
+    if (scrollHeight - scrollTop - clientHeight < 50) {
+      if (!loadingMore && !loadingThreads && hasMore) {
+        const nextPage = page + 1;
+        setPage(nextPage);
+        fetchThreads(nextPage, true, debouncedSearchQuery);
+      }
     }
   };
 
@@ -377,7 +423,10 @@ const WAChatWindow = () => {
           </div>
 
           {/* Threads list scrollable stream */}
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-white/5">
+          <div 
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-white/5"
+          >
             {loadingThreads ? (
               <div className="p-8 text-center text-slate-400 animate-pulse text-sm">
                 Loading conversations...
@@ -387,51 +436,58 @@ const WAChatWindow = () => {
                 No conversations found.
               </div>
             ) : (
-              filteredThreads.map(t => {
-                const isSelected = selectedThread && selectedThread.id === t.id;
-                const lastMsgBody = t.metadata?.body || (t.event_type === 'unsubscribed' ? 'User unsubscribed' : '');
+              <>
+                {filteredThreads.map(t => {
+                  const isSelected = selectedThread && selectedThread.id === t.id;
+                  const lastMsgBody = t.metadata?.body || (t.event_type === 'unsubscribed' ? 'User unsubscribed' : '');
 
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => setSelectedThread(t)}
-                    className={`w-full text-left p-4 transition-colors flex items-start space-x-3 ${isSelected
-                      ? 'bg-emerald-500/10 dark:bg-emerald-500/5 border-l-4 border-emerald-500'
-                      : 'hover:bg-slate-100/50 dark:hover:bg-white/[0.01]'
-                      }`}
-                  >
-                    <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 shrink-0">
-                      <User className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-bold text-sm truncate text-slate-900 dark:text-white">
-                          {t.name || t.phone}
-                        </h4>
-                        <span className="text-[10px] text-slate-400 shrink-0">
-                          {formatTime(t.last_message_at)}
-                        </span>
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setSelectedThread(t)}
+                      className={`w-full text-left p-4 transition-colors flex items-start space-x-3 ${isSelected
+                        ? 'bg-emerald-500/10 dark:bg-emerald-500/5 border-l-4 border-emerald-500'
+                        : 'hover:bg-slate-100/50 dark:hover:bg-white/[0.01]'
+                        }`}
+                    >
+                      <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 shrink-0">
+                        <User className="w-5 h-5" />
                       </div>
-                      <p className="text-xs text-slate-400 truncate mt-0.5">{t.phone}</p>
-
-                      {/* Last message preview */}
-                      <div className="flex items-center space-x-1.5 mt-1">
-                        {t.event_type !== 'replied' && t.event_type !== 'unsubscribed' && (
-                          <span className="shrink-0">{getStatusIcon(t.event_type)}</span>
-                        )}
-                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1">
-                          {lastMsgBody ? lastMsgBody : `Template: ${t.metadata?.template_name || 'Template'}`}
-                        </p>
-                        {t.engagement_score > 0 && (
-                          <span className="shrink-0 text-[9px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded-md font-bold">
-                            {Math.round(t.engagement_score)}%
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-bold text-sm truncate text-slate-900 dark:text-white">
+                            {t.name || t.phone}
+                          </h4>
+                          <span className="text-[10px] text-slate-400 shrink-0">
+                            {formatTime(t.last_message_at)}
                           </span>
-                        )}
+                        </div>
+                        <p className="text-xs text-slate-400 truncate mt-0.5">{t.phone}</p>
+
+                        {/* Last message preview */}
+                        <div className="flex items-center space-x-1.5 mt-1">
+                          {t.event_type !== 'replied' && t.event_type !== 'unsubscribed' && (
+                            <span className="shrink-0">{getStatusIcon(t.event_type)}</span>
+                          )}
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1">
+                            {lastMsgBody ? lastMsgBody : `Template: ${t.metadata?.template_name || 'Template'}`}
+                          </p>
+                          {t.engagement_score > 0 && (
+                            <span className="shrink-0 text-[9px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded-md font-bold">
+                              {Math.round(t.engagement_score)}%
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                );
-              })
+                    </button>
+                  );
+                })}
+                {loadingMore && (
+                  <div className="p-4 text-center text-xs text-slate-400 animate-pulse border-t border-slate-100 dark:border-white/5">
+                    Loading more...
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
