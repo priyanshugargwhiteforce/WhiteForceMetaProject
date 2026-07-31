@@ -329,10 +329,11 @@ const TaskManager = () => {
   };
 
   const resetForm = () => {
+    const isStandardUser = user?.role !== 'admin' && user?.role !== 'manager';
     setFormData({
       title: '',
       description: '',
-      assigned_to: [],
+      assigned_to: isStandardUser && user?.id ? [user.id] : [],
       ad_platform: 'general',
       ad_id: '',
       ad_name: '',
@@ -342,7 +343,7 @@ const TaskManager = () => {
     setCurrentTask(null);
   };
 
-  const canCreateTask = user?.role === 'admin' || user?.role === 'manager';
+  const canCreateTask = !!user;
 
   // Derived filtered tasks list
   const filteredTasks = useMemo(() => {
@@ -550,6 +551,7 @@ const TaskManager = () => {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/10 text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[9px] font-bold">
+                  <th className="px-4 py-3.5 text-center w-12">S.no</th>
                   <th className="px-6 py-3.5">Task Details</th>
                   <th className="px-6 py-3.5">Priority</th>
                   <th className="px-6 py-3.5">Status</th>
@@ -561,7 +563,7 @@ const TaskManager = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05]">
-                {filteredTasks.map((task) => {
+                {filteredTasks.map((task, index) => {
                   const taskOverdue = isOverdue(task);
                   const isCreator = task.assigned_by === user?.id;
                   const isAssignee = task.assigned_to === user?.id;
@@ -570,6 +572,10 @@ const TaskManager = () => {
 
                   return (
                     <tr key={task.id} className="hover:bg-slate-50/[0.01] dark:hover:bg-white/[0.01] transition-colors group">
+                      {/* Serial Number */}
+                      <td className="px-4 py-3.5 text-center font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                        {index + 1}
+                      </td>
                       {/* Details & Ad linkages */}
                       <td className="px-6 py-3.5">
                         <div className="space-y-1 max-w-[200px]">

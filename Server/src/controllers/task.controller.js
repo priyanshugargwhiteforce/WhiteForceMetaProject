@@ -31,9 +31,9 @@ exports.getTasks = async (req, res) => {
         } else if (role === 'admin') {
             // Admin sees all tasks
         } else if (role === 'manager') {
-            // Manager sees tasks assigned to them, created by them, or assigned to their team members
-            conditions.push('(t.assigned_to = ? OR t.assigned_by = ? OR t.assigned_to IN (SELECT id FROM users WHERE manager_id = ?))');
-            params.push(userId, userId, userId);
+            // Manager sees tasks assigned to them, created by them, or assigned to/created by their team members
+            conditions.push('(t.assigned_to = ? OR t.assigned_by = ? OR t.assigned_to IN (SELECT id FROM users WHERE manager_id = ?) OR t.assigned_by IN (SELECT id FROM users WHERE manager_id = ?))');
+            params.push(userId, userId, userId, userId);
         } else {
             // Standard employees see ONLY tasks assigned to them
             conditions.push('t.assigned_to = ?');
