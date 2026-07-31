@@ -355,8 +355,15 @@ exports.updateTask = async (req, res) => {
                     );
                 }
 
-                // Make sure primary parent_task_id is set
-                await pool.query('UPDATE tasks SET parent_task_id = ? WHERE id = ?', [parentKey, parentKey]);
+                // Query remaining active rows in this group after deletion/insertion
+                const [finalRows] = await pool.query('SELECT id, assigned_to FROM tasks WHERE parent_task_id = ? OR id = ?', [parentKey, parentKey]);
+                if (finalRows.length === 1) {
+                    // Revert to a single task: clear parent_task_id so it behaves as a normal single task!
+                    await pool.query('UPDATE tasks SET parent_task_id = NULL WHERE id = ?', [finalRows[0].id]);
+                } else if (finalRows.length > 1) {
+                    const newGroupParentKey = finalRows[0].id;
+                    await pool.query('UPDATE tasks SET parent_task_id = ? WHERE id IN (?)', [newGroupParentKey, finalRows.map(r => r.id)]);
+                }
             }
         }
 
