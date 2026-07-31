@@ -282,56 +282,81 @@ exports.updateTask = async (req, res) => {
             await pool.query(`UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`, params);
         } else {
             // Full update for admin, manager, or creator
-            if (task.parent_task_id && (isAdmin || isCreator || isManagerOfAssignee)) {
-                // Update shared metadata fields for the whole group
-                const groupFields = [];
-                const groupParams = [];
-                if (title !== undefined) { groupFields.push('title = ?'); groupParams.push(title); }
-                if (description !== undefined) { groupFields.push('description = ?'); groupParams.push(description); }
-                if (ad_platform !== undefined) { groupFields.push('ad_platform = ?'); groupParams.push(ad_platform); }
-                if (ad_id !== undefined) { groupFields.push('ad_id = ?'); groupParams.push(ad_id); }
-                if (ad_name !== undefined) { groupFields.push('ad_name = ?'); groupParams.push(ad_name); }
-                if (priority !== undefined) { groupFields.push('priority = ?'); groupParams.push(priority); }
-                if (due_date !== undefined) { groupFields.push('due_date = ?'); groupParams.push(due_date); }
+            const parentKey = task.parent_task_id || task.id;
 
-                if (groupFields.length > 0) {
-                    groupParams.push(task.parent_task_id);
-                    await pool.query(`UPDATE tasks SET ${groupFields.join(', ')} WHERE parent_task_id = ?`, groupParams);
+            // Parse new assignees array if provided
+            let newAssigneeIds = null;
+            if (assigned_to !== undefined && assigned_to !== null && assigned_to !== '') {
+                if (Array.isArray(assigned_to)) {
+                    newAssigneeIds = assigned_to.map(i => parseInt(i)).filter(i => !isNaN(i));
+                } else if (typeof assigned_to === 'string' && assigned_to.includes(',')) {
+                    newAssigneeIds = assigned_to.split(',').map(i => parseInt(i.trim())).filter(i => !isNaN(i));
+                } else {
+                    const parsed = parseInt(assigned_to);
+                    if (!isNaN(parsed)) {
+                        newAssigneeIds = [parsed];
+                    }
+                }
+            }
+
+            // Update shared metadata fields for the whole group
+            const groupFields = [];
+            const groupParams = [];
+            if (title !== undefined) { groupFields.push('title = ?'); groupParams.push(title); }
+            if (description !== undefined) { groupFields.push('description = ?'); groupParams.push(description); }
+            if (ad_platform !== undefined) { groupFields.push('ad_platform = ?'); groupParams.push(ad_platform); }
+            if (ad_id !== undefined) { groupFields.push('ad_id = ?'); groupParams.push(ad_id); }
+            if (ad_name !== undefined) { groupFields.push('ad_name = ?'); groupParams.push(ad_name); }
+            if (priority !== undefined) { groupFields.push('priority = ?'); groupParams.push(priority); }
+            if (due_date !== undefined) { groupFields.push('due_date = ?'); groupParams.push(due_date); }
+
+            if (groupFields.length > 0) {
+                groupParams.push(parentKey, parentKey);
+                await pool.query(`UPDATE tasks SET ${groupFields.join(', ')} WHERE parent_task_id = ? OR id = ?`, groupParams);
+            }
+
+            if (status !== undefined) {
+                await pool.query('UPDATE tasks SET status = ? WHERE id = ?', [status, id]);
+            }
+            if (remark !== undefined) {
+                await pool.query('UPDATE tasks SET remarks = ? WHERE id = ?', [JSON.stringify(remarksArray), id]);
+            }
+
+            // Sync group assignees if assigned_to was updated
+            if (newAssigneeIds && newAssigneeIds.length > 0) {
+                const [existingRows] = await pool.query('SELECT id, assigned_to FROM tasks WHERE parent_task_id = ? OR id = ?', [parentKey, parentKey]);
+                const existingAssignees = existingRows.map(r => r.assigned_to);
+
+                // Remove assignees that are no longer in newAssigneeIds
+                const rowsToRemove = existingRows.filter(r => !newAssigneeIds.includes(r.assigned_to));
+                if (rowsToRemove.length > 0) {
+                    const removeIds = rowsToRemove.map(r => r.id);
+                    await pool.query('DELETE FROM tasks WHERE id IN (?)', [removeIds]);
                 }
 
-                // Update specific task fields (assigned_to, status, remarks) for the specific row ID
-                const specificFields = [];
-                const specificParams = [];
-                if (assigned_to !== undefined) { specificFields.push('assigned_to = ?'); specificParams.push(assigned_to); }
-                if (status !== undefined) { specificFields.push('status = ?'); specificParams.push(status); }
-                if (remark !== undefined) { specificFields.push('remarks = ?'); specificParams.push(JSON.stringify(remarksArray)); }
-
-                if (specificFields.length > 0) {
-                    specificParams.push(id);
-                    await pool.query(`UPDATE tasks SET ${specificFields.join(', ')} WHERE id = ?`, specificParams);
-                }
-            } else {
-                // Single/un-grouped task update
-                const fields = [];
-                const params = [];
-
-                if (title !== undefined) { fields.push('title = ?'); params.push(title); }
-                if (description !== undefined) { fields.push('description = ?'); params.push(description); }
-                if (assigned_to !== undefined) { fields.push('assigned_to = ?'); params.push(assigned_to); }
-                if (ad_platform !== undefined) { fields.push('ad_platform = ?'); params.push(ad_platform); }
-                if (ad_id !== undefined) { fields.push('ad_id = ?'); params.push(ad_id); }
-                if (ad_name !== undefined) { fields.push('ad_name = ?'); params.push(ad_name); }
-                if (priority !== undefined) { fields.push('priority = ?'); params.push(priority); }
-                if (status !== undefined) { fields.push('status = ?'); params.push(status); }
-                if (due_date !== undefined) { fields.push('due_date = ?'); params.push(due_date); }
-                if (remark !== undefined) { fields.push('remarks = ?'); params.push(JSON.stringify(remarksArray)); }
-
-                if (fields.length === 0) {
-                    return res.status(400).json({ success: false, message: 'No fields provided for update.' });
+                // Add new assignees that were not in existingAssignees
+                const assigneesToAdd = newAssigneeIds.filter(aId => !existingAssignees.includes(aId));
+                for (const aId of assigneesToAdd) {
+                    await pool.query(
+                        `INSERT INTO tasks (title, description, assigned_to, assigned_by, ad_platform, ad_id, ad_name, priority, due_date, parent_task_id, status)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+                        [
+                            title !== undefined ? title : task.title,
+                            description !== undefined ? description : task.description,
+                            aId,
+                            task.assigned_by,
+                            ad_platform !== undefined ? ad_platform : task.ad_platform,
+                            ad_id !== undefined ? ad_id : task.ad_id,
+                            ad_name !== undefined ? ad_name : task.ad_name,
+                            priority !== undefined ? priority : task.priority,
+                            due_date !== undefined ? due_date : task.due_date,
+                            parentKey
+                        ]
+                    );
                 }
 
-                params.push(id);
-                await pool.query(`UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`, params);
+                // Make sure primary parent_task_id is set
+                await pool.query('UPDATE tasks SET parent_task_id = ? WHERE id = ?', [parentKey, parentKey]);
             }
         }
 

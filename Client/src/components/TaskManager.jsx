@@ -268,10 +268,16 @@ const TaskManager = () => {
 
   const handleEditClick = (task) => {
     setCurrentTask(task);
+    let assignedToIds = [];
+    if (task.assignees && task.assignees.length > 0) {
+      assignedToIds = task.assignees.map(a => a.assigned_to).filter(Boolean);
+    } else if (task.assigned_to) {
+      assignedToIds = [task.assigned_to];
+    }
     setFormData({
       title: task.title,
       description: task.description || '',
-      assigned_to: task.assigned_to,
+      assigned_to: assignedToIds,
       ad_platform: task.ad_platform || 'general',
       ad_id: task.ad_id || '',
       ad_name: task.ad_name || '',
@@ -557,6 +563,7 @@ const TaskManager = () => {
                   <th className="px-6 py-3.5">Status</th>
                   <th className="px-6 py-3.5">Assigned To</th>
                   <th className="px-6 py-3.5">Created By</th>
+                  <th className="px-6 py-3.5">Created Date</th>
                   <th className="px-6 py-3.5">Due Date</th>
                   <th className="px-6 py-3.5">Latest Remark</th>
                   <th className="px-6 py-3.5 text-right">Actions</th>
@@ -663,6 +670,20 @@ const TaskManager = () => {
                       {/* Assigner */}
                       <td className="px-6 py-3.5 whitespace-nowrap text-slate-500 font-medium">
                         {task.assigner_name} {isCreator && <span className="text-[9px] text-blue-500 font-bold">(You)</span>}
+                      </td>
+
+                      {/* Created Date */}
+                      <td className="px-6 py-3.5 whitespace-nowrap text-slate-500 font-medium">
+                        {task.created_at ? (
+                          <div className="flex items-center space-x-1">
+                            <Clock className="w-3.5 h-3.5 opacity-60 text-slate-400" />
+                            <span>
+                              {new Date(task.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 italic">N/A</span>
+                        )}
                       </td>
 
                       {/* Due Date */}
@@ -789,8 +810,8 @@ const TaskManager = () => {
                 {/* Assignee Selection */}
                 <div className="space-y-1">
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Assignee(s)</label>
-                  {isCreateModalOpen ? (
-                    // Multi-select scrollable checklist for Creation
+                  {(isCreateModalOpen || user?.role === 'admin' || user?.role === 'manager' || currentTask?.assigned_by === user?.id) ? (
+                    // Multi-select scrollable checklist for Creation & Management
                     <div className="border border-slate-200 dark:border-white/10 rounded-xl bg-slate-50 dark:bg-slate-800 p-3 space-y-2.5">
                       <span className="text-[10px] text-slate-550 dark:text-slate-400 font-bold block mb-1">
                         Select one or more employee assignees:
@@ -811,7 +832,7 @@ const TaskManager = () => {
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={(e) => {
-                                  const checkedList = [...(formData.assigned_to || [])];
+                                  const checkedList = Array.isArray(formData.assigned_to) ? [...formData.assigned_to] : [];
                                   if (e.target.checked) {
                                     if (!checkedList.includes(u.id)) checkedList.push(u.id);
                                   } else {
@@ -851,23 +872,8 @@ const TaskManager = () => {
                       )}
                     </div>
                   ) : (
-                    // Single-select dropdown for Editing
-                    <div className="relative">
-                      <select
-                        required
-                        name="assigned_to"
-                        value={formData.assigned_to}
-                        onChange={handleInputChange}
-                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-slate-800 dark:text-slate-200 appearance-none pr-8"
-                      >
-                        <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="">Select Employee...</option>
-                        {assignees.map(u => (
-                          <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" key={u.id} value={u.id}>
-                            {u.username} ({u.role.toUpperCase()})
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+                    <div className="px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-350">
+                      {currentTask?.assignees ? currentTask.assignees.map(a => a.assignee_name).join(', ') : (currentTask?.assignee_name || 'Assigned User')}
                     </div>
                   )}
                 </div>

@@ -39,7 +39,7 @@ exports.getUser = async (req, res) => {
 // @access  Private/Admin
 exports.createUser = async (req, res) => {
     try {
-        const { username, email, password, role, status, meta_access, google_access, whatsapp_access, linkedin_access, manager_id } = req.body;
+        const { username, email, password, role, status, meta_access, google_access, whatsapp_access, linkedin_access, meta_publish, manager_id } = req.body;
         
         if (!username || !email || !password) {
             return res.status(400).json({ success: false, message: 'Please provide all required fields' });
