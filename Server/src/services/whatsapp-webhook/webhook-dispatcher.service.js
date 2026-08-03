@@ -30,6 +30,7 @@ async function dispatch(body) {
             const value = change?.value;
             const phoneNumberId = value?.metadata?.phone_number_id;
             const isTemplateEvent = !!(value?.event && value?.message_template_name);
+            const isCallEvent = change?.field === 'calls' || !!(value?.calls && Array.isArray(value.calls));
 
             // 1. WIRA phone ID check
             if (phoneNumberId && phoneNumberId === wiraPhoneId) {
@@ -56,7 +57,13 @@ async function dispatch(body) {
                 continue;
             }
 
-            // 4. Unknown event
+            // 4. WFADM Call event check
+            if (isCallEvent) {
+                wfadmChanges.push({ entryId: entry.id, change });
+                continue;
+            }
+
+            // 5. Unknown event
             console.warn(`[Webhook Dispatcher] Unknown event or missing phone ID: ${phoneNumberId}. Ignoring.`);
         }
     }

@@ -952,6 +952,9 @@ const initSchema = async () => {
         try {
             await pool.query("ALTER TABLE whatsapp_contact_activity MODIFY campaign_id INT NULL");
         } catch (e) { /* Migration might fail safely */ }
+        try {
+            await pool.query("ALTER TABLE whatsapp_contact_activity MODIFY event_type VARCHAR(50) NOT NULL");
+        } catch (e) { /* Migration might fail safely */ }
 
 
         // Indexes for whatsapp_contact_activity
@@ -1003,7 +1006,33 @@ const initSchema = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        console.log(' - whatsapp_waba_payment_history table created/verified');
+        // WhatsApp Call Logs Table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS whatsapp_call_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                call_id VARCHAR(255) NOT NULL UNIQUE,
+                phone_number_id VARCHAR(100) DEFAULT NULL,
+                display_phone_number VARCHAR(50) DEFAULT NULL,
+                caller_phone VARCHAR(50) NOT NULL,
+                caller_name VARCHAR(255) DEFAULT NULL,
+                caller_user_id VARCHAR(255) DEFAULT NULL,
+                receiver_phone VARCHAR(50) DEFAULT NULL,
+                direction VARCHAR(50) DEFAULT 'USER_INITIATED',
+                event VARCHAR(50) DEFAULT 'connect',
+                sdp_type VARCHAR(50) DEFAULT NULL,
+                session_data JSON DEFAULT NULL,
+                raw_payload JSON DEFAULT NULL,
+                duration INT DEFAULT 0,
+                call_timestamp TIMESTAMP NULL DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_caller_phone (caller_phone),
+                INDEX idx_phone_number_id (phone_number_id),
+                INDEX idx_event (event),
+                INDEX idx_call_timestamp (call_timestamp)
+            )
+        `);
+        console.log(' - whatsapp_call_logs table created/verified');
 
         // --- Task Management Table ---
         await pool.query(`

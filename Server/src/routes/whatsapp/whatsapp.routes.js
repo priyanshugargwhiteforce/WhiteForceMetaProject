@@ -5,6 +5,7 @@ const whatsappChannelsController = require('../../controllers/whatsapp/whatsapp-
 const whatsappTemplatesController = require('../../controllers/whatsapp/whatsapp-templates.controller');
 const whatsappContactsController = require('../../controllers/whatsapp/whatsapp-contacts.controller');
 const whatsappCampaignsController = require('../../controllers/whatsapp/whatsapp-campaigns.controller');
+const whatsappCallsController = require('../../controllers/whatsapp/whatsapp-calls.controller');
 const { protect, authorizeWhatsapp } = require('../../middlewares/auth.middleware');
 
 // Public Webhook endpoints (No protect middleware) - Handled by Webhook Dispatcher
@@ -79,6 +80,11 @@ router.get('/chats/events', whatsappContactsController.getChatEvents);
 router.get('/chats', whatsappContactsController.getChatThreads);
 router.get('/chats/:contactId/messages', whatsappContactsController.getChatMessages);
 router.post('/chats/:contactId/send', whatsappContactsController.sendFreeTextChat);
+
+// WhatsApp Call Logs Routes
+router.get('/calls', whatsappCallsController.getCallLogs);
+router.get('/calls/:id', whatsappCallsController.getCallDetails);
+router.delete('/calls/:id', whatsappCallsController.deleteCallLog);
 
 // Sprint 9: Contact Intelligence Routes — MUST be before /:id param routes
 router.get('/contacts/segments', whatsappContactsController.getEngagementSegments);

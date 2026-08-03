@@ -1,4 +1,5 @@
 const whatsappTemplatesService = require('../whatsapp-templates.service');
+const whatsappCallsService = require('../whatsapp-calls.service');
 
 /**
  * Core processing function for WFADM WhatsApp webhook body.
@@ -76,6 +77,16 @@ async function processWebhookBody(body) {
                     phoneId: value.metadata?.phone_number_id,
                     replyToMessageId
                 });
+            }
+        }
+
+        // 4. Check for incoming WhatsApp Calls events
+        if (value?.calls && Array.isArray(value.calls)) {
+            const metadata = value.metadata || {};
+            const contacts = value.contacts || [];
+            for (const callObj of value.calls) {
+                console.log(`Webhook Trigger: Incoming WhatsApp Call event '${callObj.event}' for Call ID: ${callObj.id} (From: ${callObj.from})`);
+                await whatsappCallsService.processCallWebhook(callObj, metadata, contacts);
             }
         }
     }

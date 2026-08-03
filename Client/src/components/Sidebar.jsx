@@ -24,6 +24,7 @@ import {
   Calendar,
   ClipboardList,
   MessageSquare,
+  PhoneCall,
   FolderOpen,
   Video,
   Play,
@@ -105,7 +106,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   const metaPaths = ['/ad-accounts', '/ad-analyzer', '/single-ad-analyzer', '/insights', '/all-leads', '/ad-owners', '/meta-posting', '/page-tracker'];
   const googlePaths = ['/google-dashboard', '/google-campaigns', '/google-performance', '/google-insights', '/google-leads', '/youtube-ads', '/youtube-shorts'];
-  const waPaths = ['/whatsapp-manager', '/wa-channels', '/wa-templates', '/wa-templates/new', '/send-message', '/wa-analytics', '/wa-contacts', '/wa-campaigns', '/wa-schedules', '/wa-chats', '/wa-external'];
+  const waPaths = ['/whatsapp-manager', '/wa-channels', '/wa-templates', '/wa-templates/new', '/send-message', '/wa-analytics', '/wa-contacts', '/wa-campaigns', '/wa-schedules', '/wa-chats', '/wa-calls', '/wa-external'];
   const settingsPaths = ['/users', '/settings/meta', '/settings/whatsapp'];
   const linkedInPaths = [
     '/linkedin-manager', '/linkedin-campaigns', '/linkedin-analytics', '/linkedin-leads',
@@ -419,6 +420,14 @@ const Sidebar = ({ isOpen, onClose }) => {
               label="Messages"
               active={isActive('/wa-chats')}
               onClick={() => navigate('/wa-chats')}
+              isSubItem={true}
+              colorScheme="whatsapp"
+            />
+            <NavItem
+              icon={PhoneCall}
+              label="Call Logs"
+              active={isActive('/wa-calls')}
+              onClick={() => navigate('/wa-calls')}
               isSubItem={true}
               colorScheme="whatsapp"
             />
