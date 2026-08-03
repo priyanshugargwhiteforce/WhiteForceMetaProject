@@ -1,5 +1,7 @@
 const { pool } = require('../config/db');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const { formatMetaError } = require('../utils/meta-error');
 
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL
@@ -336,11 +338,86 @@ const isKnownWfadmPhoneNumber = async (phoneId) => {
     }
 };
 
+const downloadAndSaveWhatsAppAudio = async (mediaId, phoneId) => {
+    if (!mediaId) return null;
+
+    try {
+        let token = process.env.META_ACCESS_TOKEN;
+        if (phoneId) {
+            const [[config]] = await pool.query(
+                'SELECT access_token FROM whatsapp_configs WHERE phone_number_id = ? LIMIT 1',
+                [phoneId]
+            );
+            if (config?.access_token) {
+                token = config.access_token;
+            }
+        }
+        if (!token) {
+            const resolved = await resolveWhatsAppConfig(null);
+            token = resolved.token;
+        }
+
+        if (!token) {
+            console.warn('[WhatsApp Media] Missing access token for downloading audio media ID:', mediaId);
+            return null;
+        }
+
+        // Step 1: Get media URL from Meta Graph API
+        const mediaRes = await axios.get(`https://graph.facebook.com/v21.0/${mediaId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const downloadUrl = mediaRes.data?.url;
+        const mimeType = mediaRes.data?.mime_type || 'audio/ogg';
+
+        if (!downloadUrl) {
+            console.warn(`[WhatsApp Media] Could not retrieve download URL for mediaId: ${mediaId}`);
+            return null;
+        }
+
+        let ext = 'ogg';
+        if (mimeType.includes('mp3') || mimeType.includes('mpeg')) ext = 'mp3';
+        else if (mimeType.includes('mp4') || mimeType.includes('m4a')) ext = 'm4a';
+        else if (mimeType.includes('wav')) ext = 'wav';
+
+        const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'whatsapp_media');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+
+        const fileName = `audio_${mediaId}.${ext}`;
+        const filePath = path.join(uploadDir, fileName);
+        const relativeUrl = `/uploads/whatsapp_media/${fileName}`;
+
+        if (fs.existsSync(filePath)) {
+            return relativeUrl;
+        }
+
+        // Step 2: Download binary stream from Meta CDN
+        const fileRes = await axios.get(downloadUrl, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'User-Agent': 'curl/7.64.1'
+            },
+            responseType: 'arraybuffer'
+        });
+
+        fs.writeFileSync(filePath, Buffer.from(fileRes.data));
+        console.log(`[WhatsApp Media] Successfully downloaded and saved audio file to ${filePath} (${fileRes.data.length} bytes)`);
+
+        return relativeUrl;
+    } catch (err) {
+        console.error(`[WhatsApp Media] Failed to download audio media ID ${mediaId}:`, err.message);
+        return null;
+    }
+};
+
 module.exports = {
     resolveWhatsAppConfig,
     getWabaDetails,
     getTemplates,
     logSentMessage,
     processAndSaveTemplateVariables,
-    isKnownWfadmPhoneNumber
+    isKnownWfadmPhoneNumber,
+    downloadAndSaveWhatsAppAudio
 };

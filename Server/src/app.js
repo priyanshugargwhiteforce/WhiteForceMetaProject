@@ -15,6 +15,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(accessLogger);
 
+// Serve static uploaded files (e.g. WhatsApp audio media)
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
 // Basic route for testing
 app.get('/', (req, res) => {
     res.json({ message: 'Welcome to the Meta API Project Backend' });

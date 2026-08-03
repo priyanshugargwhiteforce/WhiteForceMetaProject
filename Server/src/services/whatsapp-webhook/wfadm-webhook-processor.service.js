@@ -1,5 +1,6 @@
 const whatsappTemplatesService = require('../whatsapp-templates.service');
 const whatsappCallsService = require('../whatsapp-calls.service');
+const whatsappService = require('../whatsapp.service');
 
 /**
  * Core processing function for WFADM WhatsApp webhook body.
@@ -68,10 +69,21 @@ async function processWebhookBody(body) {
                     const audioObj = msg.audio || msg.voice;
                     const isVoice = type === 'voice' || audioObj?.voice || false;
                     bodyText = isVoice ? '🎙️ Voice Note' : '🎵 Audio Message';
+
+                    let audioUrl = null;
+                    if (audioObj.id) {
+                        try {
+                            audioUrl = await whatsappService.downloadAndSaveWhatsAppAudio(audioObj.id, value.metadata?.phone_number_id);
+                        } catch (err) {
+                            console.warn('[Webhook Processor] Failed to download audio:', err.message);
+                        }
+                    }
+
                     mediaData = {
                         media_id: audioObj.id,
                         mime_type: audioObj.mime_type || null,
-                        voice: isVoice
+                        voice: isVoice,
+                        audio_url: audioUrl
                     };
                 } else if (type === 'image' && msg.image) {
                     const caption = msg.image.caption || '';

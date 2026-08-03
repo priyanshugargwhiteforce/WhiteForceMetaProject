@@ -20,8 +20,7 @@ import {
   CheckCircle2,
   Info,
   ExternalLink,
-  Share2,
-  HelpCircle
+  Volume2
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
@@ -212,7 +211,7 @@ const WAChatWindow = () => {
     } catch (err) {
       console.error('Error fetching chat threads:', err);
       setError(err.response?.data?.message || 'Failed to fetch conversations.');
-    } fontally: () => {
+    } finally {
       setLoadingThreads(false);
       setLoadingMore(false);
     }
@@ -344,17 +343,17 @@ const WAChatWindow = () => {
     if (msg.location || msg.type === 'location') {
       const loc = msg.location || {};
       return (
-        <div className="space-y-2 p-3 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1">
-          <div className="flex items-start gap-2.5">
-            <div className="p-2 rounded-lg bg-rose-500/10 text-rose-500 border border-rose-500/20 shrink-0">
-              <MapPin className="w-5 h-5" />
+        <div className="space-y-1.5 p-2.5 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1">
+          <div className="flex items-start gap-2">
+            <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500 border border-rose-500/20 shrink-0">
+              <MapPin className="w-4 h-4" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-bold text-xs text-slate-900 dark:text-white">
                 {loc.name || 'Shared Location'}
               </p>
               {loc.address && (
-                <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">{loc.address}</p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug mt-0.5">{loc.address}</p>
               )}
               {loc.latitude && loc.longitude && (
                 <p className="text-[10px] font-mono text-slate-400 mt-0.5">
@@ -368,9 +367,9 @@ const WAChatWindow = () => {
               href={loc.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm mt-1"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-semibold transition-colors shadow-sm mt-1"
             >
-              <ExternalLink className="w-3.5 h-3.5" />
+              <ExternalLink className="w-3 h-3" />
               Open in Google Maps
             </a>
           )}
@@ -378,20 +377,36 @@ const WAChatWindow = () => {
       );
     }
 
-    // 2. Audio / Voice Note Message
-    if (msg.type === 'audio' || msg.type === 'voice' || msg.media_id) {
+    // 2. Audio / Voice Note Message (with Audio Player)
+    if (msg.type === 'audio' || msg.type === 'voice' || msg.media_id || msg.audio_url) {
       const isVoice = msg.type === 'voice';
       return (
-        <div className="flex items-center gap-3 p-3 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1">
-          <div className="p-2 rounded-full bg-purple-500/10 text-purple-500 border border-purple-500/20 shrink-0">
-            <Mic className="w-5 h-5" />
+        <div className="space-y-1.5 p-2.5 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-full bg-purple-500/10 text-purple-500 border border-purple-500/20 shrink-0">
+              <Mic className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="font-semibold text-xs text-slate-900 dark:text-white">
+                {isVoice ? '🎙️ Voice Note' : '🎵 Audio Message'}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="font-semibold text-xs text-slate-900 dark:text-white">
-              {isVoice ? '🎙️ Voice Note Record' : '🎵 Audio Message'}
-            </p>
-            <p className="text-[10px] text-slate-400 font-mono">WhatsApp Audio Attachment</p>
-          </div>
+
+          {/* Render Audio Player if audio_url is available */}
+          {msg.audio_url ? (
+            <div className="pt-1">
+              <audio
+                controls
+                className="w-full max-w-[240px] h-8 rounded-lg outline-none"
+                src={msg.audio_url}
+              >
+                Your browser does not support the audio player.
+              </audio>
+            </div>
+          ) : (
+            <p className="text-[10px] text-slate-400 font-mono">Attachment ID: {msg.media_id || 'Voice Track'}</p>
+          )}
         </div>
       );
     }
@@ -402,57 +417,57 @@ const WAChatWindow = () => {
         <div className="space-y-1 my-0.5">
           <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
             <CheckCircle2 className="w-3 h-3" />
-            Selected Button / Option
+            Selected Button Option
           </span>
-          <p className="text-sm font-semibold text-slate-900 dark:text-white select-text">{msg.body}</p>
+          <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white select-text">{msg.body}</p>
         </div>
       );
     }
 
     // 4. Photos / Videos / Documents / Stickers
     if (msg.type === 'image' || msg.type === 'video' || msg.type === 'document' || msg.type === 'sticker') {
-      let icon = <FileText className="w-4 h-4 text-amber-500" />;
+      let icon = <FileText className="w-3.5 h-3.5 text-amber-500" />;
       let badgeLabel = 'Document';
       if (msg.type === 'image') {
-        icon = <Image className="w-4 h-4 text-blue-500" />;
+        icon = <Image className="w-3.5 h-3.5 text-blue-500" />;
         badgeLabel = 'Photo';
       } else if (msg.type === 'video') {
-        icon = <Video className="w-4 h-4 text-purple-500" />;
+        icon = <Video className="w-3.5 h-3.5 text-purple-500" />;
         badgeLabel = 'Video';
       }
 
       return (
-        <div className="space-y-1.5 my-1">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2.5 rounded-xl border border-slate-200/50 dark:border-white/10">
+        <div className="space-y-1 my-1">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2 rounded-lg border border-slate-200/50 dark:border-white/10">
             {icon}
             <span>{badgeLabel} {msg.filename ? `: ${msg.filename}` : ''}</span>
           </div>
-          {msg.body && <p className="text-sm whitespace-pre-wrap select-text">{msg.body}</p>}
+          {msg.body && <p className="text-xs sm:text-sm whitespace-pre-wrap select-text">{msg.body}</p>}
         </div>
       );
     }
 
     // Default Text with Emojis
-    return <p className="text-sm whitespace-pre-wrap leading-relaxed select-text">{msg.body}</p>;
+    return <p className="text-xs sm:text-sm whitespace-pre-wrap leading-relaxed select-text">{msg.body}</p>;
   };
 
   return (
-    <div className="p-4 md:p-5 space-y-3 max-w-7xl mx-auto h-[90vh] flex flex-col">
+    <div className="p-2 sm:p-3 md:p-4 space-y-2 max-w-7xl mx-auto h-[88vh] flex flex-col">
       {/* Title block */}
-      <div className="flex flex-wrap items-center justify-between gap-4 shrink-0">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500 border border-emerald-500/20">
-            <MessageSquare className="w-5 h-5" />
+      <div className="flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="flex items-center space-x-2.5">
+          <div className="p-1.5 bg-emerald-500/10 rounded-xl text-emerald-500 border border-emerald-500/20">
+            <MessageSquare className="w-4 h-4" />
           </div>
           <div className="flex flex-col items-start leading-none">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Messages & Conversations</h2>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">WhatsApp Web Window</p>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white mb-0.5">Messages & Conversations</h2>
+            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">WhatsApp Web Window</p>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2">
           {/* Config selector */}
-          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-1">
-            <Database className="w-4 h-4 text-green-500" />
+          <div className="flex items-center space-x-1.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-0.5">
+            <Database className="w-3.5 h-3.5 text-green-500" />
             <CustomSelect
               value={selectedConfigId}
               onChange={(val) => handleConfigChange({ target: { value: val } })}
@@ -460,34 +475,34 @@ const WAChatWindow = () => {
                 { value: "", label: "Default Server Config" },
                 ...whatsappConfigs.map(cfg => ({ value: cfg.id, label: cfg.name }))
               ]}
-              className="border-none bg-transparent py-1 text-xs px-1 min-w-[160px]"
+              className="border-none bg-transparent py-0.5 text-xs px-1 min-w-[140px]"
             />
           </div>
           <button
             onClick={() => fetchThreads(1, false, debouncedSearchQuery)}
-            className="p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 hover:text-green-500 transition-all"
+            className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 hover:text-green-500 transition-all"
             disabled={loadingThreads}
           >
-            <RefreshCw className={`w-4 h-4 ${loadingThreads ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingThreads ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
 
       {/* Main chat window container */}
-      <div className="flex-1 bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-[2rem] overflow-hidden shadow-premium flex min-h-0">
+      <div className="flex-1 bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-premium flex min-h-0">
 
         {/* Left Side: Threads List */}
-        <div className="w-80 md:w-96 border-r border-slate-200 dark:border-white/10 flex flex-col shrink-0 bg-slate-50/50 dark:bg-black/10">
+        <div className="w-72 md:w-80 border-r border-slate-200 dark:border-white/10 flex flex-col shrink-0 bg-slate-50/50 dark:bg-black/10">
           {/* Search bar */}
-          <div className="p-4 border-b border-slate-200 dark:border-white/10 shrink-0">
+          <div className="p-3 border-b border-slate-200 dark:border-white/10 shrink-0">
             <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search chats..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
+                className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
               />
             </div>
           </div>
@@ -498,11 +513,11 @@ const WAChatWindow = () => {
             className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-white/5"
           >
             {loadingThreads ? (
-              <div className="p-8 text-center text-slate-400 animate-pulse text-sm">
+              <div className="p-6 text-center text-slate-400 animate-pulse text-xs">
                 Loading conversations...
               </div>
             ) : filteredThreads.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-sm">
+              <div className="p-6 text-center text-slate-400 text-xs">
                 No conversations found.
               </div>
             ) : (
@@ -515,35 +530,35 @@ const WAChatWindow = () => {
                     <button
                       key={t.id}
                       onClick={() => setSelectedThread(t)}
-                      className={`w-full text-left p-4 transition-colors flex items-start space-x-3 ${isSelected
+                      className={`w-full text-left p-3 transition-colors flex items-start space-x-2.5 ${isSelected
                         ? 'bg-emerald-500/10 dark:bg-emerald-500/5 border-l-4 border-emerald-500'
                         : 'hover:bg-slate-100/50 dark:hover:bg-white/[0.01]'
                         }`}
                     >
-                      <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 shrink-0">
-                        <User className="w-5 h-5" />
+                      <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 shrink-0 text-xs font-bold">
+                        <User className="w-4 h-4" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <h4 className="font-bold text-sm truncate text-slate-900 dark:text-white">
-                            {t.name || t.phone}
+                          <h4 className="font-bold text-xs truncate text-slate-900 dark:text-white">
+                            {t.name ? `${t.phone} (${t.name})` : t.phone}
                           </h4>
-                          <span className="text-[10px] text-slate-400 shrink-0">
+                          <span className="text-[9px] text-slate-400 shrink-0 ml-1">
                             {formatTime(t.last_message_at)}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-400 truncate mt-0.5">{t.phone}</p>
+                        <p className="text-[11px] text-slate-400 font-mono truncate">{t.phone}</p>
 
                         {/* Last message preview */}
-                        <div className="flex items-center space-x-1.5 mt-1">
+                        <div className="flex items-center space-x-1 mt-0.5">
                           {t.event_type !== 'replied' && t.event_type !== 'unsubscribed' && (
                             <span className="shrink-0">{getStatusIcon(t.event_type)}</span>
                           )}
-                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1">
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate flex-1">
                             {lastMsgBody ? lastMsgBody : `Template: ${t.metadata?.template_name || 'Template'}`}
                           </p>
                           {t.engagement_score > 0 && (
-                            <span className="shrink-0 text-[9px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded-md font-bold">
+                            <span className="shrink-0 text-[8px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1 py-0.5 rounded font-bold">
                               {Math.round(t.engagement_score)}%
                             </span>
                           )}
@@ -553,7 +568,7 @@ const WAChatWindow = () => {
                   );
                 })}
                 {loadingMore && (
-                  <div className="p-4 text-center text-xs text-slate-400 animate-pulse border-t border-slate-100 dark:border-white/5">
+                  <div className="p-3 text-center text-[10px] text-slate-400 animate-pulse border-t border-slate-100 dark:border-white/5">
                     Loading more...
                   </div>
                 )}
@@ -567,60 +582,60 @@ const WAChatWindow = () => {
           {selectedThread ? (
             <>
               {/* Chat Thread Header */}
-              <div className="p-4 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/60 backdrop-blur-md shrink-0 flex items-center justify-between gap-4 flex-wrap">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400">
-                    <User className="w-5 h-5" />
+              <div className="p-3 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/60 backdrop-blur-md shrink-0 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400">
+                    <User className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                      {selectedThread.name || selectedThread.phone}
+                    <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                      {selectedThread.phone} {selectedThread.name ? `(${selectedThread.name})` : ''}
                     </h4>
-                    <div className="flex items-center space-x-2 text-xs text-slate-400 font-mono mt-0.5">
-                      <Phone className="w-3 h-3" />
-                      <span>{selectedThread.phone}</span>
+                    <div className="flex items-center space-x-1.5 text-[11px] text-slate-400 font-mono">
+                      <Phone className="w-3 h-3 text-emerald-500" />
+                      <span>+{selectedThread.phone}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   {/* 24-Hour Customer Service Window Status Badge */}
                   {window24h && (
                     window24h.isOpen ? (
                       <div
-                        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-sm"
+                        className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                         title="Meta 24-Hour Customer Service Free-Form Reply Window is Active"
                       >
-                        <Clock className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
+                        <Clock className="w-3 h-3 text-emerald-500 animate-pulse" />
                         <span>24h Reply Window: <strong>{window24h.remainingFormatted}</strong></span>
                       </div>
                     ) : (
                       <div
-                        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm"
+                        className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
                         title="24-Hour Customer Service Reply Window has Expired. Template message required."
                       >
-                        <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                        <AlertCircle className="w-3 h-3 text-amber-500" />
                         <span>24h Reply Window: <strong>Expired</strong></span>
                       </div>
                     )
                   )}
 
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-xl">
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-lg">
                     Score: {Math.round(selectedThread.engagement_score || 0)}%
                   </span>
                   <button
                     onClick={() => fetchMessages(selectedThread.id)}
-                    className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-slate-400 hover:text-emerald-500 transition-colors"
+                    className="p-1.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-slate-400 hover:text-emerald-500 transition-colors"
                   >
-                    <RefreshCw className={`w-4 h-4 ${loadingMessages ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingMessages ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
               </div>
 
               {/* Messages Body stream area */}
-              <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 whatsapp-chat-bg relative">
+              <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 whatsapp-chat-bg relative">
                 {loadingMessages && messages.length === 0 ? (
-                  <div className="flex justify-center items-center h-full text-slate-400 text-sm">
+                  <div className="flex justify-center items-center h-full text-slate-400 text-xs">
                     Loading messages...
                   </div>
                 ) : (
@@ -632,10 +647,10 @@ const WAChatWindow = () => {
                         new Date(msg.timestamp).toDateString() !== new Date(prevMsg.timestamp).toDateString();
 
                       return (
-                        <div key={msg.id || idx} className="space-y-4">
+                        <div key={msg.id || idx} className="space-y-2">
                           {showDateLabel && (
                             <div className="flex justify-center shrink-0">
-                              <span className="text-[10px] font-bold tracking-wider uppercase bg-slate-200/50 dark:bg-white/5 text-slate-500 dark:text-slate-400 px-3 py-1 rounded-full border border-slate-300/20 dark:border-white/5 shadow-sm">
+                              <span className="text-[9px] font-bold tracking-wider uppercase bg-slate-200/60 dark:bg-white/5 text-slate-500 dark:text-slate-400 px-2.5 py-0.5 rounded-full border border-slate-300/20 dark:border-white/5 shadow-sm">
                                 {formatDateLabel(msg.timestamp)}
                               </span>
                             </div>
@@ -643,15 +658,15 @@ const WAChatWindow = () => {
 
                           <div className={`flex ${msg.isOutgoing ? 'justify-end' : 'justify-start'}`}>
                             <div
-                              className={`max-w-md lg:max-w-xl rounded-2xl p-4 shadow-sm relative group transition-all duration-300 ${msg.isOutgoing
+                              className={`max-w-xs sm:max-w-md lg:max-w-lg rounded-2xl p-3 shadow-sm relative group transition-all duration-300 ${msg.isOutgoing
                                 ? 'bg-whatsapp-light dark:bg-whatsapp-dark-green text-slate-800 dark:text-slate-100 rounded-tr-none border border-emerald-500/10 dark:border-emerald-500/20'
                                 : 'bg-white dark:bg-[#202c33] border border-slate-100 dark:border-white/5 text-slate-800 dark:text-slate-100 rounded-tl-none'
                                 }`}
                             >
                               {/* Message bubble header (for templates) */}
                               {msg.template_name && (
-                                <div className="text-[10px] font-mono tracking-wider opacity-60 uppercase mb-1 flex items-center">
-                                  <ShieldCheck className="w-3.5 h-3.5 mr-1" />
+                                <div className="text-[9px] font-mono tracking-wider opacity-60 uppercase mb-1 flex items-center">
+                                  <ShieldCheck className="w-3 h-3 mr-1" />
                                   Template: {msg.template_name}
                                 </div>
                               )}
@@ -660,8 +675,8 @@ const WAChatWindow = () => {
                               {renderRichMessageBody(msg)}
 
                               {/* Bubble bottom footer with timestamp and status ticks */}
-                              <div className="flex items-center justify-end space-x-1 mt-1.5 opacity-80">
-                                <span className="text-[10px] font-mono">
+                              <div className="flex items-center justify-end space-x-1 mt-1 opacity-80">
+                                <span className="text-[9px] font-mono">
                                   {formatTime(msg.timestamp)}
                                 </span>
                                 {msg.isOutgoing && getStatusIcon(msg.status)}
@@ -669,8 +684,8 @@ const WAChatWindow = () => {
 
                               {/* Error tag for failed messages */}
                               {msg.error && (
-                                <div className="mt-2 text-xs text-red-200 bg-red-900/40 px-2 py-1 rounded-lg border border-red-500/20 flex items-center">
-                                  <AlertCircle className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+                                <div className="mt-1.5 text-[11px] text-rose-200 bg-rose-900/40 px-2 py-0.5 rounded-md border border-rose-500/20 flex items-center">
+                                  <AlertCircle className="w-3 h-3 mr-1 shrink-0" />
                                   <span>{msg.error}</span>
                                 </div>
                               )}
@@ -685,35 +700,35 @@ const WAChatWindow = () => {
               </div>
 
               {/* 24-Hour Customer Service Window Notice Policy Bar */}
-              <div className="px-4 py-2 bg-slate-100/90 dark:bg-slate-900/80 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
-                <div className="flex items-center gap-2">
-                  <Info className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+              <div className="px-3 py-1.5 bg-slate-100/90 dark:bg-slate-900/80 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-300">
+                <div className="flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
                   <span>
-                    <strong>Meta 24-Hour Policy Notice:</strong> Customer Service Messaging Window remains open for 24 hours per contact after their last message.
+                    <strong>Meta 24-Hour Policy Notice:</strong> Customer Service Messaging Window is open for 24 hours per contact after their last message.
                   </span>
                 </div>
                 {window24h && (
-                  <span className={`font-mono text-[11px] px-2.5 py-0.5 rounded-md ${window24h.isOpen ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold'}`}>
+                  <span className={`font-mono text-[10px] px-2 py-0.5 rounded ${window24h.isOpen ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold'}`}>
                     {window24h.isOpen ? window24h.remainingFormatted : 'Window Expired'}
                   </span>
                 )}
               </div>
 
               {/* Message Input replying footer bar */}
-              <div className="p-4 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/60 backdrop-blur-md shrink-0">
-                <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
+              <div className="p-3 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/60 backdrop-blur-md shrink-0">
+                <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
                   <input
                     type="text"
                     placeholder={window24h && !window24h.isOpen ? "24-Hour Window Expired (Free text allowed during active 24h window)..." : "Type a free-text reply..."}
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     disabled={sendingMessage}
-                    className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
+                    className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 text-xs sm:text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
                   />
                   <button
                     type="submit"
                     disabled={sendingMessage || !inputMessage.trim()}
-                    className="p-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-md disabled:opacity-40 disabled:hover:bg-emerald-600 transition-colors"
+                    className="p-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-md disabled:opacity-40 disabled:hover:bg-emerald-600 transition-colors"
                   >
                     <Send className="w-4 h-4" />
                   </button>
@@ -721,13 +736,13 @@ const WAChatWindow = () => {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col justify-center items-center text-center p-8 whatsapp-chat-bg">
-              <div className="w-20 h-20 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-3xl flex items-center justify-center mb-6 shadow-lg border border-emerald-500/20 backdrop-blur-md">
-                <MessageSquare className="w-10 h-10 text-emerald-500" />
+            <div className="flex-1 flex flex-col justify-center items-center text-center p-6 whatsapp-chat-bg">
+              <div className="w-16 h-16 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-2xl flex items-center justify-center mb-4 shadow-lg border border-emerald-500/20 backdrop-blur-md">
+                <MessageSquare className="w-8 h-8 text-emerald-500" />
               </div>
-              <h3 className="text-xl font-bold mb-1 text-slate-800 dark:text-white">Your Chat Window</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm backdrop-blur-sm bg-white/30 dark:bg-black/20 p-4 rounded-2xl border border-white/20 dark:border-white/5 mt-2 shadow-sm">
-                Select a conversation from the sidebar list to view the full chat history logs and send replies.
+              <h3 className="text-lg font-bold mb-1 text-slate-800 dark:text-white">Your Chat Window</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-xs max-w-xs backdrop-blur-sm bg-white/30 dark:bg-black/20 p-3 rounded-xl border border-white/20 dark:border-white/5 mt-1 shadow-sm">
+                Select a conversation from the sidebar list to view full chat logs and send replies.
               </p>
             </div>
           )}
