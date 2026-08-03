@@ -377,8 +377,8 @@ const WAChatWindow = () => {
       );
     }
 
-    // 2. Audio / Voice Note Message (with Audio Player)
-    if (msg.type === 'audio' || msg.type === 'voice' || msg.media_id || msg.audio_url) {
+    // 2. Audio / Voice Note Message (Only for audio/voice types or explicit audio_url)
+    if (msg.type === 'audio' || msg.type === 'voice' || msg.audio_url) {
       const isVoice = msg.type === 'voice';
       const token = localStorage.getItem('token') || '';
       const audioSource = msg.audio_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
@@ -414,38 +414,92 @@ const WAChatWindow = () => {
       );
     }
 
-    // 3. Interactive / Button Click Reply
-    if (msg.interactive || msg.type === 'interactive' || msg.type === 'button') {
+    // 3. Image Message
+    if (msg.type === 'image') {
+      const token = localStorage.getItem('token') || '';
+      const imageSrc = msg.image_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
       return (
-        <div className="space-y-1 my-0.5">
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-            <CheckCircle2 className="w-3 h-3" />
-            Selected Button Option
-          </span>
-          <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white select-text">{msg.body}</p>
+        <div className="space-y-1.5 my-1">
+          {imageSrc ? (
+            <div className="overflow-hidden rounded-xl border border-slate-200/50 dark:border-white/10 max-w-xs sm:max-w-sm">
+              <a href={imageSrc} target="_blank" rel="noopener noreferrer" title="Click to view full image">
+                <img
+                  src={imageSrc}
+                  alt={msg.caption || 'WhatsApp Photo'}
+                  className="w-full h-auto max-h-72 object-cover hover:scale-[1.02] transition-transform duration-200"
+                  loading="lazy"
+                />
+              </a>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2 rounded-lg border border-slate-200/50 dark:border-white/10">
+              <Image className="w-4 h-4 text-blue-500" />
+              <span>Photo</span>
+            </div>
+          )}
+          {msg.caption && <p className="text-xs sm:text-sm whitespace-pre-wrap select-text">{msg.caption}</p>}
+          {msg.body && msg.body !== '📷 Photo' && !msg.body.startsWith('📷 Photo:') && (
+            <p className="text-xs sm:text-sm whitespace-pre-wrap select-text">{msg.body}</p>
+          )}
         </div>
       );
     }
 
-    // 4. Photos / Videos / Documents / Stickers
-    if (msg.type === 'image' || msg.type === 'video' || msg.type === 'document' || msg.type === 'sticker') {
-      let icon = <FileText className="w-3.5 h-3.5 text-amber-500" />;
-      let badgeLabel = 'Document';
-      if (msg.type === 'image') {
-        icon = <Image className="w-3.5 h-3.5 text-blue-500" />;
-        badgeLabel = 'Photo';
-      } else if (msg.type === 'video') {
-        icon = <Video className="w-3.5 h-3.5 text-purple-500" />;
-        badgeLabel = 'Video';
-      }
+    // 4. Video Message
+    if (msg.type === 'video') {
+      const token = localStorage.getItem('token') || '';
+      const videoSrc = msg.video_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
 
       return (
-        <div className="space-y-1 my-1">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2 rounded-lg border border-slate-200/50 dark:border-white/10">
-            {icon}
-            <span>{badgeLabel} {msg.filename ? `: ${msg.filename}` : ''}</span>
+        <div className="space-y-1.5 my-1">
+          {videoSrc ? (
+            <div className="overflow-hidden rounded-xl border border-slate-200/50 dark:border-white/10 max-w-xs sm:max-w-sm">
+              <video
+                controls
+                className="w-full max-h-72 rounded-xl"
+                src={videoSrc}
+              >
+                Your browser does not support the video player.
+              </video>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2 rounded-lg border border-slate-200/50 dark:border-white/10">
+              <Video className="w-4 h-4 text-purple-500" />
+              <span>Video</span>
+            </div>
+          )}
+          {msg.caption && <p className="text-xs sm:text-sm whitespace-pre-wrap select-text">{msg.caption}</p>}
+        </div>
+      );
+    }
+
+    // 5. Document Message
+    if (msg.type === 'document') {
+      const token = localStorage.getItem('token') || '';
+      const docSrc = msg.document_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
+      return (
+        <div className="space-y-1.5 my-1">
+          <div className="flex items-center justify-between gap-3 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2.5 rounded-xl border border-slate-200/50 dark:border-white/10">
+            <div className="flex items-center gap-2 min-w-0">
+              <FileText className="w-4 h-4 text-amber-500 shrink-0" />
+              <span className="truncate">{msg.filename || 'Document'}</span>
+            </div>
+            {docSrc && (
+              <a
+                href={docSrc}
+                target="_blank"
+                rel="noopener noreferrer"
+                download={msg.filename || 'document'}
+                className="p-1 bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white rounded-md transition-colors shrink-0"
+                title="Download / View Document"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
           </div>
-          {msg.body && <p className="text-xs sm:text-sm whitespace-pre-wrap select-text">{msg.body}</p>}
+          {msg.caption && <p className="text-xs sm:text-sm whitespace-pre-wrap select-text">{msg.caption}</p>}
         </div>
       );
     }
