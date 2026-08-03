@@ -624,7 +624,10 @@ const useTemplateMapping = async (templateId, mappingId) => {
 };
 
 const handleIncomingMessage = async (msgData) => {
-    const { fromPhone, messageId, timestamp, type, body, senderName, phoneId, replyToMessageId } = msgData;
+    const {
+        fromPhone, messageId, timestamp, type, body, senderName, phoneId, replyToMessageId,
+        location, media, interactive, reactionEmoji, contactsData
+    } = msgData;
 
     try {
         // 1. Normalize the phone number
@@ -737,6 +740,14 @@ const handleIncomingMessage = async (msgData) => {
         const activityMetadata = {
             body,
             type,
+            location: location || null,
+            media_id: media?.media_id || null,
+            mime_type: media?.mime_type || null,
+            caption: media?.caption || null,
+            filename: media?.filename || null,
+            interactive: interactive || null,
+            emoji: reactionEmoji || null,
+            contacts: contactsData || null,
             raw_phone: fromPhone,
             waba_phone_id: phoneId,
             source_app: linkedMsg?.source_app || null,

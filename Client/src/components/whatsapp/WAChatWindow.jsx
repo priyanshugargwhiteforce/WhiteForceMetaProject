@@ -12,7 +12,16 @@ import {
   RefreshCw,
   User,
   ShieldCheck,
-  Share2
+  MapPin,
+  Mic,
+  Image,
+  Video,
+  FileText,
+  CheckCircle2,
+  Info,
+  ExternalLink,
+  Share2,
+  HelpCircle
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
@@ -24,6 +33,7 @@ const WAChatWindow = () => {
   const [filteredThreads, setFilteredThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [window24h, setWindow24h] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const [loadingThreads, setLoadingThreads] = useState(true);
@@ -98,89 +108,49 @@ const WAChatWindow = () => {
 
         console.log('[SSE] Received real-time update:', payload);
 
-        if (payload.type === 'message') {
-          const { contactId, message } = payload.data;
-          const currentSelected = selectedThreadRef.current;
-
-          // 1. If currently viewing this contact, append the message
-          if (currentSelected && currentSelected.id === contactId) {
-            setMessages(prev => {
-              const alreadyExists = prev.some(m =>
-                (message.message_id && m.message_id === message.message_id) ||
-                m.id === message.id
-              );
-              if (alreadyExists) return prev;
-              return [...prev, message];
-            });
-          }
-
-          // 2. Refresh page 1 of threads to place active thread at top
-          setPage(1);
-          fetchThreads(1, false, debouncedSearchQueryRef.current);
+        const currentSelected = selectedThreadRef.current;
+        if (currentSelected && payload.contact_id === currentSelected.id) {
+          fetchMessages(currentSelected.id);
         }
 
-        if (payload.type === 'status') {
-          const { contactId, messageId, status, error } = payload.data;
-          const currentSelected = selectedThreadRef.current;
-
-          // 1. If currently viewing this contact, update status checkmarks
-          if (currentSelected && currentSelected.id === contactId) {
-            setMessages(prev =>
-              prev.map(m => {
-                if (m.message_id === messageId) {
-                  return { ...m, status, error: error || m.error };
-                }
-                return m;
-              })
-            );
+        setThreads(prev => {
+          const index = prev.findIndex(t => t.id === payload.contact_id);
+          if (index !== -1) {
+            const updated = [...prev];
+            updated[index] = {
+              ...updated[index],
+              last_message_at: payload.timestamp || new Date().toISOString(),
+              event_type: payload.event_type || updated[index].event_type,
+              metadata: payload.metadata || updated[index].metadata
+            };
+            return updated.sort((a, b) => new Date(b.last_message_at) - new Date(a.last_message_at));
+          } else {
+            return prev;
           }
-
-          // 2. Update status ticks in the threads list sidebar inline
-          setThreads(prev =>
-            prev.map(t => {
-              if (t.id === contactId) {
-                return { ...t, event_type: status };
-              }
-              return t;
-            })
-          );
-        }
+        });
       } catch (err) {
-        console.error('[SSE] Error processing SSE payload:', err);
+        console.error('[SSE] Error processing event:', err);
       }
     };
 
     eventSource.onerror = (err) => {
-      console.error('[SSE] EventSource connection encountered error. Reconnecting...', err);
-      eventSource.close();
+      console.warn('[SSE] EventSource connection error. Retrying...', err);
     };
 
     return () => {
-      console.log('[SSE] Closing EventSource connection.');
       eventSource.close();
     };
   }, []);
 
-  // Update filteredThreads when threads list changes
-  useEffect(() => {
-    setFilteredThreads(threads);
-  }, [threads]);
-
   useEffect(() => {
     if (selectedThread) {
       fetchMessages(selectedThread.id);
-    } else {
-      setMessages([]);
     }
   }, [selectedThread]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, [messages]);
 
   const fetchConfigs = async () => {
     try {
@@ -192,24 +162,25 @@ const WAChatWindow = () => {
         setWhatsappConfigs(response.data.configs || []);
       }
     } catch (err) {
-      console.error('Error fetching whatsapp configs:', err);
+      console.error('Error fetching WhatsApp configs:', err);
     }
   };
 
   const handleConfigChange = (e) => {
-    const val = e.target.value;
-    setSelectedConfigId(val);
-    localStorage.setItem('selectedWhatsAppConfigId', val);
+    const newConfigId = e.target.value;
+    setSelectedConfigId(newConfigId);
+    localStorage.setItem('selectedWhatsAppConfigId', newConfigId);
+    window.dispatchEvent(new CustomEvent('config-changed', { detail: { type: 'whatsapp', id: newConfigId } }));
   };
 
-  const fetchThreads = async (pageNum = 1, isAppend = false, search = '') => {
+  const fetchThreads = async (pageNum = 1, isAppend = false, searchVal = '') => {
     try {
-      if (pageNum === 1) {
-        setLoadingThreads(true);
-      } else {
+      if (isAppend) {
         setLoadingMore(true);
+      } else {
+        setLoadingThreads(true);
       }
-      setError(null);
+
       const token = localStorage.getItem('token');
       const configId = localStorage.getItem('selectedWhatsAppConfigId') || '';
 
@@ -218,36 +189,37 @@ const WAChatWindow = () => {
         headers['X-WhatsApp-Config-Id'] = configId;
       }
 
-      const response = await axios.get('/api/whatsapp/chats', {
+      const response = await axios.get(`/api/whatsapp/chats`, {
         headers,
-        params: { page: pageNum, limit: 20, search }
+        params: { page: pageNum, limit: 20, search: searchVal }
       });
 
       if (response.data.success) {
-        const newThreads = response.data.threads || [];
+        const fetchedThreads = response.data.threads || [];
         setHasMore(response.data.hasMore);
+
         if (isAppend) {
-          setThreads(prev => {
-            const existingIds = new Set(prev.map(t => t.id));
-            const filteredNew = newThreads.filter(t => !existingIds.has(t.id));
-            return [...prev, ...filteredNew];
-          });
+          setThreads(prev => [...prev, ...fetchedThreads]);
+          setFilteredThreads(prev => [...prev, ...fetchedThreads]);
         } else {
-          setThreads(newThreads);
+          setThreads(fetchedThreads);
+          setFilteredThreads(fetchedThreads);
+          if (fetchedThreads.length > 0 && !selectedThread) {
+            setSelectedThread(fetchedThreads[0]);
+          }
         }
       }
     } catch (err) {
       console.error('Error fetching chat threads:', err);
-      setError(err.response?.data?.message || err.message);
-    } finally {
+      setError(err.response?.data?.message || 'Failed to fetch conversations.');
+    } fontally: () => {
       setLoadingThreads(false);
       setLoadingMore(false);
     }
   };
 
   const handleScroll = (e) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    // Trigger when user is within 50px of the bottom
+    const { scrollTop, scrollHeight, clientHeight } = e.target;
     if (scrollHeight - scrollTop - clientHeight < 50) {
       if (!loadingMore && !loadingThreads && hasMore) {
         const nextPage = page + 1;
@@ -271,6 +243,7 @@ const WAChatWindow = () => {
       const response = await axios.get(`/api/whatsapp/chats/${contactId}/messages`, { headers });
       if (response.data.success) {
         setMessages(response.data.messages || []);
+        setWindow24h(response.data.window24h || null);
       }
     } catch (err) {
       console.error('Error fetching chat messages:', err);
@@ -303,11 +276,9 @@ const WAChatWindow = () => {
       );
 
       if (response.data.success) {
-        // Optimistically add message to view or fetch updated history
         setInputMessage('');
         fetchMessages(selectedThread.id);
 
-        // Update thread's last message locally
         setThreads(prev =>
           prev.map(t =>
             t.id === selectedThread.id
@@ -332,12 +303,14 @@ const WAChatWindow = () => {
   const formatTime = (isoString) => {
     if (!isoString) return '';
     const date = new Date(isoString);
+    if (isNaN(date.getTime())) return '';
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   const formatDateLabel = (isoString) => {
     if (!isoString) return '';
     const date = new Date(isoString);
+    if (isNaN(date.getTime())) return '';
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
@@ -360,10 +333,107 @@ const WAChatWindow = () => {
       case 'sent':
         return <Check className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />;
       case 'failed':
-        return <AlertCircle className="w-3.5 h-3.5 text-red-500" />;
+        return <AlertCircle className="w-3.5 h-3.5 text-rose-500" />;
       default:
         return null;
     }
+  };
+
+  const renderRichMessageBody = (msg) => {
+    // 1. Location Message
+    if (msg.location || msg.type === 'location') {
+      const loc = msg.location || {};
+      return (
+        <div className="space-y-2 p-3 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1">
+          <div className="flex items-start gap-2.5">
+            <div className="p-2 rounded-lg bg-rose-500/10 text-rose-500 border border-rose-500/20 shrink-0">
+              <MapPin className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-bold text-xs text-slate-900 dark:text-white">
+                {loc.name || 'Shared Location'}
+              </p>
+              {loc.address && (
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">{loc.address}</p>
+              )}
+              {loc.latitude && loc.longitude && (
+                <p className="text-[10px] font-mono text-slate-400 mt-0.5">
+                  Lat: {loc.latitude}, Long: {loc.longitude}
+                </p>
+              )}
+            </div>
+          </div>
+          {loc.url && (
+            <a
+              href={loc.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm mt-1"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Open in Google Maps
+            </a>
+          )}
+        </div>
+      );
+    }
+
+    // 2. Audio / Voice Note Message
+    if (msg.type === 'audio' || msg.type === 'voice' || msg.media_id) {
+      const isVoice = msg.type === 'voice';
+      return (
+        <div className="flex items-center gap-3 p-3 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1">
+          <div className="p-2 rounded-full bg-purple-500/10 text-purple-500 border border-purple-500/20 shrink-0">
+            <Mic className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="font-semibold text-xs text-slate-900 dark:text-white">
+              {isVoice ? '🎙️ Voice Note Record' : '🎵 Audio Message'}
+            </p>
+            <p className="text-[10px] text-slate-400 font-mono">WhatsApp Audio Attachment</p>
+          </div>
+        </div>
+      );
+    }
+
+    // 3. Interactive / Button Click Reply
+    if (msg.interactive || msg.type === 'interactive' || msg.type === 'button') {
+      return (
+        <div className="space-y-1 my-0.5">
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+            <CheckCircle2 className="w-3 h-3" />
+            Selected Button / Option
+          </span>
+          <p className="text-sm font-semibold text-slate-900 dark:text-white select-text">{msg.body}</p>
+        </div>
+      );
+    }
+
+    // 4. Photos / Videos / Documents / Stickers
+    if (msg.type === 'image' || msg.type === 'video' || msg.type === 'document' || msg.type === 'sticker') {
+      let icon = <FileText className="w-4 h-4 text-amber-500" />;
+      let badgeLabel = 'Document';
+      if (msg.type === 'image') {
+        icon = <Image className="w-4 h-4 text-blue-500" />;
+        badgeLabel = 'Photo';
+      } else if (msg.type === 'video') {
+        icon = <Video className="w-4 h-4 text-purple-500" />;
+        badgeLabel = 'Video';
+      }
+
+      return (
+        <div className="space-y-1.5 my-1">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2.5 rounded-xl border border-slate-200/50 dark:border-white/10">
+            {icon}
+            <span>{badgeLabel} {msg.filename ? `: ${msg.filename}` : ''}</span>
+          </div>
+          {msg.body && <p className="text-sm whitespace-pre-wrap select-text">{msg.body}</p>}
+        </div>
+      );
+    }
+
+    // Default Text with Emojis
+    return <p className="text-sm whitespace-pre-wrap leading-relaxed select-text">{msg.body}</p>;
   };
 
   return (
@@ -394,7 +464,7 @@ const WAChatWindow = () => {
             />
           </div>
           <button
-            onClick={fetchThreads}
+            onClick={() => fetchThreads(1, false, debouncedSearchQuery)}
             className="p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 hover:text-green-500 transition-all"
             disabled={loadingThreads}
           >
@@ -423,7 +493,7 @@ const WAChatWindow = () => {
           </div>
 
           {/* Threads list scrollable stream */}
-          <div 
+          <div
             onScroll={handleScroll}
             className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-white/5"
           >
@@ -497,7 +567,7 @@ const WAChatWindow = () => {
           {selectedThread ? (
             <>
               {/* Chat Thread Header */}
-              <div className="p-4 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/60 backdrop-blur-md shrink-0 flex items-center justify-between">
+              <div className="p-4 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/60 backdrop-blur-md shrink-0 flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400">
                     <User className="w-5 h-5" />
@@ -513,7 +583,28 @@ const WAChatWindow = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-3">
+                  {/* 24-Hour Customer Service Window Status Badge */}
+                  {window24h && (
+                    window24h.isOpen ? (
+                      <div
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-sm"
+                        title="Meta 24-Hour Customer Service Free-Form Reply Window is Active"
+                      >
+                        <Clock className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
+                        <span>24h Reply Window: <strong>{window24h.remainingFormatted}</strong></span>
+                      </div>
+                    ) : (
+                      <div
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm"
+                        title="24-Hour Customer Service Reply Window has Expired. Template message required."
+                      >
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                        <span>24h Reply Window: <strong>Expired</strong></span>
+                      </div>
+                    )
+                  )}
+
                   <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-xl">
                     Score: {Math.round(selectedThread.engagement_score || 0)}%
                   </span>
@@ -565,8 +656,8 @@ const WAChatWindow = () => {
                                 </div>
                               )}
 
-                              {/* Message text body */}
-                              <p className="text-sm whitespace-pre-wrap leading-relaxed select-text">{msg.body}</p>
+                              {/* Render Rich Message Content */}
+                              {renderRichMessageBody(msg)}
 
                               {/* Bubble bottom footer with timestamp and status ticks */}
                               <div className="flex items-center justify-end space-x-1 mt-1.5 opacity-80">
@@ -593,12 +684,27 @@ const WAChatWindow = () => {
                 )}
               </div>
 
+              {/* 24-Hour Customer Service Window Notice Policy Bar */}
+              <div className="px-4 py-2 bg-slate-100/90 dark:bg-slate-900/80 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
+                <div className="flex items-center gap-2">
+                  <Info className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                  <span>
+                    <strong>Meta 24-Hour Policy Notice:</strong> Customer Service Messaging Window remains open for 24 hours per contact after their last message.
+                  </span>
+                </div>
+                {window24h && (
+                  <span className={`font-mono text-[11px] px-2.5 py-0.5 rounded-md ${window24h.isOpen ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold'}`}>
+                    {window24h.isOpen ? window24h.remainingFormatted : 'Window Expired'}
+                  </span>
+                )}
+              </div>
+
               {/* Message Input replying footer bar */}
               <div className="p-4 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/60 backdrop-blur-md shrink-0">
                 <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
                   <input
                     type="text"
-                    placeholder="Type a free-text reply..."
+                    placeholder={window24h && !window24h.isOpen ? "24-Hour Window Expired (Free text allowed during active 24h window)..." : "Type a free-text reply..."}
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     disabled={sendingMessage}

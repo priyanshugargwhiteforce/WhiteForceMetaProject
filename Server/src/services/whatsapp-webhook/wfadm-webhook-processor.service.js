@@ -41,15 +41,102 @@ async function processWebhookBody(body) {
                 const fromPhone = msg.from; // Sender phone number
                 const messageId = msg.id; // Unique WhatsApp message ID
                 const timestamp = msg.timestamp; // Epoch timestamp
-                const type = msg.type; // text, interactive, button, etc.
+                const type = msg.type; // text, location, audio, voice, image, video, document, sticker, interactive, button, reaction, contacts, etc.
 
                 let bodyText = '';
+                let locationData = null;
+                let mediaData = null;
+                let interactiveDetails = null;
+                let reactionEmoji = null;
+                let contactsData = null;
+
                 if (type === 'text' && msg.text?.body) {
                     bodyText = msg.text.body;
-                } else if (type === 'interactive') {
-                    bodyText = msg.interactive?.button_reply?.title || msg.interactive?.list_reply?.title || '[Interactive Reply]';
-                } else if (type === 'button') {
-                    bodyText = msg.button?.text || '[Button Click]';
+                } else if (type === 'location' && msg.location) {
+                    const { latitude, longitude, name, address } = msg.location;
+                    const mapsUrl = `https://maps.google.com/?q=${latitude},${longitude}`;
+                    const locationLabel = name ? `${name}${address ? ' - ' + address : ''}` : (address || `${latitude}, ${longitude}`);
+                    bodyText = `📍 Location: ${locationLabel}\n${mapsUrl}`;
+                    locationData = {
+                        latitude,
+                        longitude,
+                        name: name || null,
+                        address: address || null,
+                        url: mapsUrl
+                    };
+                } else if ((type === 'audio' || type === 'voice') && (msg.audio || msg.voice)) {
+                    const audioObj = msg.audio || msg.voice;
+                    const isVoice = type === 'voice' || audioObj?.voice || false;
+                    bodyText = isVoice ? '🎙️ Voice Note' : '🎵 Audio Message';
+                    mediaData = {
+                        media_id: audioObj.id,
+                        mime_type: audioObj.mime_type || null,
+                        voice: isVoice
+                    };
+                } else if (type === 'image' && msg.image) {
+                    const caption = msg.image.caption || '';
+                    bodyText = caption ? `📷 Photo: ${caption}` : '📷 Photo';
+                    mediaData = {
+                        media_id: msg.image.id,
+                        mime_type: msg.image.mime_type || null,
+                        caption
+                    };
+                } else if (type === 'video' && msg.video) {
+                    const caption = msg.video.caption || '';
+                    bodyText = caption ? `🎥 Video: ${caption}` : '🎥 Video';
+                    mediaData = {
+                        media_id: msg.video.id,
+                        mime_type: msg.video.mime_type || null,
+                        caption
+                    };
+                } else if (type === 'document' && msg.document) {
+                    const filename = msg.document.filename || msg.document.caption || 'Document';
+                    bodyText = `📄 Document: ${filename}`;
+                    mediaData = {
+                        media_id: msg.document.id,
+                        filename: msg.document.filename || null,
+                        caption: msg.document.caption || null,
+                        mime_type: msg.document.mime_type || null
+                    };
+                } else if (type === 'sticker' && msg.sticker) {
+                    bodyText = '🎨 Sticker';
+                    mediaData = {
+                        media_id: msg.sticker.id,
+                        mime_type: msg.sticker.mime_type || null
+                    };
+                } else if (type === 'interactive' && msg.interactive) {
+                    const buttonReply = msg.interactive.button_reply;
+                    const listReply = msg.interactive.list_reply;
+                    const nfmReply = msg.interactive.nfm_reply;
+
+                    if (buttonReply) {
+                        bodyText = buttonReply.title || buttonReply.id || 'Selected Button Option';
+                        interactiveDetails = { type: 'button_reply', id: buttonReply.id, title: buttonReply.title };
+                    } else if (listReply) {
+                        const title = listReply.title || 'Selected List Item';
+                        const desc = listReply.description ? ` (${listReply.description})` : '';
+                        bodyText = `${title}${desc}`;
+                        interactiveDetails = { type: 'list_reply', id: listReply.id, title: listReply.title, description: listReply.description };
+                    } else if (nfmReply) {
+                        bodyText = 'Form Response Submitted';
+                        interactiveDetails = { type: 'nfm_reply', response: nfmReply.response_json };
+                    } else {
+                        bodyText = 'Interactive Response';
+                    }
+                } else if (type === 'button' && msg.button) {
+                    bodyText = msg.button.text || msg.button.payload || 'Clicked Button';
+                    interactiveDetails = { type: 'button', text: msg.button.text, payload: msg.button.payload };
+                } else if (type === 'reaction' && msg.reaction) {
+                    reactionEmoji = msg.reaction.emoji || null;
+                    bodyText = reactionEmoji ? `Reacted ${reactionEmoji}` : 'Removed reaction';
+                } else if (type === 'contacts' && Array.isArray(msg.contacts) && msg.contacts.length > 0) {
+                    const c = msg.contacts[0];
+                    const name = c.name?.formatted_name || c.name?.first_name || 'Contact';
+                    const phone = c.phones?.[0]?.phone || '';
+                    bodyText = `🎴 Contact Shared: ${name}${phone ? ' (' + phone + ')' : ''}`;
+                    contactsData = { name, phone };
+                } else if (msg.system?.body) {
+                    bodyText = msg.system.body;
                 } else {
                     bodyText = `[${type} message]`;
                 }
@@ -63,7 +150,7 @@ async function processWebhookBody(body) {
                     }
                 }
 
-                console.log(`Webhook Trigger: Incoming message from ${fromPhone} (Name: ${senderName}): "${bodyText}"`);
+                console.log(`Webhook Trigger: Incoming message from ${fromPhone} (Type: ${type}, Name: ${senderName}): "${bodyText}"`);
 
                 const replyToMessageId = msg.context?.id || null;
 
@@ -75,7 +162,12 @@ async function processWebhookBody(body) {
                     body: bodyText,
                     senderName,
                     phoneId: value.metadata?.phone_number_id,
-                    replyToMessageId
+                    replyToMessageId,
+                    location: locationData,
+                    media: mediaData,
+                    interactive: interactiveDetails,
+                    reactionEmoji,
+                    contactsData
                 });
             }
         }

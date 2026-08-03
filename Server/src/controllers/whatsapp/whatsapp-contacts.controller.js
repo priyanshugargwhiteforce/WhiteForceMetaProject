@@ -171,8 +171,10 @@ exports.getChatThreads = async (req, res) => {
 exports.getChatMessages = async (req, res) => {
     try {
         const { contactId } = req.params;
-        const messages = await contactsService.getChatMessages(parseInt(contactId));
-        res.status(200).json({ success: true, messages });
+        const result = await contactsService.getChatMessages(parseInt(contactId));
+        const messages = Array.isArray(result) ? result : (result.messages || []);
+        const window24h = result.window24h || null;
+        res.status(200).json({ success: true, messages, window24h });
     } catch (error) {
         console.error('Get chat messages error:', error.message);
         res.status(500).json({ success: false, message: error.message });

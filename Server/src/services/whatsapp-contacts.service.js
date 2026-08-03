@@ -352,10 +352,16 @@ const getChatMessages = async (contactId) => {
 
     const messages = [];
     const messageMap = {};
+    let lastIncomingTimestamp = null;
 
     for (const act of rows) {
         const metadata = typeof act.metadata === 'string' ? JSON.parse(act.metadata) : (act.metadata || {});
         const msgId = act.message_id;
+        const isOutgoing = act.event_type !== 'replied';
+
+        if (act.event_type === 'replied' && act.event_timestamp) {
+            lastIncomingTimestamp = act.event_timestamp;
+        }
 
         if (msgId) {
             if (messageMap[msgId]) {
@@ -363,13 +369,20 @@ const getChatMessages = async (contactId) => {
                 msg.status = act.event_type;
                 if (metadata.error) msg.error = metadata.error;
             } else {
-                const isOutgoing = act.event_type !== 'replied';
                 const msg = {
                     id: act.id,
                     message_id: msgId,
                     campaign_id: act.campaign_id,
                     type: metadata.type || (isOutgoing ? 'template' : 'text'),
                     body: metadata.body || (isOutgoing ? `Template: ${metadata.template_name || 'Campaign Template'}` : ''),
+                    location: metadata.location || null,
+                    media_id: metadata.media_id || null,
+                    mime_type: metadata.mime_type || null,
+                    caption: metadata.caption || null,
+                    filename: metadata.filename || null,
+                    interactive: metadata.interactive || null,
+                    emoji: metadata.emoji || null,
+                    contacts: metadata.contacts || null,
                     status: act.event_type,
                     isOutgoing,
                     timestamp: act.event_timestamp,
@@ -379,13 +392,20 @@ const getChatMessages = async (contactId) => {
                 messages.push(msg);
             }
         } else {
-            const isOutgoing = act.event_type !== 'replied';
             messages.push({
                 id: act.id,
                 message_id: null,
                 campaign_id: act.campaign_id,
-                type: act.event_type === 'unsubscribed' ? 'system' : 'text',
+                type: act.event_type === 'unsubscribed' ? 'system' : (metadata.type || 'text'),
                 body: act.event_type === 'unsubscribed' ? 'User unsubscribed' : (metadata.body || `Event: ${act.event_type}`),
+                location: metadata.location || null,
+                media_id: metadata.media_id || null,
+                mime_type: metadata.mime_type || null,
+                caption: metadata.caption || null,
+                filename: metadata.filename || null,
+                interactive: metadata.interactive || null,
+                emoji: metadata.emoji || null,
+                contacts: metadata.contacts || null,
                 status: act.event_type,
                 isOutgoing,
                 timestamp: act.event_timestamp
@@ -393,7 +413,45 @@ const getChatMessages = async (contactId) => {
         }
     }
 
-    return messages;
+    // Calculate 24-Hour Customer Service Window Status
+    let window24h = {
+        isOpen: false,
+        lastIncomingAt: null,
+        expiresAt: null,
+        remainingMinutes: 0,
+        remainingFormatted: 'Expired'
+    };
+
+    if (lastIncomingTimestamp) {
+        const lastTime = new Date(lastIncomingTimestamp).getTime();
+        if (!isNaN(lastTime)) {
+            const expiresTime = lastTime + (24 * 60 * 60 * 1000);
+            const nowTime = Date.now();
+            const diffMs = expiresTime - nowTime;
+
+            if (diffMs > 0) {
+                const hours = Math.floor(diffMs / (1000 * 60 * 60));
+                const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                window24h = {
+                    isOpen: true,
+                    lastIncomingAt: new Date(lastTime).toISOString(),
+                    expiresAt: new Date(expiresTime).toISOString(),
+                    remainingMinutes: Math.floor(diffMs / (1000 * 60)),
+                    remainingFormatted: `${hours}h ${mins}m remaining`
+                };
+            } else {
+                window24h = {
+                    isOpen: false,
+                    lastIncomingAt: new Date(lastTime).toISOString(),
+                    expiresAt: new Date(expiresTime).toISOString(),
+                    remainingMinutes: 0,
+                    remainingFormatted: 'Expired'
+                };
+            }
+        }
+    }
+
+    return { messages, window24h };
 };
 
 module.exports = {
