@@ -380,11 +380,14 @@ const WAChatWindow = () => {
     // 2. Audio / Voice Note Message (with Audio Player)
     if (msg.type === 'audio' || msg.type === 'voice' || msg.media_id || msg.audio_url) {
       const isVoice = msg.type === 'voice';
+      const token = localStorage.getItem('token') || '';
+      const audioSource = msg.audio_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
       return (
         <div className="space-y-1.5 p-2.5 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-full bg-purple-500/10 text-purple-500 border border-purple-500/20 shrink-0">
-              <Mic className="w-4 h-4" />
+              <Mic className="w-4 h-4 text-purple-400 animate-pulse" />
             </div>
             <div>
               <p className="font-semibold text-xs text-slate-900 dark:text-white">
@@ -393,13 +396,13 @@ const WAChatWindow = () => {
             </div>
           </div>
 
-          {/* Render Audio Player if audio_url is available */}
-          {msg.audio_url ? (
+          {/* Render Audio Player - works via local saved file OR live streaming proxy */}
+          {audioSource ? (
             <div className="pt-1">
               <audio
                 controls
                 className="w-full max-w-[240px] h-8 rounded-lg outline-none"
-                src={msg.audio_url}
+                src={audioSource}
               >
                 Your browser does not support the audio player.
               </audio>

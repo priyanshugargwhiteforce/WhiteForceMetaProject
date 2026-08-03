@@ -80,6 +80,7 @@ router.get('/chats/events', whatsappContactsController.getChatEvents);
 router.get('/chats', whatsappContactsController.getChatThreads);
 router.get('/chats/:contactId/messages', whatsappContactsController.getChatMessages);
 router.post('/chats/:contactId/send', whatsappContactsController.sendFreeTextChat);
+router.get('/media/:mediaId/stream', whatsappController.streamWhatsAppMedia);
 
 // WhatsApp Call Logs Routes
 router.get('/calls', whatsappCallsController.getCallLogs);
