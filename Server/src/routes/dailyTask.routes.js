@@ -33,6 +33,7 @@ router.get('/reports', dailyTaskController.getDailyTaskReports);
 router.get('/export', dailyTaskController.exportDailyTasks);
 router.get('/sample-template', dailyTaskController.downloadSampleExcelTemplate);
 router.post('/upload', upload.single('file'), dailyTaskController.uploadDailyTasksExcel);
+router.post('/trigger-missing-reminders', dailyTaskController.triggerMissingTaskReminders);
 
 router.route('/:id')
     .get(dailyTaskController.getDailyTaskById)

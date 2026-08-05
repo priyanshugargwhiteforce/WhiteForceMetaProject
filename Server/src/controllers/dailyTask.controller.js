@@ -804,3 +804,18 @@ exports.downloadSampleExcelTemplate = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// @desc    Trigger 06:00 PM WhatsApp reminders to managers for team members with missing daily tasks
+// @route   POST /api/daily-tasks/trigger-missing-reminders
+// @access  Private (Admin / Manager)
+exports.triggerMissingTaskReminders = async (req, res) => {
+    try {
+        const { date } = req.body || {};
+        const { checkAndSendMissingTaskReminders } = require('../services/dailyTaskReminder.service');
+        const result = await checkAndSendMissingTaskReminders(date || null);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('triggerMissingTaskReminders Controller Error:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

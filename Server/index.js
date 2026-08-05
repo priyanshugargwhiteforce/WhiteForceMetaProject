@@ -13,10 +13,13 @@ const startServer = async () => {
     // Connect to Database
     await connectDB();
 
-    // Initialize Queue Worker
+    // Initialize Queue Worker & Daily Task Reminder Cron
     require('./src/services/whatsapp-queue.service');
     const { recoverQueuedJobs } = require('./src/services/meta-queue.service');
     recoverQueuedJobs();
+
+    const { initDailyTaskCron } = require('./src/services/dailyTaskReminder.service');
+    initDailyTaskCron();
 
     // Start listening
     app.listen(PORT, () => {
