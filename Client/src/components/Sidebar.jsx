@@ -6,6 +6,7 @@ import axios from 'axios';
 import {
   LayoutDashboard,
   Users,
+  User,
   ChartBar,
   Settings,
   LogOut,
@@ -118,6 +119,25 @@ const Sidebar = ({ isOpen, onClose }) => {
   const [openYoutube, setOpenYoutube] = useState(location.pathname.startsWith('/youtube-'));
 
   const [pendingCount, setPendingCount] = useState(0);
+  const [isApiConnected, setIsApiConnected] = useState(true);
+
+  useEffect(() => {
+    const checkApiStatus = async () => {
+      try {
+        const res = await axios.get('/health', { timeout: 3000 });
+        if (res.status === 200) {
+          setIsApiConnected(true);
+        } else {
+          setIsApiConnected(false);
+        }
+      } catch (err) {
+        setIsApiConnected(false);
+      }
+    };
+    checkApiStatus();
+    const interval = setInterval(checkApiStatus, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchPendingCount = async () => {
     if (!user) return;
@@ -596,21 +616,22 @@ const Sidebar = ({ isOpen, onClose }) => {
         )}
       </nav>
 
-      <div className="p-6 border-t border-slate-200 dark:border-white/5">
-        <div className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-2xl p-4 border border-indigo-500/10 mb-4">
-          <p className="text-xs font-semibold text-indigo-300 mb-1">API Status</p>
-          <div className="flex items-center">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2 shadow-lg shadow-emerald-500/50"></div>
-            <span className="text-[10px] text-slate-400">Connected to v24.0</span>
+      <div className="p-4 border-t border-slate-200 dark:border-white/5">
+        {/* Compact API Status Badge */}
+        <div className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span className="relative flex h-2 w-2">
+              {isApiConnected && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              )}
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${isApiConnected ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+            </span>
+            <span className={`text-[11px] font-bold ${isApiConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+              {isApiConnected ? 'API Connected' : 'API Offline'}
+            </span>
           </div>
+          <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500">v24.0</span>
         </div>
-        <button
-          onClick={logout}
-          className="flex items-center w-full px-4 py-3 text-slate-500 dark:text-slate-400 hover:text-red-500 hover:bg-red-500/5 rounded-xl transition-all duration-300 group"
-        >
-          <LogOut className="w-5 h-5 mr-3 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-medium text-sm">Logout</span>
-        </button>
       </div>
     </aside>
     </>

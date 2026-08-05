@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -18,7 +19,8 @@ import {
   ExternalLink,
   ChevronDown,
   X,
-  Eye
+  Eye,
+  FileSpreadsheet
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -27,6 +29,7 @@ const TaskManager = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const token = localStorage.getItem('token');
+  const navigate = useNavigate();
 
   // Tasks state
   const [tasks, setTasks] = useState([]);
@@ -434,15 +437,25 @@ const TaskManager = () => {
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Assign, track, and execute tasks mapped to Meta, Google, LinkedIn, or WhatsApp campaigns</p>
         </div>
 
-        {canCreateTask && (
+        <div className="flex flex-wrap items-center gap-2.5">
+          {canCreateTask && (
+            <button
+              onClick={() => { resetForm(); setIsCreateModalOpen(true); }}
+              className="flex items-center space-x-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/10 transition-all font-semibold text-xs"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Task</span>
+            </button>
+          )}
+
           <button
-            onClick={() => { resetForm(); setIsCreateModalOpen(true); }}
-            className="flex items-center space-x-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/10 transition-all font-semibold text-xs"
+            onClick={() => navigate('/daily-tasks')}
+            className="flex items-center space-x-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-lg shadow-emerald-500/10 transition-all font-semibold text-xs"
           >
-            <Plus className="w-4 h-4" />
-            <span>Create Task</span>
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>+ Daily Creative Task</span>
           </button>
-        )}
+        </div>
       </div>
 
       {/* KPI Cards Row */}
@@ -572,10 +585,14 @@ const TaskManager = () => {
               <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05]">
                 {filteredTasks.map((task, index) => {
                   const taskOverdue = isOverdue(task);
-                  const isCreator = task.assigned_by === user?.id;
-                  const isAssignee = task.assigned_to === user?.id;
+                  const isCreator = Number(task.assigned_by) === Number(user?.id);
+                  const isAssignee = Number(task.assigned_to) === Number(user?.id) || (task.assignees && task.assignees.some(a => Number(a.assigned_to) === Number(user?.id)));
                   const isAdmin = user?.role === 'admin';
-                  const isManagerOfAssignee = user?.role === 'manager' && task.assignee_manager_id === user?.id;
+                  const isManagerOfAssignee = user?.role === 'manager' && (
+                    Number(task.assignee_manager_id) === Number(user?.id) ||
+                    Number(task.assigned_by) === Number(user?.id) ||
+                    (task.assignees && task.assignees.some(a => Number(a.assignee_manager_id) === Number(user?.id)))
+                  );
 
                   return (
                     <tr key={task.id} className="hover:bg-slate-50/[0.01] dark:hover:bg-white/[0.01] transition-colors group">
@@ -810,7 +827,7 @@ const TaskManager = () => {
                 {/* Assignee Selection */}
                 <div className="space-y-1">
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Assignee(s)</label>
-                  {(isCreateModalOpen || user?.role === 'admin' || user?.role === 'manager' || currentTask?.assigned_by === user?.id) ? (
+                  {(isCreateModalOpen || user?.role === 'admin' || user?.role === 'manager' || Number(currentTask?.assigned_by) === Number(user?.id)) ? (
                     // Multi-select scrollable checklist for Creation & Management
                     <div className="border border-slate-200 dark:border-white/10 rounded-xl bg-slate-50 dark:bg-slate-800 p-3 space-y-2.5">
                       <span className="text-[10px] text-slate-550 dark:text-slate-400 font-bold block mb-1">

@@ -1087,6 +1087,50 @@ const initSchema = async () => {
             await pool.query("ALTER TABLE tasks ADD INDEX idx_tasks_parent_task_id (parent_task_id)");
         } catch (e) { /* Index might exist */ }
 
+        // --- Daily Tasks Table ---
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS daily_tasks (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                date DATE NOT NULL,
+                theme VARCHAR(255) NULL,
+                social_media_platform VARCHAR(255) NULL,
+                page_name VARCHAR(255) NULL,
+                department VARCHAR(255) NULL,
+                manager_name VARCHAR(255) NULL,
+                given_by VARCHAR(255) NULL,
+                employee VARCHAR(255) NULL,
+                position VARCHAR(255) NULL,
+                poster_name VARCHAR(255) NULL,
+                location VARCHAR(255) NULL,
+                facebook TEXT NULL,
+                instagram TEXT NULL,
+                linkedin TEXT NULL,
+                youtube TEXT NULL,
+                twitter TEXT NULL,
+                status ENUM('active', 'deleted') DEFAULT 'active',
+                created_by INT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+            )
+        `);
+        console.log(' - daily_tasks table created/verified');
+
+        // Column Migrations for newly added Excel template fields
+        try { await pool.query("ALTER TABLE daily_tasks ADD COLUMN page_name VARCHAR(255) NULL AFTER social_media_platform"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD COLUMN manager_name VARCHAR(255) NULL AFTER department"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD COLUMN poster_name VARCHAR(255) NULL AFTER position"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD COLUMN instagram TEXT NULL AFTER facebook"); } catch (e) {}
+
+        try { await pool.query("ALTER TABLE daily_tasks ADD INDEX idx_daily_tasks_date (date)"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD INDEX idx_daily_tasks_employee (employee)"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD INDEX idx_daily_tasks_dept (department)"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD INDEX idx_daily_tasks_theme (theme)"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD INDEX idx_daily_tasks_platform (social_media_platform)"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD INDEX idx_daily_tasks_status (status)"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD INDEX idx_daily_tasks_page (page_name)"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD INDEX idx_daily_tasks_mgr (manager_name)"); } catch (e) {}
+
         // --- User Hierarchy Migrations ---
         try {
             await pool.query("ALTER TABLE users ADD COLUMN manager_id INT NULL DEFAULT NULL");

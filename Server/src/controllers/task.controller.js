@@ -89,6 +89,7 @@ exports.getTasks = async (req, res) => {
                     assigned_to: row.assigned_to,
                     assignee_name: row.assignee_name,
                     assignee_email: row.assignee_email,
+                    assignee_manager_id: row.assignee_manager_id,
                     status: row.status,
                     remarks: row.remarks
                 });
@@ -104,6 +105,7 @@ exports.getTasks = async (req, res) => {
                     assigned_to: row.assigned_to,
                     assignee_name: row.assignee_name,
                     assignee_email: row.assignee_email,
+                    assignee_manager_id: row.assignee_manager_id,
                     status: row.status,
                     remarks: row.remarks
                 }]
@@ -148,7 +150,7 @@ exports.createTask = async (req, res) => {
         }
 
         // Only admin or manager can create tasks for others. Anyone can create a task for themselves.
-        const containsOthers = assignees.some(id => id !== assigned_by);
+        const containsOthers = assignees.some(id => Number(id) !== Number(assigned_by));
         if (role !== 'admin' && role !== 'manager' && containsOthers) {
             return res.status(403).json({ 
                 success: false, 
@@ -220,21 +222,28 @@ exports.updateTask = async (req, res) => {
 
         const task = taskRows[0];
 
-        const isCreator = task.assigned_by === userId;
-        const isAssignee = task.assigned_to === userId;
+        const isCreator = Number(task.assigned_by) === Number(userId);
+        const isAssignee = Number(task.assigned_to) === Number(userId);
         const isAdmin = role === 'admin';
 
-        // Check if assignee is a team member of the current manager
-        let isManagerOfAssignee = false;
-        if (role === 'manager' && task.assigned_to) {
-            const [assigneeRows] = await pool.query('SELECT manager_id FROM users WHERE id = ?', [task.assigned_to]);
-            if (assigneeRows.length > 0 && assigneeRows[0].manager_id === userId) {
-                isManagerOfAssignee = true;
+        // Check if manager is managing the assigned user or the creator user
+        let isManagerOfTask = false;
+        if (role === 'manager') {
+            if (isCreator || isAssignee) {
+                isManagerOfTask = true;
+            } else {
+                const [teamRows] = await pool.query(
+                    'SELECT id FROM users WHERE (id = ? OR id = ?) AND manager_id = ?',
+                    [task.assigned_to, task.assigned_by, userId]
+                );
+                if (teamRows.length > 0) {
+                    isManagerOfTask = true;
+                }
             }
         }
 
         // Check authorization
-        if (!isAdmin && !isCreator && !isAssignee && !isManagerOfAssignee) {
+        if (!isAdmin && !isCreator && !isAssignee && !isManagerOfTask) {
             return res.status(403).json({ success: false, message: 'You are not authorized to update this task.' });
         }
 
@@ -261,15 +270,15 @@ exports.updateTask = async (req, res) => {
             });
         }
 
-        // If assignee (and not admin/creator/manager of assignee), they can only update status or add a remark
-        if (!isAdmin && !isCreator && !isManagerOfAssignee && isAssignee) {
+        // If assignee (and not admin/creator/manager of task), they can only update status or add a remark
+        if (!isAdmin && !isCreator && !isManagerOfTask && isAssignee) {
             if (status === undefined && remark === undefined) {
                 return res.status(400).json({ success: false, message: 'Assignees can only update the task status or add a remark.' });
             }
             
             const fields = [];
             const params = [];
-            if (status !== undefined) {
+            if (status !== undefined && status !== null && status !== '') {
                 fields.push('status = ?');
                 params.push(status);
             }
@@ -278,8 +287,10 @@ exports.updateTask = async (req, res) => {
                 params.push(JSON.stringify(remarksArray));
             }
             
-            params.push(id);
-            await pool.query(`UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`, params);
+            if (fields.length > 0) {
+                params.push(id);
+                await pool.query(`UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`, params);
+            }
         } else {
             // Full update for admin, manager, or creator
             const parentKey = task.parent_task_id || task.id;
@@ -303,19 +314,19 @@ exports.updateTask = async (req, res) => {
             const groupFields = [];
             const groupParams = [];
             if (title !== undefined) { groupFields.push('title = ?'); groupParams.push(title); }
-            if (description !== undefined) { groupFields.push('description = ?'); groupParams.push(description); }
-            if (ad_platform !== undefined) { groupFields.push('ad_platform = ?'); groupParams.push(ad_platform); }
-            if (ad_id !== undefined) { groupFields.push('ad_id = ?'); groupParams.push(ad_id); }
-            if (ad_name !== undefined) { groupFields.push('ad_name = ?'); groupParams.push(ad_name); }
+            if (description !== undefined) { groupFields.push('description = ?'); groupParams.push(description || null); }
+            if (ad_platform !== undefined) { groupFields.push('ad_platform = ?'); groupParams.push(ad_platform || 'general'); }
+            if (ad_id !== undefined) { groupFields.push('ad_id = ?'); groupParams.push(ad_id || null); }
+            if (ad_name !== undefined) { groupFields.push('ad_name = ?'); groupParams.push(ad_name || null); }
             if (priority !== undefined) { groupFields.push('priority = ?'); groupParams.push(priority); }
-            if (due_date !== undefined) { groupFields.push('due_date = ?'); groupParams.push(due_date); }
+            if (due_date !== undefined) { groupFields.push('due_date = ?'); groupParams.push(due_date || null); }
 
             if (groupFields.length > 0) {
                 groupParams.push(parentKey, parentKey);
                 await pool.query(`UPDATE tasks SET ${groupFields.join(', ')} WHERE parent_task_id = ? OR id = ?`, groupParams);
             }
 
-            if (status !== undefined) {
+            if (status !== undefined && status !== null && status !== '') {
                 await pool.query('UPDATE tasks SET status = ? WHERE id = ?', [status, id]);
             }
             if (remark !== undefined) {
@@ -342,14 +353,14 @@ exports.updateTask = async (req, res) => {
                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
                         [
                             title !== undefined ? title : task.title,
-                            description !== undefined ? description : task.description,
+                            description !== undefined ? (description || null) : task.description,
                             aId,
                             task.assigned_by,
-                            ad_platform !== undefined ? ad_platform : task.ad_platform,
-                            ad_id !== undefined ? ad_id : task.ad_id,
-                            ad_name !== undefined ? ad_name : task.ad_name,
+                            ad_platform !== undefined ? (ad_platform || 'general') : task.ad_platform,
+                            ad_id !== undefined ? (ad_id || null) : task.ad_id,
+                            ad_name !== undefined ? (ad_name || null) : task.ad_name,
                             priority !== undefined ? priority : task.priority,
-                            due_date !== undefined ? due_date : task.due_date,
+                            due_date !== undefined ? (due_date || null) : task.due_date,
                             parentKey
                         ]
                     );
@@ -390,17 +401,28 @@ exports.deleteTask = async (req, res) => {
 
         const task = taskRows[0];
 
-        // Check if assignee is a team member of the current manager
-        let isManagerOfAssignee = false;
-        if (role === 'manager' && task.assigned_to) {
-            const [assigneeRows] = await pool.query('SELECT manager_id FROM users WHERE id = ?', [task.assigned_to]);
-            if (assigneeRows.length > 0 && assigneeRows[0].manager_id === userId) {
-                isManagerOfAssignee = true;
+        const isCreator = Number(task.assigned_by) === Number(userId);
+        const isAssignee = Number(task.assigned_to) === Number(userId);
+        const isAdmin = role === 'admin';
+
+        // Check if assignee or creator is a team member of current manager
+        let isManagerOfTask = false;
+        if (role === 'manager') {
+            if (isCreator || isAssignee) {
+                isManagerOfTask = true;
+            } else {
+                const [teamRows] = await pool.query(
+                    'SELECT id FROM users WHERE (id = ? OR id = ?) AND manager_id = ?',
+                    [task.assigned_to, task.assigned_by, userId]
+                );
+                if (teamRows.length > 0) {
+                    isManagerOfTask = true;
+                }
             }
         }
 
-        // Only Admin, the creator, or the manager of the assignee can delete the task
-        if (role !== 'admin' && task.assigned_by !== userId && !isManagerOfAssignee) {
+        // Only Admin, the creator, or manager of task can delete the task
+        if (!isAdmin && !isCreator && !isManagerOfTask) {
             return res.status(403).json({ success: false, message: 'You are not authorized to delete this task.' });
         }
 

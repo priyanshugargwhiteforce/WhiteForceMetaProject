@@ -371,3 +371,49 @@ exports.getDashboardStats = async (req, res) => {
     }
 };
 
+// @desc    Get currently logged in user profile
+// @route   GET /api/users/profile/me
+// @access  Private
+exports.getProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        res.status(200).json({ success: true, user });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Update currently logged in user profile (Department, Designation, Phone, Profile Picture)
+// @route   PUT /api/users/profile/me
+// @access  Private
+exports.updateProfile = async (req, res) => {
+    try {
+        const { department, designation, phone, profile_image } = req.body;
+        const updateData = {};
+
+        if (department !== undefined) updateData.department = department ? String(department).trim() : null;
+        if (designation !== undefined) updateData.designation = designation ? String(designation).trim() : null;
+        if (phone !== undefined) updateData.phone = phone ? String(phone).trim() : null;
+        if (profile_image !== undefined) updateData.profile_image = profile_image ? String(profile_image).trim() : null;
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ success: false, message: 'No profile fields provided for update.' });
+        }
+
+        await User.update(req.user.id, updateData);
+        const updatedUser = await User.findById(req.user.id);
+
+        res.status(200).json({
+            success: true,
+            message: 'Profile updated successfully.',
+            user: updatedUser
+        });
+    } catch (error) {
+        console.error('updateProfile Error:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+

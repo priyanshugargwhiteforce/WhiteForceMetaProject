@@ -49,11 +49,13 @@ import MetaSettings from './components/MetaSettings';
 import WhatsAppSettings from './components/WhatsAppSettings';
 import AdOwner from './components/AdOwner';
 import TaskManager from './components/TaskManager';
+import DailyTaskManager from './components/DailyTaskManager';
 import MediaLibrary from './components/media/MediaLibrary';
 import LinkedInAssetManager from './components/linkedin/LinkedInAssetManager';
 import CreativeBuilder from './components/linkedin/CreativeBuilder';
 import CreativeLibrary from './components/linkedin/CreativeLibrary';
 import MetaPosting from './components/MetaPosting';
+import Profile from './components/Profile';
 import './App.css';
 
 import Layout from './components/Layout';
@@ -475,6 +477,14 @@ function App() {
                             } 
                         />
                         <Route 
+                            path="/daily-tasks" 
+                            element={
+                                <ProtectedRoute>
+                                    <DailyTaskManager />
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
                             path="/linkedin-manager" 
                             element={
                                 <ProtectedRoute>
@@ -592,6 +602,14 @@ function App() {
                                     <PermissionRoute permission="linkedin_access">
                                         <AdDetail />
                                         </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/profile" 
+                            element={
+                                <ProtectedRoute>
+                                    <Profile />
                                 </ProtectedRoute>
                             } 
                         />

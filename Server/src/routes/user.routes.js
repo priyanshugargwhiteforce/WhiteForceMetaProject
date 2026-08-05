@@ -6,12 +6,19 @@ const {
     updateUser,
     deleteUser,
     getManagers,
-    getDashboardStats
+    getDashboardStats,
+    getProfile,
+    updateProfile
 } = require('../controllers/user.controller');
 
 const { protect, authorize } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
+
+// Route for current user's profile (accessible by any logged in user)
+router.route('/profile/me')
+    .get(getProfile)
+    .put(updateProfile);
 
 // Route to get dashboard statistics
 router.route('/dashboard/stats')

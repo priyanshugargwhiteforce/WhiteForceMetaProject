@@ -39,7 +39,8 @@ app.use('/api/youtube-ads', protect, require('./routes/youtubeAd.routes'));
 app.use('/api/linkedin', require('./routes/linkedin/linkedin.routes'));
 app.use('/api/linkedin/ads', require('./routes/linkedin/ads.routes'));
 
-app.use('/api/tasks', protect, require('./routes/task.routes'));;
+app.use('/api/tasks', protect, require('./routes/task.routes'));
+app.use('/api/daily-tasks', protect, require('./routes/dailyTask.routes'));
 
 // Phase 4 - Media Library, Assets, and Creatives Router Registry
 app.use('/api/media', require('./routes/media.routes'));
