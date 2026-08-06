@@ -299,6 +299,23 @@ const WAChatWindow = () => {
     }
   };
 
+  const getDisplayName = (phone, name) => {
+    if (!name) return phone || '';
+    let clean = String(name).trim();
+    if (!clean || clean === phone) return phone || '';
+    
+    // Strip legacy duplicate wrappers e.g. "919000000000 (Live Tester)" or "919875364966 (919875364966 (...))"
+    while (/^\d+\s*\((.+)\)$/.test(clean)) {
+      const match = clean.match(/^\d+\s*\((.+)\)$/);
+      if (match) {
+        clean = match[1].trim();
+      } else {
+        break;
+      }
+    }
+    return clean || phone || '';
+  };
+
   const formatTime = (isoString) => {
     if (!isoString) return '';
     const date = new Date(isoString);
@@ -598,7 +615,7 @@ const WAChatWindow = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <h4 className="font-bold text-xs truncate text-slate-900 dark:text-white">
-                            {t.name ? `${t.phone} (${t.name})` : t.phone}
+                            {getDisplayName(t.phone, t.name)}
                           </h4>
                           <span className="text-[9px] text-slate-400 shrink-0 ml-1">
                             {formatTime(t.last_message_at)}
@@ -646,7 +663,7 @@ const WAChatWindow = () => {
                   </div>
                   <div>
                     <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
-                      {selectedThread.phone} {selectedThread.name ? `(${selectedThread.name})` : ''}
+                      {getDisplayName(selectedThread.phone, selectedThread.name)}
                     </h4>
                     <div className="flex items-center space-x-1.5 text-[11px] text-slate-400 font-mono">
                       <Phone className="w-3 h-3 text-emerald-500" />

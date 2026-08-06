@@ -930,6 +930,10 @@ const initSchema = async () => {
         try {
             await pool.query("UPDATE whatsapp_contacts SET status = 'unsubscribed' WHERE opt_in_status = 0 AND status = 'active'");
         } catch (e) { /* Migration might fail safely */ }
+        // Clean legacy auto-generated contact names containing source_user_name e.g. "919000000000 (Live Tester)"
+        try {
+            await pool.query("UPDATE whatsapp_contacts SET name = NULL WHERE name REGEXP '^[0-9]+[[:space:]]*\\\\('");
+        } catch (e) { /* Migration might fail safely */ }
         console.log(' - whatsapp_contacts engagement columns added/verified');
 
         // Create whatsapp_contact_activity table

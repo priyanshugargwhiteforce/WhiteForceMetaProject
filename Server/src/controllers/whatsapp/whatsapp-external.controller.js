@@ -62,6 +62,8 @@ exports.trackExternalMessage = async (req, res) => {
             [normalizedPhone]
         );
 
+        const candidateName = req.body.recipient_name || req.body.contact_name || req.body.candidate_name || req.body.name || null;
+
         if (contact) {
             contactId = contact.id;
             await pool.query(
@@ -69,16 +71,16 @@ exports.trackExternalMessage = async (req, res) => {
                  SET last_message_at = NOW(), 
                      status = 'active', 
                      opt_in_status = TRUE, 
-                     opt_in_date = COALESCE(opt_in_date, NOW()) 
+                     opt_in_date = COALESCE(opt_in_date, NOW()),
+                     name = COALESCE(?, name)
                  WHERE id = ?`,
-                [contactId]
+                [candidateName, contactId]
             );
         } else {
-            const defaultName = source_user_name ? `${normalizedPhone} (${source_user_name})` : `WhatsApp User ${normalizedPhone.slice(-4)}`;
             const [insertRes] = await pool.query(
                 `INSERT INTO whatsapp_contacts (phone, name, opt_in_status, opt_in_date, last_message_at, status)
                  VALUES (?, ?, TRUE, NOW(), NOW(), 'active')`,
-                [normalizedPhone, defaultName]
+                [normalizedPhone, candidateName]
             );
             contactId = insertRes.insertId;
         }

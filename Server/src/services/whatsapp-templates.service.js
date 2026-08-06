@@ -656,22 +656,26 @@ const handleIncomingMessage = async (msgData) => {
 
         if (contact) {
             contactId = contact.id;
-            // Update last_message_at and ensure opt_in_status is true if they messaged us
+            // Update last_message_at and update name if senderName is provided by WhatsApp
             await pool.query(
                 `UPDATE whatsapp_contacts 
                  SET last_message_at = NOW(), 
                      opt_in_status = TRUE, 
                      status = 'active',
-                     opt_in_date = COALESCE(opt_in_date, NOW())
+                     opt_in_date = COALESCE(opt_in_date, NOW()),
+                     name = CASE 
+                         WHEN ? IS NOT NULL AND CHAR_LENGTH(TRIM(?)) > 0 THEN ? 
+                         ELSE name 
+                     END
                  WHERE id = ?`,
-                [contactId]
+                [senderName || null, senderName || null, senderName || null, contactId]
             );
         } else {
             // Create a new contact
             const [insertRes] = await pool.query(
                 `INSERT INTO whatsapp_contacts (phone, name, opt_in_status, opt_in_date, last_message_at, status)
                  VALUES (?, ?, TRUE, NOW(), NOW(), 'active')`,
-                [normalized, senderName || `WhatsApp User ${normalized.slice(-4)}`]
+                [normalized, senderName || null]
             );
             contactId = insertRes.insertId;
             console.log(`[Webhook] Created new contact ID ${contactId} for phone ${normalized}`);
