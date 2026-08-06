@@ -384,6 +384,7 @@ const getChatMessages = async (contactId) => {
                     interactive: metadata.interactive || null,
                     emoji: metadata.emoji || null,
                     contacts: metadata.contacts || null,
+                    order: metadata.order || null,
                     status: act.event_type,
                     isOutgoing,
                     timestamp: act.event_timestamp,
@@ -408,6 +409,7 @@ const getChatMessages = async (contactId) => {
                 interactive: metadata.interactive || null,
                 emoji: metadata.emoji || null,
                 contacts: metadata.contacts || null,
+                order: metadata.order || null,
                 status: act.event_type,
                 isOutgoing,
                 timestamp: act.event_timestamp

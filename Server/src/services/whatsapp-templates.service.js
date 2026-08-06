@@ -626,7 +626,7 @@ const useTemplateMapping = async (templateId, mappingId) => {
 const handleIncomingMessage = async (msgData) => {
     const {
         fromPhone, messageId, timestamp, type, body, senderName, phoneId, replyToMessageId,
-        location, media, interactive, reactionEmoji, contactsData
+        location, media, interactive, reactionEmoji, contactsData, orderData
     } = msgData;
 
     try {
@@ -746,12 +746,14 @@ const handleIncomingMessage = async (msgData) => {
             type,
             location: location || null,
             media_id: media?.media_id || null,
+            audio_url: media?.audio_url || null,
             mime_type: media?.mime_type || null,
             caption: media?.caption || null,
             filename: media?.filename || null,
             interactive: interactive || null,
             emoji: reactionEmoji || null,
             contacts: contactsData || null,
+            order: orderData || null,
             raw_phone: fromPhone,
             waba_phone_id: phoneId,
             source_app: linkedMsg?.source_app || null,

@@ -50,6 +50,7 @@ async function processWebhookBody(body) {
                 let interactiveDetails = null;
                 let reactionEmoji = null;
                 let contactsData = null;
+                let orderData = null;
 
                 if (type === 'text' && msg.text?.body) {
                     bodyText = msg.text.body;
@@ -114,7 +115,8 @@ async function processWebhookBody(body) {
                     bodyText = '🎨 Sticker';
                     mediaData = {
                         media_id: msg.sticker.id,
-                        mime_type: msg.sticker.mime_type || null
+                        mime_type: msg.sticker.mime_type || null,
+                        animated: msg.sticker.animated || false
                     };
                 } else if (type === 'interactive' && msg.interactive) {
                     const buttonReply = msg.interactive.button_reply;
@@ -147,10 +149,18 @@ async function processWebhookBody(body) {
                     const phone = c.phones?.[0]?.phone || '';
                     bodyText = `🎴 Contact Shared: ${name}${phone ? ' (' + phone + ')' : ''}`;
                     contactsData = { name, phone };
+                } else if (type === 'order' && msg.order) {
+                    const catalogId = msg.order.catalog_id;
+                    const items = msg.order.product_items || [];
+                    bodyText = `🛒 Order Received (${items.length} item${items.length === 1 ? '' : 's'})`;
+                    orderData = { catalog_id: catalogId, items, text: msg.order.text || null };
+                } else if (type === 'unsupported' || (msg.errors && msg.errors.length > 0)) {
+                    const errDetail = msg.errors?.[0]?.message || msg.errors?.[0]?.title || 'Unsupported message type sent by user';
+                    bodyText = `⚠️ Unsupported Message (${errDetail})`;
                 } else if (msg.system?.body) {
                     bodyText = msg.system.body;
                 } else {
-                    bodyText = `[${type} message]`;
+                    bodyText = msg.text?.body || msg.caption || `[${type || 'unsupported'} message]`;
                 }
 
                 // Sender profile name if present
@@ -179,7 +189,8 @@ async function processWebhookBody(body) {
                     media: mediaData,
                     interactive: interactiveDetails,
                     reactionEmoji,
-                    contactsData
+                    contactsData,
+                    orderData
                 });
             }
         }
