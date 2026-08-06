@@ -17,7 +17,17 @@ import {
     SlidersHorizontal,
     MessageSquare,
     AlertCircle,
-    X
+    X,
+    MapPin,
+    Mic,
+    Image,
+    Video,
+    FileText,
+    Smile,
+    UserCheck,
+    MousePointerClick,
+    ShoppingBag,
+    ExternalLink
 } from 'lucide-react';
 
 const renderTemplateMessage = (templateComponents, params) => {
@@ -61,6 +71,249 @@ const renderTemplateMessage = (templateComponents, params) => {
         footerText,
         buttons: buttonComp ? buttonComp.buttons : []
     };
+};
+
+const renderRichMessageBody = (msg) => {
+    // 1. Location
+    if (msg.location || msg.type === 'location') {
+        const loc = msg.location || {};
+        return (
+            <div className="space-y-1.5 p-2.5 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1">
+                <div className="flex items-start gap-2">
+                    <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500 border border-rose-500/20 shrink-0">
+                        <MapPin className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <p className="font-bold text-xs text-slate-900 dark:text-white">
+                            {loc.name || 'Shared Location'}
+                        </p>
+                        {loc.address && (
+                            <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug mt-0.5">{loc.address}</p>
+                        )}
+                    </div>
+                </div>
+                {loc.url && (
+                    <a
+                        href={loc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-semibold transition-colors shadow-sm mt-1"
+                    >
+                        <ExternalLink className="w-3 h-3" />
+                        Open in Google Maps
+                    </a>
+                )}
+            </div>
+        );
+    }
+
+    // 2. Audio / Voice Note
+    if (msg.type === 'audio' || msg.type === 'voice' || msg.audio_url) {
+        const isVoice = msg.type === 'voice';
+        const token = localStorage.getItem('token') || '';
+        const audioSource = msg.audio_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
+        return (
+            <div className="space-y-1.5 p-2.5 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1">
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-full bg-purple-500/10 text-purple-500 border border-purple-500/20 shrink-0">
+                        <Mic className="w-4 h-4 text-purple-400 animate-pulse" />
+                    </div>
+                    <div>
+                        <p className="font-semibold text-xs text-slate-900 dark:text-white">
+                            {isVoice ? '🎙️ Voice Note' : '🎵 Audio Message'}
+                        </p>
+                    </div>
+                </div>
+                {audioSource ? (
+                    <div className="pt-1">
+                        <audio controls className="w-full max-w-[240px] h-8 rounded-lg outline-none" src={audioSource}>
+                            Your browser does not support the audio player.
+                        </audio>
+                    </div>
+                ) : (
+                    <p className="text-[10px] text-slate-400 font-mono">Attachment ID: {msg.media_id || 'Voice Track'}</p>
+                )}
+            </div>
+        );
+    }
+
+    // 3. Image
+    if (msg.type === 'image') {
+        const token = localStorage.getItem('token') || '';
+        const imageSrc = msg.image_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
+        return (
+            <div className="space-y-1.5 my-1">
+                {imageSrc ? (
+                    <div className="overflow-hidden rounded-xl border border-slate-200/50 dark:border-white/10 max-w-xs">
+                        <a href={imageSrc} target="_blank" rel="noopener noreferrer" title="Click to view full image">
+                            <img src={imageSrc} alt={msg.caption || 'Photo'} className="w-full h-auto max-h-60 object-cover hover:scale-[1.02] transition-transform duration-200" loading="lazy" />
+                        </a>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2 rounded-lg border border-slate-200/50 dark:border-white/10">
+                        <Image className="w-4 h-4 text-blue-500" />
+                        <span>Photo</span>
+                    </div>
+                )}
+                {msg.caption && <p className="text-xs select-text">{msg.caption}</p>}
+                {msg.received_message_text && msg.received_message_text !== '📷 Photo' && !msg.received_message_text.startsWith('📷 Photo:') && (
+                    <p className="text-xs select-text">{msg.received_message_text}</p>
+                )}
+            </div>
+        );
+    }
+
+    // 4. Video
+    if (msg.type === 'video') {
+        const token = localStorage.getItem('token') || '';
+        const videoSrc = msg.video_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
+        return (
+            <div className="space-y-1.5 my-1">
+                {videoSrc ? (
+                    <div className="overflow-hidden rounded-xl border border-slate-200/50 dark:border-white/10 max-w-xs">
+                        <video controls className="w-full max-h-60 rounded-xl" src={videoSrc}>
+                            Your browser does not support the video player.
+                        </video>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2 rounded-lg border border-slate-200/50 dark:border-white/10">
+                        <Video className="w-4 h-4 text-purple-500" />
+                        <span>Video</span>
+                    </div>
+                )}
+                {msg.caption && <p className="text-xs select-text">{msg.caption}</p>}
+            </div>
+        );
+    }
+
+    // 5. Document
+    if (msg.type === 'document') {
+        const token = localStorage.getItem('token') || '';
+        const docSrc = msg.document_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
+        return (
+            <div className="space-y-1.5 my-1">
+                <div className="flex items-center justify-between gap-3 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2.5 rounded-xl border border-slate-200/50 dark:border-white/10">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="w-4 h-4 text-amber-500 shrink-0" />
+                        <span className="truncate">{msg.filename || 'Document'}</span>
+                    </div>
+                    {docSrc && (
+                        <a href={docSrc} target="_blank" rel="noopener noreferrer" download={msg.filename || 'document'} className="p-1 bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white rounded-md transition-colors shrink-0" title="Download Document">
+                            <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                    )}
+                </div>
+                {msg.caption && <p className="text-xs select-text">{msg.caption}</p>}
+            </div>
+        );
+    }
+
+    // 6. Sticker
+    if (msg.type === 'sticker') {
+        const token = localStorage.getItem('token') || '';
+        const stickerSrc = msg.sticker_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
+        return (
+            <div className="my-1">
+                {stickerSrc ? (
+                    <div className="inline-block p-1 rounded-2xl bg-transparent">
+                        <img src={stickerSrc} alt="Sticker" className="w-24 h-24 object-contain hover:scale-105 transition-transform" loading="lazy" />
+                    </div>
+                ) : (
+                    <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2 rounded-xl border border-slate-200/50 dark:border-white/10">
+                        <Smile className="w-4 h-4 text-amber-500" />
+                        <span>🎨 Sticker</span>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // 7. Contact Card
+    if (msg.type === 'contacts' || msg.contacts) {
+        const contactObj = Array.isArray(msg.contacts) ? msg.contacts[0] : (msg.contacts || {});
+        const name = contactObj.name || 'Shared Contact';
+        const phone = contactObj.phone || '';
+
+        return (
+            <div className="space-y-1.5 p-2.5 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1 max-w-xs">
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center border border-emerald-500/20 shrink-0">
+                        <UserCheck className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <p className="font-bold text-xs truncate">{name}</p>
+                        {phone && <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">{phone}</p>}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // 8. Interactive / Button Response
+    if (msg.type === 'interactive' || msg.type === 'button' || msg.interactive) {
+        const interactive = msg.interactive || {};
+        const title = interactive.title || msg.received_message_text || msg.body || 'Button Option Selected';
+
+        return (
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 rounded-xl border border-emerald-500/20 my-1 text-xs font-semibold">
+                <MousePointerClick className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span>{title}</span>
+            </div>
+        );
+    }
+
+    // 9. Reaction
+    if (msg.type === 'reaction' || msg.emoji) {
+        return (
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-900/5 dark:bg-black/30 text-slate-800 dark:text-slate-200 rounded-full border border-slate-200/50 dark:border-white/10 text-xs font-medium my-0.5">
+                <span>Reacted {msg.emoji || msg.received_message_text}</span>
+            </div>
+        );
+    }
+
+    // 10. Catalog Order
+    if (msg.type === 'order' || msg.order) {
+        const order = msg.order || {};
+        const items = order.items || [];
+
+        return (
+            <div className="space-y-1.5 p-2.5 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1">
+                <div className="flex items-center gap-2">
+                    <ShoppingBag className="w-4 h-4 text-emerald-500" />
+                    <p className="font-bold text-xs">Order Received ({items.length} item{items.length === 1 ? '' : 's'})</p>
+                </div>
+                {items.map((item, idx) => (
+                    <div key={idx} className="text-[11px] flex items-center justify-between text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-black/20 p-1.5 rounded-lg">
+                        <span>Item ID: {item.product_retailer_id}</span>
+                        <span className="font-mono font-bold">x{item.quantity}</span>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    // 11. Unsupported Message Badge
+    if (msg.type === 'unsupported' || (msg.received_message_text && (msg.received_message_text.includes('[unsupported message]') || msg.received_message_text.includes('Unsupported Message')))) {
+        return (
+            <div className="flex items-start gap-2 p-2 bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded-xl border border-amber-500/20 text-xs my-1">
+                <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                    <p className="font-semibold text-xs">WhatsApp Format Notice</p>
+                    <p className="text-[10px] opacity-90 leading-tight mt-0.5">
+                        {msg.received_message_text && !msg.received_message_text.includes('[unsupported message]') ? msg.received_message_text : 'Received an incoming media/message format not supported by Meta API version.'}
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    // Default text fallback
+    return <p className="whitespace-pre-line select-text">{msg.received_message_text || msg.body}</p>;
 };
 
 const WAExternalTracker = () => {
@@ -739,7 +992,7 @@ const WAExternalTracker = () => {
                                                         );
                                                     })()
                                                 ) : (
-                                                    <p className="whitespace-pre-line">{chat.received_message_text}</p>
+                                                    renderRichMessageBody(chat)
                                                 )}
 
                                                 {/* Error logger if failed */}

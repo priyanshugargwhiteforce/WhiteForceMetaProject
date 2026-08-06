@@ -249,6 +249,25 @@ exports.getExternalConversation = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid phone number parameter.' });
         }
 
+        const [[contact]] = await pool.query(
+            'SELECT id FROM whatsapp_contacts WHERE phone = ? LIMIT 1',
+            [normalizedPhone]
+        );
+
+        let activityMap = {};
+        if (contact) {
+            const [activities] = await pool.query(
+                'SELECT message_id, event_type, metadata FROM whatsapp_contact_activity WHERE contact_id = ?',
+                [contact.id]
+            );
+            activities.forEach(act => {
+                const meta = typeof act.metadata === 'string' ? JSON.parse(act.metadata) : (act.metadata || {});
+                if (act.message_id) {
+                    activityMap[act.message_id] = meta;
+                }
+            });
+        }
+
         const [rows] = await pool.query(
             `SELECT * FROM whatsapp_message_logs 
              WHERE recipient_number = ? 
@@ -260,11 +279,25 @@ exports.getExternalConversation = async (req, res) => {
             success: true,
             phone: normalizedPhone,
             source_app,
-            conversation: rows.map(r => ({
-                ...r,
-                template_params_json: typeof r.template_params_json === 'string' ? JSON.parse(r.template_params_json) : r.template_params_json,
-                meta_response_json: typeof r.meta_response_json === 'string' ? JSON.parse(r.meta_response_json) : r.meta_response_json
-            }))
+            conversation: rows.map(r => {
+                const meta = (r.message_id && activityMap[r.message_id]) ? activityMap[r.message_id] : {};
+                return {
+                    ...r,
+                    template_params_json: typeof r.template_params_json === 'string' ? JSON.parse(r.template_params_json) : r.template_params_json,
+                    meta_response_json: typeof r.meta_response_json === 'string' ? JSON.parse(r.meta_response_json) : r.meta_response_json,
+                    type: meta.type || (r.direction === 'incoming' ? 'text' : 'template'),
+                    location: meta.location || null,
+                    media_id: meta.media_id || null,
+                    audio_url: meta.audio_url || null,
+                    mime_type: meta.mime_type || null,
+                    caption: meta.caption || null,
+                    filename: meta.filename || null,
+                    interactive: meta.interactive || null,
+                    emoji: meta.emoji || null,
+                    contacts: meta.contacts || null,
+                    order: meta.order || null
+                };
+            })
         });
 
     } catch (error) {
@@ -424,6 +457,25 @@ exports.getDashboardExternalConversation = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid phone number parameter.' });
         }
 
+        const [[contact]] = await pool.query(
+            'SELECT id FROM whatsapp_contacts WHERE phone = ? LIMIT 1',
+            [normalizedPhone]
+        );
+
+        let activityMap = {};
+        if (contact) {
+            const [activities] = await pool.query(
+                'SELECT message_id, event_type, metadata FROM whatsapp_contact_activity WHERE contact_id = ?',
+                [contact.id]
+            );
+            activities.forEach(act => {
+                const meta = typeof act.metadata === 'string' ? JSON.parse(act.metadata) : (act.metadata || {});
+                if (act.message_id) {
+                    activityMap[act.message_id] = meta;
+                }
+            });
+        }
+
         const [rows] = await pool.query(
             `SELECT * FROM whatsapp_message_logs 
              WHERE recipient_number = ? 
@@ -446,12 +498,26 @@ exports.getDashboardExternalConversation = async (req, res) => {
         return res.status(200).json({
             success: true,
             phone: normalizedPhone,
-            conversation: rows.map(r => ({
-                ...r,
-                template_params_json: typeof r.template_params_json === 'string' ? JSON.parse(r.template_params_json) : r.template_params_json,
-                meta_response_json: typeof r.meta_response_json === 'string' ? JSON.parse(r.meta_response_json) : r.meta_response_json,
-                template_components: templatesMap[r.template_name] || null
-            }))
+            conversation: rows.map(r => {
+                const meta = (r.message_id && activityMap[r.message_id]) ? activityMap[r.message_id] : {};
+                return {
+                    ...r,
+                    template_params_json: typeof r.template_params_json === 'string' ? JSON.parse(r.template_params_json) : r.template_params_json,
+                    meta_response_json: typeof r.meta_response_json === 'string' ? JSON.parse(r.meta_response_json) : r.meta_response_json,
+                    template_components: templatesMap[r.template_name] || null,
+                    type: meta.type || (r.direction === 'incoming' ? 'text' : 'template'),
+                    location: meta.location || null,
+                    media_id: meta.media_id || null,
+                    audio_url: meta.audio_url || null,
+                    mime_type: meta.mime_type || null,
+                    caption: meta.caption || null,
+                    filename: meta.filename || null,
+                    interactive: meta.interactive || null,
+                    emoji: meta.emoji || null,
+                    contacts: meta.contacts || null,
+                    order: meta.order || null
+                };
+            })
         });
 
     } catch (error) {
