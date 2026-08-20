@@ -183,6 +183,42 @@ async function run() {
         assert(upRes.summary.duplicate === 1, `Skipped 1 duplicate row (got ${upRes.summary.duplicate})`);
         assert(upRes.summary.totalRows === 3, `Ignored empty row, totalRows is 3 (got ${upRes.summary.totalRows})`);
 
+        // Test 4b: Multiple posts/updates on same date, employee, theme & page with different links/platforms must ALL be inserted
+        const mockMultiPostData = [
+            {
+                'S.No': 1, 'Date': '2026-08-05', 'Themes': 'Brand Awareness', 'Social Media Platforms': 'Facebook',
+                'Page name': 'White force', 'Department': 'Digital Marketing', 'Manager Name': 'Deepali maam',
+                'Given By': 'Director', 'Employee': 'Charlie Brown', 'Poster Name': 'Post 1 Creative',
+                'Location': 'Delhi', 'Facebook': 'fb.com/post1', 'Instagram': '', 'LinkedIn': '',
+                'Youtube': '', 'Twitter': ''
+            },
+            {
+                'S.No': 2, 'Date': '2026-08-05', 'Themes': 'Brand Awareness', 'Social Media Platforms': 'Facebook',
+                'Page name': 'White force', 'Department': 'Digital Marketing', 'Manager Name': 'Deepali maam',
+                'Given By': 'Director', 'Employee': 'Charlie Brown', 'Poster Name': 'Post 2 Creative',
+                'Location': 'Delhi', 'Facebook': 'fb.com/post2', 'Instagram': '', 'LinkedIn': '',
+                'Youtube': '', 'Twitter': ''
+            },
+            {
+                'S.No': 3, 'Date': '2026-08-05', 'Themes': 'Brand Awareness', 'Social Media Platforms': 'Instagram',
+                'Page name': 'White force', 'Department': 'Digital Marketing', 'Manager Name': 'Deepali maam',
+                'Given By': 'Director', 'Employee': 'Charlie Brown', 'Poster Name': 'Instagram Reel 1',
+                'Location': 'Delhi', 'Facebook': '', 'Instagram': 'ig.com/reel1', 'LinkedIn': '',
+                'Youtube': '', 'Twitter': ''
+            }
+        ];
+
+        let upCode4b = null, upRes4b = null;
+        const mockUpRes4b = {
+            status: (code) => { upCode4b = code; return mockUpRes4b; },
+            json: (data) => { upRes4b = data; return mockUpRes4b; }
+        };
+
+        await dailyTaskController.uploadDailyTasksExcel({ body: { excelData: mockMultiPostData }, user: { id: testUserId } }, mockUpRes4b);
+        assert(upCode4b === 200 && upRes4b.success === true, 'Multi-post Excel upload executed successfully');
+        assert(upRes4b.summary.inserted === 3, `All 3 distinct posts/updates on same date inserted without false duplicate rejection (got ${upRes4b.summary.inserted})`);
+        assert(upRes4b.summary.duplicate === 0, `0 false duplicates reported for distinct posts (got ${upRes4b.summary.duplicate})`);
+
 
         // ── Test 5: Reports Generation & Aggregation ────────────────────────────
         console.log('\n[T5] Daily Tasks Reports & Aggregation assertion');

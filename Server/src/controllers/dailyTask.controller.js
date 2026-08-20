@@ -526,20 +526,55 @@ exports.uploadDailyTasksExcel = async (req, res) => {
                 continue;
             }
 
-            // Duplicate check against database
+            const cleanTheme = theme ? String(theme).trim() : null;
+            const cleanPlatform = platform ? String(platform).trim() : null;
+            const cleanPageName = page_name ? String(page_name).trim() : null;
+            const cleanDept = department ? String(department).trim() : null;
+            const cleanManager = manager_name ? String(manager_name).trim() : null;
+            const cleanGivenBy = given_by ? String(given_by).trim() : null;
+            const cleanEmployee = String(employee).trim();
+            const cleanPoster = poster_name ? String(poster_name).trim() : null;
+            const cleanLocation = location ? String(location).trim() : null;
+            const cleanFacebook = facebook ? String(facebook).trim() : null;
+            const cleanInstagram = instagram ? String(instagram).trim() : null;
+            const cleanLinkedin = linkedin ? String(linkedin).trim() : null;
+            const cleanYoutube = youtube ? String(youtube).trim() : null;
+            const cleanTwitter = twitter ? String(twitter).trim() : null;
+
+            // Exact duplicate check against database (checks ALL content fields to allow multiple posts/updates per day/platform)
             const [existing] = await connection.query(
                 `SELECT id FROM daily_tasks 
                  WHERE date = ? AND employee = ? AND status = "active" 
                    AND (theme = ? OR (theme IS NULL AND ? IS NULL))
-                   AND (department = ? OR (department IS NULL AND ? IS NULL))
+                   AND (social_media_platform = ? OR (social_media_platform IS NULL AND ? IS NULL))
                    AND (page_name = ? OR (page_name IS NULL AND ? IS NULL))
+                   AND (department = ? OR (department IS NULL AND ? IS NULL))
+                   AND (manager_name = ? OR (manager_name IS NULL AND ? IS NULL))
+                   AND (given_by = ? OR (given_by IS NULL AND ? IS NULL))
+                   AND (poster_name = ? OR (poster_name IS NULL AND ? IS NULL))
+                   AND (location = ? OR (location IS NULL AND ? IS NULL))
+                   AND (facebook = ? OR (facebook IS NULL AND ? IS NULL))
+                   AND (instagram = ? OR (instagram IS NULL AND ? IS NULL))
+                   AND (linkedin = ? OR (linkedin IS NULL AND ? IS NULL))
+                   AND (youtube = ? OR (youtube IS NULL AND ? IS NULL))
+                   AND (twitter = ? OR (twitter IS NULL AND ? IS NULL))
                  LIMIT 1`,
                 [
                     parsedDate, 
-                    String(employee).trim(), 
-                    theme ? String(theme).trim() : null, theme ? String(theme).trim() : null,
-                    department ? String(department).trim() : null, department ? String(department).trim() : null,
-                    page_name ? String(page_name).trim() : null, page_name ? String(page_name).trim() : null
+                    cleanEmployee,
+                    cleanTheme, cleanTheme,
+                    cleanPlatform, cleanPlatform,
+                    cleanPageName, cleanPageName,
+                    cleanDept, cleanDept,
+                    cleanManager, cleanManager,
+                    cleanGivenBy, cleanGivenBy,
+                    cleanPoster, cleanPoster,
+                    cleanLocation, cleanLocation,
+                    cleanFacebook, cleanFacebook,
+                    cleanInstagram, cleanInstagram,
+                    cleanLinkedin, cleanLinkedin,
+                    cleanYoutube, cleanYoutube,
+                    cleanTwitter, cleanTwitter
                 ]
             );
 
@@ -557,21 +592,21 @@ exports.uploadDailyTasksExcel = async (req, res) => {
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
                 [
                     parsedDate,
-                    theme ? String(theme).trim() : null,
-                    platform ? String(platform).trim() : null,
-                    page_name ? String(page_name).trim() : null,
-                    department ? String(department).trim() : null,
-                    manager_name ? String(manager_name).trim() : null,
-                    given_by ? String(given_by).trim() : null,
-                    String(employee).trim(),
-                    poster_name ? String(poster_name).trim() : null,
-                    poster_name ? String(poster_name).trim() : null,
-                    location ? String(location).trim() : null,
-                    facebook ? String(facebook).trim() : null,
-                    instagram ? String(instagram).trim() : null,
-                    linkedin ? String(linkedin).trim() : null,
-                    youtube ? String(youtube).trim() : null,
-                    twitter ? String(twitter).trim() : null,
+                    cleanTheme,
+                    cleanPlatform,
+                    cleanPageName,
+                    cleanDept,
+                    cleanManager,
+                    cleanGivenBy,
+                    cleanEmployee,
+                    cleanPoster,
+                    cleanPoster,
+                    cleanLocation,
+                    cleanFacebook,
+                    cleanInstagram,
+                    cleanLinkedin,
+                    cleanYoutube,
+                    cleanTwitter,
                     userId
                 ]
             );

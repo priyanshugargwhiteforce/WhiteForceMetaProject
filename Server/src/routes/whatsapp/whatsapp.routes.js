@@ -18,7 +18,7 @@ const whatsappExternalController = require('../../controllers/whatsapp/whatsapp-
 
 const validateExternalApiKey = (req, res, next) => {
     const apiKey = req.headers['x-internal-api-key'];
-    const expectedKey = process.env.INTERNAL_API_KEY || 'company_internal_whatsapp_tracking_secret_2026';
+    const expectedKey = process.env.INTERNAL_API_KEY || 'whiteforceadmanager2026garg18';
     
     if (!apiKey || apiKey !== expectedKey) {
         return res.status(401).json({ success: false, message: 'Unauthorized: Invalid API Key.' });
