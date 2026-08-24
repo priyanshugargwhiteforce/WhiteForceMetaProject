@@ -1434,6 +1434,10 @@ const initSchema = async () => {
                 )
             `);
             console.log(' - meta_page_monthly_metrics table created/verified');
+
+            // Initialize PO (Purchase Order) Database Table
+            const POModel = require('../models/po/po.model');
+            await POModel.createTable();
         } catch (migErr) {
             console.error('[Migration Error] database schema initialization failed:', migErr.message);
             throw migErr;

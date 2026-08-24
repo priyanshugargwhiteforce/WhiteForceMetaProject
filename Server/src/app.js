@@ -47,6 +47,9 @@ app.use('/api/media', require('./routes/media.routes'));
 app.use('/api/linkedin/assets', require('./routes/linkedin/assets.routes'));
 app.use('/api/linkedin/creatives', require('./routes/linkedin/creatives.routes'));
 
+// Purchase Order (PO) Router
+app.use('/api/po', require('./routes/po/po.routes'));
+
 // Health check route
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
