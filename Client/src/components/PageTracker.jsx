@@ -16,7 +16,10 @@ import {
   Minus,
   X,
   ChevronRight,
-  Info
+  Info,
+  Zap,
+  Clock,
+  Filter
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -31,7 +34,11 @@ const PageTracker = () => {
   const [livePages, setLivePages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState(null);
   const [error, setError] = useState(null);
+
+  // Date Filter state: 'all' | '30days' | '90days' | 'thisMonth'
+  const [dateFilter, setDateFilter] = useState('all');
 
   // Modal states
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -47,8 +54,7 @@ const PageTracker = () => {
   const [formFollowers, setFormFollowers] = useState('');
   const [formLikes, setFormLikes] = useState('');
   const [formPosts, setFormPosts] = useState('');
-  const [formYear, setFormYear] = useState(new Date().getFullYear());
-  const [formMonth, setFormMonth] = useState(new Date().getMonth() + 1);
+  const [formRecordDate, setFormRecordDate] = useState(new Date().toISOString().split('T')[0]);
   const [submitLoading, setSubmitLoading] = useState(false);
 
   // Fetch Meta Configs
@@ -85,7 +91,7 @@ const PageTracker = () => {
         'X-Meta-Config-Id': selectedConfigId
       };
 
-      // 1. Fetch live pages first (which automatically saves/updates current month to DB)
+      // 1. Fetch live pages first (which automatically saves/updates current date snapshot to DB)
       const liveRes = await axios.get('/api/meta/fb-pages', { headers: configHeaders });
       if (liveRes.data.success) {
         setLivePages(liveRes.data.data);
@@ -95,6 +101,7 @@ const PageTracker = () => {
       const historyRes = await axios.get('/api/meta/page-tracker/history', { headers: configHeaders });
       if (historyRes.data.success) {
         setPagesHistory(historyRes.data.data);
+        setLastSyncTime(new Date());
       }
     } catch (err) {
       console.error("Error fetching tracker data:", err);
@@ -122,7 +129,8 @@ const PageTracker = () => {
       });
       if (res.data.success) {
         setPagesHistory(res.data.data);
-        // Refresh live pages lists too
+        setLastSyncTime(new Date());
+        // Refresh live pages list
         const liveRes = await axios.get('/api/meta/fb-pages', {
           headers: { 
             Authorization: `Bearer ${token}`,
@@ -141,14 +149,39 @@ const PageTracker = () => {
     }
   };
 
-  // Group history records by platform + page_id
+  // Helper date formatter
+  const formatDateDisplay = (dateStr, year, month) => {
+    if (dateStr) {
+      const parts = String(dateStr).split('T')[0].split('-');
+      if (parts.length === 3) {
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const d = parseInt(parts[2], 10);
+        const dateObj = new Date(y, m, d);
+        if (!isNaN(dateObj.getTime())) {
+          return dateObj.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+      }
+    }
+    if (year && month) {
+      const date = new Date(year, month - 1, 1);
+      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    }
+    return 'N/A';
+  };
+
+  const getMonthName = (monthNumber) => {
+    const date = new Date();
+    date.setMonth(monthNumber - 1);
+    return date.toLocaleString('en-US', { month: 'short' });
+  };
+
+  // Group history records by platform + page_id with Date-wise chronological metrics
   const pagesSummary = useMemo(() => {
-    // Unique page lists found in history database or currently live
     const listMap = new Map();
 
-    // 1. Populate from live list first (ensure all current pages are in the list)
+    // 1. Populate from live list first
     livePages.forEach(p => {
-      // Add Facebook Page
       const fbKey = `facebook-${p.id}`;
       listMap.set(fbKey, {
         page_id: p.id,
@@ -157,11 +190,10 @@ const PageTracker = () => {
         instagram_username: null,
         current_followers: p.followers_count || 0,
         current_likes: p.fan_count || 0,
-        current_posts: 0,
+        current_posts: p.posts_count || (p.published_posts?.summary?.total_count || 0),
         history: []
       });
 
-      // Add Instagram Page if linked
       if (p.instagram_business_account && p.instagram_business_account.id) {
         const ig = p.instagram_business_account;
         const igKey = `instagram-${ig.id}`;
@@ -195,28 +227,48 @@ const PageTracker = () => {
       }
 
       const item = listMap.get(key);
-      item.history.push({
-        id: h.id,
-        followers: h.followers_count,
-        likes: h.likes_count,
-        posts: h.posts_count,
-        year: h.record_year,
-        month: h.record_month,
-        recorded_at: h.recorded_at
-      });
+      const recordDate = h.record_date 
+        ? h.record_date.split('T')[0] 
+        : (h.recorded_at ? h.recorded_at.split('T')[0] : `${h.record_year}-${String(h.record_month).padStart(2, '0')}-01`);
+
+      // Deduplicate date entries: keep latest ID per date
+      const existingDateIdx = item.history.findIndex(existing => existing.date === recordDate);
+      if (existingDateIdx !== -1) {
+        if (h.id > item.history[existingDateIdx].id) {
+          item.history[existingDateIdx] = {
+            id: h.id,
+            followers: h.followers_count,
+            likes: h.likes_count,
+            posts: h.posts_count,
+            year: h.record_year,
+            month: h.record_month,
+            date: recordDate,
+            recorded_at: h.recorded_at
+          };
+        }
+      } else {
+        item.history.push({
+          id: h.id,
+          followers: h.followers_count,
+          likes: h.likes_count,
+          posts: h.posts_count,
+          year: h.record_year,
+          month: h.record_month,
+          date: recordDate,
+          recorded_at: h.recorded_at
+        });
+      }
     });
 
-    // 3. For each unique page/account, sort its history chronologically and calculate monthly growth
+    // 3. For each unique page/account, sort history chronologically by date and calculate period growth
     const summaryArray = Array.from(listMap.values());
+    const now = new Date();
     
     summaryArray.forEach(item => {
       // Sort history chronologically: older dates first
-      item.history.sort((a, b) => {
-        if (a.year !== b.year) return a.year - b.year;
-        return a.month - b.month;
-      });
+      item.history.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-      // Calculate month-over-month differences
+      // Calculate period-over-period differences
       item.history.forEach((hist, index) => {
         if (index === 0) {
           hist.growth = 0;
@@ -229,32 +281,50 @@ const PageTracker = () => {
         }
       });
 
-      // Determine latest metrics and previous metrics to find short-term MoM change
+      // Filter history for display if date filter is active
+      let filteredHist = item.history;
+      if (dateFilter === '30days') {
+        const past30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        filteredHist = item.history.filter(h => new Date(h.date) >= past30);
+      } else if (dateFilter === '90days') {
+        const past90 = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        filteredHist = item.history.filter(h => new Date(h.date) >= past90);
+      } else if (dateFilter === 'thisMonth') {
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+        filteredHist = item.history.filter(h => h.year === currentYear && h.month === currentMonth);
+      }
+
+      item.displayHistory = filteredHist.length > 0 ? filteredHist : item.history;
+
+      // Determine latest metrics and previous metrics to calculate growth change
       const historyLength = item.history.length;
       if (historyLength > 0) {
         const latestLog = item.history[historyLength - 1];
         item.current_followers = latestLog.followers;
         item.current_likes = latestLog.likes;
         item.current_posts = latestLog.posts;
+        item.latest_date = latestLog.date;
         item.latest_year = latestLog.year;
         item.latest_month = latestLog.month;
         
         if (historyLength > 1) {
           const prevLog = item.history[historyLength - 2];
-          item.mom_change = latestLog.followers - prevLog.followers;
-          item.mom_change_percent = prevLog.followers > 0 ? ((latestLog.followers - prevLog.followers) / prevLog.followers) * 100 : 0;
+          item.period_change = latestLog.followers - prevLog.followers;
+          item.period_change_percent = prevLog.followers > 0 ? ((latestLog.followers - prevLog.followers) / prevLog.followers) * 100 : 0;
+          item.prev_date = prevLog.date;
         } else {
-          item.mom_change = 0;
-          item.mom_change_percent = 0;
+          item.period_change = 0;
+          item.period_change_percent = 0;
         }
       } else {
-        item.mom_change = 0;
-        item.mom_change_percent = 0;
+        item.period_change = 0;
+        item.period_change_percent = 0;
       }
     });
 
     return summaryArray;
-  }, [livePages, pagesHistory]);
+  }, [livePages, pagesHistory, dateFilter]);
 
   // Pre-fill fields when selecting page in Manual Entry form
   const handlePageSelectForForm = (e) => {
@@ -285,16 +355,17 @@ const PageTracker = () => {
     }
   };
 
-  // Submit manual log entry
+  // Submit manual log entry with exact Date support
   const handleSubmitMetric = async (e) => {
     e.preventDefault();
-    if (!formPageId || !formPageName || !formPlatform || !formYear || !formMonth) {
+    if (!formPageId || !formPageName || !formPlatform || !formRecordDate) {
       alert("Please fill in all required fields.");
       return;
     }
 
     try {
       setSubmitLoading(true);
+      const parsedDate = new Date(formRecordDate);
       const res = await axios.post('/api/meta/page-tracker/updates', {
         page_id: formPageId,
         page_name: formPageName,
@@ -303,8 +374,9 @@ const PageTracker = () => {
         followers_count: parseInt(formFollowers) || 0,
         likes_count: parseInt(formLikes) || 0,
         posts_count: parseInt(formPosts) || 0,
-        record_year: parseInt(formYear),
-        record_month: parseInt(formMonth)
+        record_date: formRecordDate,
+        record_year: parsedDate.getFullYear(),
+        record_month: parsedDate.getMonth() + 1
       }, {
         headers: { 
           Authorization: `Bearer ${token}`,
@@ -321,6 +393,7 @@ const PageTracker = () => {
         setFormFollowers('');
         setFormLikes('');
         setFormPosts('');
+        setFormRecordDate(new Date().toISOString().split('T')[0]);
         
         // Refresh
         await fetchTrackerData();
@@ -341,9 +414,9 @@ const PageTracker = () => {
     }
   };
 
-  // Delete a specific monthly log entry
+  // Delete a specific log entry
   const handleDeleteEntry = async (entryId) => {
-    if (!window.confirm("Are you sure you want to delete this historical log entry? MoM calculations will adapt automatically.")) {
+    if (!window.confirm("Are you sure you want to delete this historical log entry? Growth calculations will adapt automatically.")) {
       return;
     }
 
@@ -353,9 +426,7 @@ const PageTracker = () => {
       });
       if (res.data.success) {
         await fetchTrackerData();
-        // If history view is open, update selected page state
         if (selectedPageForDetails) {
-          // Trigger updates on next render cycle
           setTimeout(() => {
             const updatedPage = pagesSummary.find(
               p => p.page_id === selectedPageForDetails.page_id && p.platform === selectedPageForDetails.platform
@@ -370,24 +441,24 @@ const PageTracker = () => {
     }
   };
 
-  const getMonthName = (monthNumber) => {
-    const date = new Date();
-    date.setMonth(monthNumber - 1);
-    return date.toLocaleString('en-US', { month: 'short' });
-  };
-
   return (
     <div className="p-8 min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-800 dark:text-slate-100 transition-colors duration-300">
       
       {/* Top Banner Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-200 dark:border-white/10 pb-6 mb-8 gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center">
-            <TrendingUp className="w-8 h-8 mr-3 text-blue-500" />
-            Page & Instagram Follower Tracker
+          <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
+            <TrendingUp className="w-8 h-8 text-blue-500" />
+            <span>Social Page & Follower Tracker</span>
           </h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            Store, backfill, and analyze month-over-month follower statistics retrieved from Facebook and Instagram APIs.
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 flex items-center gap-2">
+            <span>Track, manage, and present exact date-wise follower statistics and live real-time metrics across Meta accounts.</span>
+            {lastSyncTime && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <Clock className="w-3 h-3 mr-1" />
+                Live synced at {lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
           </p>
         </div>
 
@@ -408,19 +479,36 @@ const PageTracker = () => {
             </div>
           )}
 
+          {/* Date Filter selector */}
+          <div className="flex items-center space-x-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200">
+            <Filter className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="bg-transparent focus:outline-none cursor-pointer text-xs font-semibold text-slate-800 dark:text-slate-200"
+            >
+              <option className="bg-white dark:bg-slate-800" value="all">All Dates</option>
+              <option className="bg-white dark:bg-slate-800" value="30days">Last 30 Days</option>
+              <option className="bg-white dark:bg-slate-800" value="90days">Last 90 Days</option>
+              <option className="bg-white dark:bg-slate-800" value="thisMonth">This Month</option>
+            </select>
+          </div>
+
+          {/* Live Sync Button */}
           <button
             onClick={handleSyncMetrics}
             disabled={syncing || !selectedConfigId}
-            className="flex items-center space-x-1.5 px-4 py-2 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50"
+            className="flex items-center space-x-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 disabled:opacity-50 cursor-pointer"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
-            <span>{syncing ? "Syncing..." : "Sync Live Data"}</span>
+            <Zap className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+            <span>{syncing ? "Syncing Live..." : "Live Sync Data"}</span>
           </button>
 
+          {/* Add / Edit Record Button */}
           <button
             onClick={() => setIsUpdateModalOpen(true)}
             disabled={!selectedConfigId}
-            className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 disabled:opacity-50"
+            className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 disabled:opacity-50 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add / Edit Record</span>
@@ -447,15 +535,15 @@ const PageTracker = () => {
           <Globe className="w-16 h-16 text-slate-300 dark:text-white/10 mb-4" />
           <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2">No Tracked Pages Found</h4>
           <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md mb-6">
-            There are no saved monthly metrics or active Facebook Pages configured. Click the button below to sync pages live from the Meta API.
+            There are no saved date metrics or active Facebook Pages configured. Click the button below to sync live real-time statistics from the Meta API.
           </p>
           <button
             onClick={handleSyncMetrics}
             disabled={syncing}
             className="flex items-center space-x-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-semibold transition-all shadow-md shadow-blue-500/15"
           >
-            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-            <span>Sync Meta Pages Now</span>
+            <Zap className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+            <span>Sync Meta Pages Live Now</span>
           </button>
         </div>
       ) : (
@@ -463,10 +551,15 @@ const PageTracker = () => {
           
           {/* Left / Middle: Page Tracking Grid */}
           <div className="lg:col-span-2 space-y-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
-              <Globe className="w-4 h-4 mr-2 text-blue-500" />
-              Connected Profiles & MoM Status
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
+                <Globe className="w-4 h-4 mr-2 text-blue-500" />
+                Connected Profiles & Date-Wise Status
+              </h3>
+              <span className="text-xs text-slate-400 font-medium">
+                Showing {pagesSummary.length} profiles
+              </span>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {pagesSummary.map((page) => {
@@ -514,57 +607,47 @@ const PageTracker = () => {
                           </span>
                         </div>
                         <div>
-                          {isFb ? (
-                            <>
-                              <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-wider">Page Likes</span>
-                              <span className="text-xl font-bold text-slate-900 dark:text-white mt-0.5 block">
-                                {page.current_likes.toLocaleString('en-IN')}
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-wider">Posts Count</span>
-                              <span className="text-xl font-bold text-slate-900 dark:text-white mt-0.5 block">
-                                {page.current_posts.toLocaleString('en-IN')}
-                              </span>
-                            </>
-                          )}
+                          <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-wider">Posts Count</span>
+                          <span className="text-xl font-bold text-slate-900 dark:text-white mt-0.5 block">
+                            {page.current_posts.toLocaleString('en-IN')}
+                          </span>
                         </div>
                       </div>
                     </div>
 
                     {/* Growth Metrics Footer */}
                     <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center">
+                        <Calendar className="w-3 h-3 mr-1 text-slate-400" />
                         {page.history.length > 0 
-                          ? `Last Logged: ${getMonthName(page.latest_month)} ${page.latest_year}` 
+                          ? `Last Logged: ${formatDateDisplay(page.latest_date, page.latest_year, page.latest_month)}` 
                           : 'No history logged'}
                       </span>
                       
                       {page.history.length > 1 ? (
                         <div className={`flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                          page.mom_change > 0 
+                          page.period_change > 0 
                             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
-                            : page.mom_change < 0 
+                            : page.period_change < 0 
                               ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' 
                               : 'bg-slate-100 dark:bg-white/5 text-slate-500'
                         }`}>
-                          {page.mom_change > 0 ? (
+                          {page.period_change > 0 ? (
                             <TrendingUp className="w-3.5 h-3.5" />
-                          ) : page.mom_change < 0 ? (
+                          ) : page.period_change < 0 ? (
                             <TrendingDown className="w-3.5 h-3.5" />
                           ) : (
                             <Minus className="w-3.5 h-3.5" />
                           )}
                           <span>
-                            {page.mom_change > 0 ? '+' : ''}
-                            {page.mom_change.toLocaleString('en-IN')} ({page.mom_change > 0 ? '+' : ''}{page.mom_change_percent.toFixed(1)}%) MoM
+                            {page.period_change > 0 ? '+' : ''}
+                            {page.period_change.toLocaleString('en-IN')} ({page.period_change > 0 ? '+' : ''}{page.period_change_percent.toFixed(1)}%)
                           </span>
                         </div>
                       ) : (
                         <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 flex items-center">
                           <Info className="w-3.5 h-3.5 mr-1" />
-                          Requires 2+ months
+                          Requires 2+ dates
                         </span>
                       )}
                     </div>
@@ -605,14 +688,14 @@ const PageTracker = () => {
                 </div>
 
                 {/* History Chart */}
-                {selectedPageForDetails.history.length > 0 ? (
+                {selectedPageForDetails.displayHistory.length > 0 ? (
                   <div className="space-y-2">
                     <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Followers Growth Trend</h4>
                     <div className="h-44 w-full bg-slate-50/50 dark:bg-slate-900/30 rounded-xl p-2 border border-slate-100 dark:border-white/5">
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart 
-                          data={selectedPageForDetails.history.map(h => ({
-                            name: `${getMonthName(h.month)} ${String(h.year).slice(-2)}`,
+                          data={selectedPageForDetails.displayHistory.map(h => ({
+                            name: formatDateDisplay(h.date, h.year, h.month),
                             followers: h.followers
                           }))}
                           margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
@@ -627,7 +710,7 @@ const PageTracker = () => {
                           <XAxis 
                             dataKey="name" 
                             stroke={isDark ? '#94a3b8' : '#64748b'} 
-                            tick={{ fontSize: 9, fontWeight: 'bold' }}
+                            tick={{ fontSize: 8, fontWeight: 'bold' }}
                           />
                           <YAxis 
                             stroke={isDark ? '#94a3b8' : '#64748b'} 
@@ -664,33 +747,33 @@ const PageTracker = () => {
 
                 {/* History Log Table */}
                 <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Monthly Logs History</h4>
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Date-Wise Logs History</h4>
                   
-                  {selectedPageForDetails.history.length === 0 ? (
+                  {selectedPageForDetails.displayHistory.length === 0 ? (
                     <div className="py-6 text-center text-xs text-slate-400 bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-xl">
-                      No logs created yet. Click "Add/Edit Record" above to backfill.
+                      No logs created yet for this date range.
                     </div>
                   ) : (
-                    <div className="overflow-x-auto border border-slate-100 dark:border-white/5 rounded-xl">
+                    <div className="overflow-x-auto max-h-60 custom-scrollbar border border-slate-100 dark:border-white/5 rounded-xl">
                       <table className="w-full text-left text-xs border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50 dark:bg-white/5 text-slate-500 font-bold border-b border-slate-200/50 dark:border-white/5">
-                            <th className="py-2.5 px-3">Month</th>
+                        <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900 border-b border-slate-200/50 dark:border-white/5 text-slate-500 font-bold z-10">
+                          <tr>
+                            <th className="py-2.5 px-3">Date</th>
                             <th className="py-2.5 px-3 text-right">Followers</th>
-                            <th className="py-2.5 px-3 text-right">MoM Growth</th>
-                            <th className="py-2.5 px-2 text-center">Delete</th>
+                            <th className="py-2.5 px-3 text-right">Growth</th>
+                            <th className="py-2.5 px-2 text-center">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                          {selectedPageForDetails.history.slice().reverse().map((hist) => (
+                          {selectedPageForDetails.displayHistory.slice().reverse().map((hist) => (
                             <tr key={hist.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors font-medium">
-                              <td className="py-2.5 px-3">
-                                {getMonthName(hist.month)} {hist.year}
+                              <td className="py-2.5 px-3 whitespace-nowrap font-bold text-slate-700 dark:text-slate-300">
+                                {formatDateDisplay(hist.date, hist.year, hist.month)}
                               </td>
                               <td className="py-2.5 px-3 text-right font-bold text-slate-900 dark:text-white">
                                 {hist.followers.toLocaleString('en-IN')}
                               </td>
-                              <td className="py-2.5 px-3 text-right">
+                              <td className="py-2.5 px-3 text-right whitespace-nowrap">
                                 {hist.growth !== 0 ? (
                                   <span className={`font-bold ${hist.growth > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                                     {hist.growth > 0 ? '+' : ''}
@@ -720,7 +803,7 @@ const PageTracker = () => {
             ) : (
               <div className="bg-white dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 rounded-2xl p-12 text-center text-slate-400 text-xs flex flex-col items-center justify-center sticky top-8">
                 <TrendingUp className="w-8 h-8 text-slate-300 dark:text-white/10 mb-2 animate-bounce" />
-                <span>Select a profile from the list to view detailed monthly metrics history and trends.</span>
+                <span>Select a profile from the list to view detailed date-wise follower history and trend graphs.</span>
               </div>
             )}
           </div>
@@ -734,7 +817,7 @@ const PageTracker = () => {
             
             {/* Modal Header */}
             <div className="flex justify-between items-center px-6 py-4 bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
-              <h3 className="font-bold text-slate-900 dark:text-white text-base">Add or Edit Monthly Metric</h3>
+              <h3 className="font-bold text-slate-900 dark:text-white text-base">Add or Edit Date Metric</h3>
               <button 
                 onClick={() => setIsUpdateModalOpen(false)}
                 className="p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-white/5 rounded-xl transition-all"
@@ -792,35 +875,20 @@ const PageTracker = () => {
                 </div>
               )}
 
-              {/* Only show numeric inputs and date inputs if a profile has been selected */}
+              {/* Only show numeric inputs and date input if a profile has been selected */}
               {formPageId && (
                 <>
-                  {/* Grid: Year & Month */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="modalYearInput" className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">Record Year *</label>
-                      <input
-                        id="modalYearInput"
-                        type="number"
-                        required
-                        value={formYear}
-                        onChange={(e) => setFormYear(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="modalMonthInput" className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">Record Month (1-12) *</label>
-                      <input
-                        id="modalMonthInput"
-                        type="number"
-                        min="1"
-                        max="12"
-                        required
-                        value={formMonth}
-                        onChange={(e) => setFormMonth(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100"
-                      />
-                    </div>
+                  {/* Record Date Picker */}
+                  <div>
+                    <label htmlFor="modalDateInput" className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">Record Date *</label>
+                    <input
+                      id="modalDateInput"
+                      type="date"
+                      required
+                      value={formRecordDate}
+                      onChange={(e) => setFormRecordDate(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100 cursor-pointer"
+                    />
                   </div>
 
                   {/* Grid: Followers count & Likes / Posts count */}
@@ -839,33 +907,16 @@ const PageTracker = () => {
                       />
                     </div>
                     <div>
-                      {formPlatform === 'facebook' ? (
-                        <>
-                          <label htmlFor="modalLikesInput" className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">Page Likes Count</label>
-                          <input
-                            id="modalLikesInput"
-                            type="number"
-                            min="0"
-                            value={formLikes}
-                            onChange={(e) => setFormLikes(e.target.value)}
-                            placeholder="e.g. 1420"
-                            className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100"
-                          />
-                        </>
-                      ) : (
-                        <>
-                          <label htmlFor="modalPostsInput" className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">Media Posts Count</label>
-                          <input
-                            id="modalPostsInput"
-                            type="number"
-                            min="0"
-                            value={formPosts}
-                            onChange={(e) => setFormPosts(e.target.value)}
-                            placeholder="e.g. 120"
-                            className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100"
-                          />
-                        </>
-                      )}
+                      <label htmlFor="modalPostsInput" className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">Posts Count</label>
+                      <input
+                        id="modalPostsInput"
+                        type="number"
+                        min="0"
+                        value={formPosts}
+                        onChange={(e) => setFormPosts(e.target.value)}
+                        placeholder="e.g. 120"
+                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100"
+                      />
                     </div>
                   </div>
                 </>

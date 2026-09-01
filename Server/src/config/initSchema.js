@@ -1429,11 +1429,74 @@ const initSchema = async () => {
                     posts_count INT DEFAULT 0,
                     record_year INT NOT NULL,
                     record_month INT NOT NULL,
+                    record_date DATE NULL,
                     recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    UNIQUE KEY uq_page_platform_month (page_id, platform, record_year, record_month)
+                    UNIQUE KEY uq_page_platform_config_date (page_id, platform, config_id, record_date)
                 )
             `);
+
+            // Migration & Duplicate Cleanup for existing databases
+            try {
+                const [cols] = await pool.query("SHOW COLUMNS FROM meta_page_monthly_metrics LIKE 'record_date'");
+                if (cols.length === 0) {
+                    await pool.query("ALTER TABLE meta_page_monthly_metrics ADD COLUMN record_date DATE NULL");
+                }
+
+                await pool.query("UPDATE meta_page_monthly_metrics SET record_date = DATE(recorded_at) WHERE record_date IS NULL");
+
+                // Clean duplicate rows keeping latest ID for each (page_id, platform, config_id, record_date)
+                await pool.query(`
+                    DELETE t1 FROM meta_page_monthly_metrics t1
+                    INNER JOIN meta_page_monthly_metrics t2 
+                    ON t1.page_id = t2.page_id 
+                   AND t1.platform = t2.platform 
+                   AND t1.config_id = t2.config_id 
+                   AND t1.record_date = t2.record_date 
+                   AND t1.id < t2.id
+                `);
+
+                const [indexes] = await pool.query("SHOW INDEX FROM meta_page_monthly_metrics");
+                const indexNames = indexes.map(i => i.Key_name);
+
+                if (indexNames.includes('uq_page_platform_month')) {
+                    await pool.query("ALTER TABLE meta_page_monthly_metrics DROP INDEX uq_page_platform_month");
+                }
+                if (indexNames.includes('uq_page_platform_date')) {
+                    await pool.query("ALTER TABLE meta_page_monthly_metrics DROP INDEX uq_page_platform_date");
+                }
+                if (!indexNames.includes('uq_page_platform_config_date')) {
+                    await pool.query("ALTER TABLE meta_page_monthly_metrics ADD UNIQUE KEY uq_page_platform_config_date (page_id, platform, config_id, record_date)");
+                }
+            } catch (migTableErr) {
+                console.warn('Note on meta_page_monthly_metrics schema migration:', migTableErr.message);
+            }
+
             console.log(' - meta_page_monthly_metrics table created/verified');
+
+            // --- Minutes of Meeting (MoM) Table ---
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS meeting_moms (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    title VARCHAR(255) NOT NULL,
+                    department ENUM('SEO', 'Marketing', 'IT', 'HR', 'Payroll', 'Other') NOT NULL DEFAULT 'Other',
+                    meeting_date DATE NOT NULL,
+                    meeting_day VARCHAR(25) NOT NULL,
+                    meeting_with VARCHAR(255) NOT NULL DEFAULT 'CEO Shailesh Rajpal',
+                    custom_meeting_with VARCHAR(255) DEFAULT NULL,
+                    attendees TEXT DEFAULT NULL,
+                    agenda VARCHAR(500) DEFAULT NULL,
+                    discussion_points JSON NOT NULL,
+                    created_by INT NOT NULL,
+                    created_by_name VARCHAR(255) DEFAULT NULL,
+                    creator_manager_id INT NULL DEFAULT NULL,
+                    status ENUM('active', 'archived') DEFAULT 'active',
+                    is_deleted TINYINT(1) DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+                )
+            `);
+            console.log(' - meeting_moms table created/verified');
 
             // Initialize PO (Purchase Order) Database Table
             const POModel = require('../models/po/po.model');

@@ -28,7 +28,8 @@ import {
   RefreshCw,
   FileSpreadsheet,
   ArrowLeft,
-  FileDown
+  FileDown,
+  Loader2
 } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -123,6 +124,7 @@ const DailyTaskManager = () => {
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentTaskId, setCurrentTaskId] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState(null);
@@ -282,6 +284,7 @@ const DailyTaskManager = () => {
 
   const handleManualSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!formData.date) {
       alert('Please enter a valid Date.');
       return;
@@ -292,6 +295,7 @@ const DailyTaskManager = () => {
     }
 
     try {
+      setIsSubmitting(true);
       if (isEditMode) {
         const res = await axios.put(`/api/daily-tasks/${currentTaskId}`, formData, {
           headers: { Authorization: `Bearer ${token}` }
@@ -318,6 +322,8 @@ const DailyTaskManager = () => {
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || 'Operation failed.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1232,12 +1238,19 @@ const DailyTaskManager = () => {
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-500/10"
-                >
-                  Save Task
-                </button>
+                {isSubmitting ? (
+                  <div className="px-5 py-2 bg-blue-600/60 text-white rounded-xl font-bold text-xs flex items-center space-x-2 cursor-not-allowed opacity-80 select-none">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>{isEditMode ? 'Updating Task...' : 'Saving Task...'}</span>
+                  </div>
+                ) : (
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-500/10"
+                  >
+                    {isEditMode ? 'Update Task' : 'Save Task'}
+                  </button>
+                )}
               </div>
             </form>
           </div>

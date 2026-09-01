@@ -327,6 +327,8 @@ exports.getFacebookPages = async (req, res) => {
 
 // @desc    Get page monthly historical metrics
 // @route   GET /api/meta/page-tracker/history
+// @desc    Get page historical metrics with date support
+// @route   GET /api/meta/page-tracker/history
 // @access  Private
 exports.getPageTrackerHistory = async (req, res) => {
     try {
@@ -335,10 +337,11 @@ exports.getPageTrackerHistory = async (req, res) => {
 
         const [rows] = await pool.query(
             `SELECT id, page_id, config_id, page_name, platform, instagram_username, 
-                    followers_count, likes_count, posts_count, record_year, record_month, recorded_at
+                    followers_count, likes_count, posts_count, record_year, record_month, 
+                    DATE_FORMAT(COALESCE(record_date, recorded_at), '%Y-%m-%d') AS record_date, recorded_at
              FROM meta_page_monthly_metrics 
              WHERE config_id = ?
-             ORDER BY record_year DESC, record_month DESC, platform ASC, page_id ASC`,
+             ORDER BY COALESCE(record_date, DATE(recorded_at)) DESC, recorded_at DESC, platform ASC, page_id ASC`,
             [configIdVal]
         );
 
@@ -355,23 +358,24 @@ exports.getPageTrackerHistory = async (req, res) => {
     }
 };
 
-// @desc    Force sync page metrics from live Graph API and save/update the current month's records
+// @desc    Force sync page metrics from live Graph API and save/update current date records
 // @route   POST /api/meta/page-tracker/sync
 // @access  Private
 exports.syncPageTracker = async (req, res) => {
     try {
         const configId = req.headers['x-meta-config-id'] || req.body.configId || req.query.configId;
-        // Fetch pages using the service, which will fetch and automatically save/upsert current month
+        // Fetch pages using the service, which will fetch and automatically save/upsert current date snapshot
         await metaService.getFacebookPages(configId);
         
         // Return updated history
         const configIdVal = configId ? parseInt(configId) : 0;
         const [rows] = await pool.query(
             `SELECT id, page_id, config_id, page_name, platform, instagram_username, 
-                    followers_count, likes_count, posts_count, record_year, record_month, recorded_at
+                    followers_count, likes_count, posts_count, record_year, record_month, 
+                    DATE_FORMAT(COALESCE(record_date, recorded_at), '%Y-%m-%d') AS record_date, recorded_at
              FROM meta_page_monthly_metrics 
              WHERE config_id = ?
-             ORDER BY record_year DESC, record_month DESC, platform ASC, page_id ASC`,
+             ORDER BY COALESCE(record_date, DATE(recorded_at)) DESC, recorded_at DESC, platform ASC, page_id ASC`,
             [configIdVal]
         );
 
@@ -389,7 +393,7 @@ exports.syncPageTracker = async (req, res) => {
     }
 };
 
-// @desc    Add or update manual monthly page metric (useful for historical backfill)
+// @desc    Add or update manual page metric record (with date & historical backfill support)
 // @route   POST /api/meta/page-tracker/updates
 // @access  Private
 exports.addOrUpdateMonthlyMetric = async (req, res) => {
@@ -403,23 +407,42 @@ exports.addOrUpdateMonthlyMetric = async (req, res) => {
             followers_count,
             likes_count,
             posts_count,
+            record_date,
             record_year,
             record_month
         } = req.body;
 
-        if (!page_id || !page_name || !platform || !record_year || !record_month) {
+        if (!page_id || !page_name || !platform) {
             return res.status(400).json({
                 success: false,
-                message: 'Page ID, Page Name, Platform, Year, and Month are required.'
+                message: 'Page ID, Page Name, and Platform are required.'
             });
+        }
+
+        let yearVal, monthVal, dateVal;
+
+        if (record_date) {
+            dateVal = record_date;
+            const parsedDate = new Date(record_date);
+            yearVal = parsedDate.getFullYear();
+            monthVal = parsedDate.getMonth() + 1;
+        } else if (record_year && record_month) {
+            yearVal = parseInt(record_year);
+            monthVal = parseInt(record_month);
+            dateVal = `${yearVal}-${String(monthVal).padStart(2, '0')}-01`;
+        } else {
+            const today = new Date();
+            yearVal = today.getFullYear();
+            monthVal = today.getMonth() + 1;
+            dateVal = today.toISOString().split('T')[0];
         }
 
         const configIdVal = configId ? parseInt(configId) : 0;
 
         await pool.query(
             `INSERT INTO meta_page_monthly_metrics 
-                (page_id, config_id, page_name, platform, instagram_username, followers_count, likes_count, posts_count, record_year, record_month)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (page_id, config_id, page_name, platform, instagram_username, followers_count, likes_count, posts_count, record_year, record_month, record_date)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE
                 page_name = VALUES(page_name),
                 instagram_username = VALUES(instagram_username),
@@ -436,14 +459,15 @@ exports.addOrUpdateMonthlyMetric = async (req, res) => {
                 parseInt(followers_count) || 0,
                 parseInt(likes_count) || 0,
                 parseInt(posts_count) || 0,
-                parseInt(record_year),
-                parseInt(record_month)
+                yearVal,
+                monthVal,
+                dateVal
             ]
         );
 
         res.status(200).json({
             success: true,
-            message: `Metric updated successfully for ${record_month}/${record_year}.`
+            message: `Metric record updated successfully for ${dateVal}.`
         });
     } catch (error) {
         console.error('addOrUpdateMonthlyMetric Controller Error:', error.message);

@@ -50,6 +50,7 @@ import WhatsAppSettings from './components/WhatsAppSettings';
 import AdOwner from './components/AdOwner';
 import TaskManager from './components/TaskManager';
 import DailyTaskManager from './components/DailyTaskManager';
+import MoMManager from './components/MoMManager';
 import MediaLibrary from './components/media/MediaLibrary';
 import LinkedInAssetManager from './components/linkedin/LinkedInAssetManager';
 import CreativeBuilder from './components/linkedin/CreativeBuilder';
@@ -481,6 +482,14 @@ function App() {
                             element={
                                 <ProtectedRoute>
                                     <DailyTaskManager />
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/mom" 
+                            element={
+                                <ProtectedRoute>
+                                    <MoMManager />
                                 </ProtectedRoute>
                             } 
                         />

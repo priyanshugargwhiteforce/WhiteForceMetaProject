@@ -18,9 +18,14 @@ import {
   AlertCircle,
   ExternalLink,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   X,
   Eye,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Loader2
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -43,6 +48,8 @@ const TaskManager = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isStatusSubmitting, setIsStatusSubmitting] = useState(false);
 
   // View Details Modal state
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -122,7 +129,9 @@ const TaskManager = () => {
 
   const handleStatusUpdateSubmit = async (e) => {
     e.preventDefault();
+    if (isStatusSubmitting) return;
     try {
+      setIsStatusSubmitting(true);
       const res = await axios.put(`/api/tasks/${statusUpdateTask.id}`, {
         status: statusUpdateValue,
         remark: statusUpdateRemark.trim() || `Status updated to ${statusUpdateValue.replace('_', ' ')}`
@@ -150,6 +159,8 @@ const TaskManager = () => {
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || 'Failed to update task status.');
+    } finally {
+      setIsStatusSubmitting(false);
     }
   };
 
@@ -159,6 +170,20 @@ const TaskManager = () => {
   const [filterPriority, setFilterPriority] = useState('All');
   const [filterAssignee, setFilterAssignee] = useState('All');
   const [filterPlatform, setFilterPlatform] = useState('All');
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    fetchTasks();
+    fetchAssignees();
+  }, []);
+
+  // Reset page when any filter or page size changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterStatus, filterPriority, filterAssignee, filterPlatform, itemsPerPage]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -250,11 +275,13 @@ const TaskManager = () => {
 
   const handleCreateTask = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!formData.assigned_to || (Array.isArray(formData.assigned_to) && formData.assigned_to.length === 0)) {
       alert('Please select at least one assignee.');
       return;
     }
     try {
+      setIsSubmitting(true);
       const res = await axios.post('/api/tasks', formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -266,6 +293,8 @@ const TaskManager = () => {
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || 'Failed to create task.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -292,7 +321,9 @@ const TaskManager = () => {
 
   const handleUpdateTask = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     try {
+      setIsSubmitting(true);
       const res = await axios.put(`/api/tasks/${currentTask.id}`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -304,6 +335,8 @@ const TaskManager = () => {
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || 'Failed to update task.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -361,14 +394,16 @@ const TaskManager = () => {
         (t.description && t.description.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesStatus = filterStatus === 'All' || t.status === filterStatus;
       const matchesPriority = filterPriority === 'All' || t.priority === filterPriority;
-      const matchesAssignee = filterAssignee === 'All' || t.assigned_to === parseInt(filterAssignee);
+      const matchesAssignee = filterAssignee === 'All' ||
+        Number(t.assigned_to) === parseInt(filterAssignee) ||
+        (Array.isArray(t.assignees) && t.assignees.some(a => Number(a.assigned_to) === parseInt(filterAssignee)));
       const matchesPlatform = filterPlatform === 'All' || t.ad_platform === filterPlatform;
 
       return matchesSearch && matchesStatus && matchesPriority && matchesAssignee && matchesPlatform;
     });
   }, [tasks, searchQuery, filterStatus, filterPriority, filterAssignee, filterPlatform]);
 
-  // Aggregate Metrics Calculations
+  // Aggregate Metrics Calculations (Evaluates filtered data & assignee specific status)
   const stats = useMemo(() => {
     let pending = 0;
     let inProgress = 0;
@@ -376,18 +411,36 @@ const TaskManager = () => {
     let overdue = 0;
     const todayStr = new Date().toISOString().split('T')[0];
 
-    tasks.forEach(t => {
-      if (t.status === 'pending') pending++;
-      else if (t.status === 'in_progress') inProgress++;
-      else if (t.status === 'completed') completed++;
+    filteredTasks.forEach(t => {
+      let effectiveStatus = t.status;
 
-      if (t.status !== 'completed' && t.due_date && t.due_date.split('T')[0] < todayStr) {
+      // If a specific assignee is selected, check that assignee's status in multi-assignee task
+      if (filterAssignee !== 'All' && Array.isArray(t.assignees) && t.assignees.length > 0) {
+        const assigneeObj = t.assignees.find(a => Number(a.assigned_to) === parseInt(filterAssignee));
+        if (assigneeObj && assigneeObj.status) {
+          effectiveStatus = assigneeObj.status;
+        }
+      }
+
+      if (effectiveStatus === 'pending') pending++;
+      else if (effectiveStatus === 'in_progress') inProgress++;
+      else if (effectiveStatus === 'completed') completed++;
+
+      if (effectiveStatus !== 'completed' && t.due_date && t.due_date.split('T')[0] < todayStr) {
         overdue++;
       }
     });
 
-    return { total: tasks.length, pending, inProgress, completed, overdue };
-  }, [tasks]);
+    return { total: filteredTasks.length, pending, inProgress, completed, overdue };
+  }, [filteredTasks, filterAssignee]);
+
+  // Pagination calculation
+  const totalPages = Math.max(1, Math.ceil(filteredTasks.length / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, filteredTasks.length);
+  const paginatedTasks = useMemo(() => {
+    return filteredTasks.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredTasks, startIndex, itemsPerPage]);
 
   const getPriorityBadgeColor = (prio) => {
     switch (prio) {
@@ -454,6 +507,14 @@ const TaskManager = () => {
           >
             <FileSpreadsheet className="w-4 h-4" />
             <span>+ Daily Creative Task</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/mom')}
+            className="flex items-center space-x-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-lg shadow-rose-500/10 transition-all font-semibold text-xs"
+          >
+            <FileText className="w-4 h-4" />
+            <span>+ MoM (Minutes of Meeting)</span>
           </button>
         </div>
       </div>
@@ -547,10 +608,26 @@ const TaskManager = () => {
               <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
             </div>
           )}
+
+          {/* Items Per Page dropdown selector */}
+          {/* <div className="relative min-w-[110px]">
+            <select
+              value={itemsPerPage}
+              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none text-slate-850 dark:text-slate-250 pr-8"
+              title="Show items per page"
+            >
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value={5}>5 / page</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value={10}>10 / page</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value={15}>15 / page</option>
+              <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value={20}>20 / page</option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+          </div> */}
         </div>
       </div>
 
-      {/* Tasks Table */}
+      {/* Tasks Table Container */}
       <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16">
@@ -566,211 +643,302 @@ const TaskManager = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/10 text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[9px] font-bold">
-                  <th className="px-4 py-3.5 text-center w-12">S.no</th>
-                  <th className="px-6 py-3.5">Task Details</th>
-                  <th className="px-6 py-3.5">Priority</th>
-                  <th className="px-6 py-3.5">Status</th>
-                  <th className="px-6 py-3.5">Assigned To</th>
-                  <th className="px-6 py-3.5">Created By</th>
-                  <th className="px-6 py-3.5">Created Date</th>
-                  <th className="px-6 py-3.5">Due Date</th>
-                  <th className="px-6 py-3.5">Latest Remark</th>
-                  <th className="px-6 py-3.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05]">
-                {filteredTasks.map((task, index) => {
-                  const taskOverdue = isOverdue(task);
-                  const isCreator = Number(task.assigned_by) === Number(user?.id);
-                  const isAssignee = Number(task.assigned_to) === Number(user?.id) || (task.assignees && task.assignees.some(a => Number(a.assigned_to) === Number(user?.id)));
-                  const isAdmin = user?.role === 'admin';
-                  const isManagerOfAssignee = user?.role === 'manager' && (
-                    Number(task.assignee_manager_id) === Number(user?.id) ||
-                    Number(task.assigned_by) === Number(user?.id) ||
-                    (task.assignees && task.assignees.some(a => Number(a.assignee_manager_id) === Number(user?.id)))
-                  );
+          <>
+            <div className="overflow-x-auto overflow-y-auto max-h-[600px] custom-scrollbar">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-white/10 text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[9px] font-bold shadow-sm">
+                  <tr>
+                    <th className="px-4 py-3.5 text-center w-12 bg-slate-50 dark:bg-slate-900">S.no</th>
+                    <th className="px-6 py-3.5 bg-slate-50 dark:bg-slate-900">Task Details</th>
+                    <th className="px-6 py-3.5 bg-slate-50 dark:bg-slate-900">Priority</th>
+                    <th className="px-6 py-3.5 bg-slate-50 dark:bg-slate-900">Status</th>
+                    <th className="px-6 py-3.5 bg-slate-50 dark:bg-slate-900">Assigned To</th>
+                    <th className="px-6 py-3.5 bg-slate-50 dark:bg-slate-900">Created By</th>
+                    <th className="px-6 py-3.5 bg-slate-50 dark:bg-slate-900">Created Date</th>
+                    <th className="px-6 py-3.5 bg-slate-50 dark:bg-slate-900">Due Date</th>
+                    <th className="px-6 py-3.5 bg-slate-50 dark:bg-slate-900">Latest Remark</th>
+                    <th className="px-6 py-3.5 text-right bg-slate-50 dark:bg-slate-900">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05]">
+                  {paginatedTasks.map((task, index) => {
+                    const taskOverdue = isOverdue(task);
+                    const isCreator = Number(task.assigned_by) === Number(user?.id);
+                    const isAssignee = Number(task.assigned_to) === Number(user?.id) || (task.assignees && task.assignees.some(a => Number(a.assigned_to) === Number(user?.id)));
+                    const isAdmin = user?.role === 'admin';
+                    const isManagerOfAssignee = user?.role === 'manager' && (
+                      Number(task.assignee_manager_id) === Number(user?.id) ||
+                      Number(task.assigned_by) === Number(user?.id) ||
+                      (task.assignees && task.assignees.some(a => Number(a.assignee_manager_id) === Number(user?.id)))
+                    );
 
-                  return (
-                    <tr key={task.id} className="hover:bg-slate-50/[0.01] dark:hover:bg-white/[0.01] transition-colors group">
-                      {/* Serial Number */}
-                      <td className="px-4 py-3.5 text-center font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap">
-                        {index + 1}
-                      </td>
-                      {/* Details & Ad linkages */}
-                      <td className="px-6 py-3.5">
-                        <div className="space-y-1 max-w-[200px]">
-                          <span className={`font-bold block text-slate-800 dark:text-slate-200 text-sm ${task.status === 'completed' ? 'line-through opacity-50' : ''}`}>
-                            {task.title}
-                          </span>
-                          {task.description && (
-                            <span className="text-slate-500 block leading-normal truncate max-w-[280px]" title={task.description}>
-                              {task.description}
+                    return (
+                      <tr key={task.id} className="hover:bg-slate-50/[0.01] dark:hover:bg-white/[0.01] transition-colors group">
+                        {/* Serial Number */}
+                        <td className="px-4 py-3.5 text-center font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                          {startIndex + index + 1}
+                        </td>
+                        {/* Details & Ad linkages */}
+                        <td className="px-6 py-3.5">
+                          <div className="space-y-1 max-w-[200px]">
+                            <span className={`font-bold block text-slate-800 dark:text-slate-200 text-sm ${task.status === 'completed' ? 'line-through opacity-50' : ''}`}>
+                              {task.title}
                             </span>
-                          )}
-                          <div className="flex items-center space-x-1.5 mt-1 flex-wrap gap-y-1">
-                            {getPlatformIcon(task.ad_platform)}
-                            {task.ad_name && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-500 max-w-[150px] truncate" title={task.ad_name}>
-                                {task.ad_name}
+                            {task.description && (
+                              <span className="text-slate-500 block leading-normal truncate max-w-[280px]" title={task.description}>
+                                {task.description}
                               </span>
                             )}
+                            <div className="flex items-center space-x-1.5 mt-1 flex-wrap gap-y-1">
+                              {getPlatformIcon(task.ad_platform)}
+                              {task.ad_name && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-500 max-w-[150px] truncate" title={task.ad_name}>
+                                  {task.ad_name}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Priority */}
-                      <td className="px-6 py-3.5 whitespace-nowrap">
-                        <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border ${getPriorityBadgeColor(task.priority)}`}>
-                          {task.priority}
-                        </span>
-                      </td>
+                        {/* Priority */}
+                        <td className="px-6 py-3.5 whitespace-nowrap">
+                          <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border ${getPriorityBadgeColor(task.priority)}`}>
+                            {task.priority}
+                          </span>
+                        </td>
 
-                      {/* Status select dropdown */}
-                      <td className="px-6 py-3.5 whitespace-nowrap">
-                        {task.assignees && task.assignees.length > 1 ? (
-                          (() => {
-                            const completedCount = task.assignees.filter(a => a.status === 'completed').length;
-                            const totalCount = task.assignees.length;
-                            const isAllCompleted = completedCount === totalCount;
-                            const badgeColor = isAllCompleted 
-                              ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                              : 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20';
-                            return (
-                              <span className={`px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider border ${badgeColor}`} title={task.assignees.map(a => `${a.assignee_name}: ${a.status}`).join('\n')}>
-                                {completedCount}/{totalCount} Done
+                        {/* Status select dropdown */}
+                        <td className="px-6 py-3.5 whitespace-nowrap">
+                          {task.assignees && task.assignees.length > 1 ? (
+                            (() => {
+                              const completedCount = task.assignees.filter(a => a.status === 'completed').length;
+                              const totalCount = task.assignees.length;
+                              const isAllCompleted = completedCount === totalCount;
+                              const badgeColor = isAllCompleted 
+                                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                : 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20';
+                              return (
+                                <span className={`px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider border ${badgeColor}`} title={task.assignees.map(a => `${a.assignee_name}: ${a.status}`).join('\n')}>
+                                  {completedCount}/{totalCount} Done
+                                </span>
+                              );
+                            })()
+                          ) : (
+                            isAssignee || isAdmin || isCreator || isManagerOfAssignee ? (
+                              <div className="relative inline-block">
+                                <select
+                                  value={task.status}
+                                  onChange={(e) => handleStatusChangeClick(task, e.target.value)}
+                                  className={`pl-2 pr-6 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider border cursor-pointer appearance-none focus:outline-none ${getStatusBadgeColor(task.status)}`}
+                                >
+                                  <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="pending">Pending</option>
+                                  <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="in_progress">In Progress</option>
+                                  <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="on_hold">On Hold</option>
+                                  <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="completed">Completed</option>
+                                  <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="cancelled">Cancelled</option>
+                                </select>
+                                <ChevronDown className="w-3 h-3 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
+                              </div>
+                            ) : (
+                              <span className={`px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider border ${getStatusBadgeColor(task.status)}`}>
+                                {task.status.replace(/_/g, ' ')}
                               </span>
-                            );
-                          })()
-                        ) : (
-                          isAssignee || isAdmin || isCreator || isManagerOfAssignee ? (
-                            <div className="relative inline-block">
-                              <select
-                                value={task.status}
-                                onChange={(e) => handleStatusChangeClick(task, e.target.value)}
-                                className={`pl-2 pr-6 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider border cursor-pointer appearance-none focus:outline-none ${getStatusBadgeColor(task.status)}`}
-                              >
-                                <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="pending">Pending</option>
-                                <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="in_progress">In Progress</option>
-                                <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="on_hold">On Hold</option>
-                                <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="completed">Completed</option>
-                                <option className="bg-white dark:bg-slate-800 text-slate-850 dark:text-slate-200" value="cancelled">Cancelled</option>
-                              </select>
-                              <ChevronDown className="w-3 h-3 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
+                            )
+                          )}
+                        </td>
+
+                        {/* Assignee */}
+                        <td className="px-6 py-3.5 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-6 h-6 rounded-full bg-blue-600/10 border border-blue-500/20 text-blue-500 flex items-center justify-center font-bold text-[10px]">
+                              {task.assignees && task.assignees.length > 1 ? task.assignees.length : (task.assignee_name ? task.assignee_name.charAt(0).toUpperCase() : 'U')}
+                            </div>
+                            <span className="font-semibold text-slate-800 dark:text-slate-200 max-w-[150px] truncate" title={task.assignees && task.assignees.map(a => a.assignee_name).join(', ')}>
+                              {task.assignees && task.assignees.length > 1 
+                                ? `${task.assignees[0].assignee_name} +${task.assignees.length - 1} others`
+                                : task.assignee_name || 'Unassigned'}
+                              {isAssignee && <span className="text-[9px] text-blue-500 font-bold ml-1">(You)</span>}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Assigner */}
+                        <td className="px-6 py-3.5 whitespace-nowrap text-slate-500 font-medium">
+                          {task.assigner_name} {isCreator && <span className="text-[9px] text-blue-500 font-bold">(You)</span>}
+                        </td>
+
+                        {/* Created Date */}
+                        <td className="px-6 py-3.5 whitespace-nowrap text-slate-500 font-medium">
+                          {task.created_at ? (
+                            <div className="flex items-center space-x-1">
+                              <Clock className="w-3.5 h-3.5 opacity-60 text-slate-400" />
+                              <span>
+                                {new Date(task.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                              </span>
                             </div>
                           ) : (
-                            <span className={`px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider border ${getStatusBadgeColor(task.status)}`}>
-                              {task.status.replace(/_/g, ' ')}
-                            </span>
-                          )
-                        )}
-                      </td>
-
-                      {/* Assignee */}
-                      <td className="px-6 py-3.5 whitespace-nowrap">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-6 h-6 rounded-full bg-blue-600/10 border border-blue-500/20 text-blue-500 flex items-center justify-center font-bold text-[10px]">
-                            {task.assignees && task.assignees.length > 1 ? task.assignees.length : (task.assignee_name ? task.assignee_name.charAt(0).toUpperCase() : 'U')}
-                          </div>
-                          <span className="font-semibold text-slate-800 dark:text-slate-200 max-w-[150px] truncate" title={task.assignees && task.assignees.map(a => a.assignee_name).join(', ')}>
-                            {task.assignees && task.assignees.length > 1 
-                              ? `${task.assignees[0].assignee_name} +${task.assignees.length - 1} others`
-                              : task.assignee_name || 'Unassigned'}
-                            {isAssignee && <span className="text-[9px] text-blue-500 font-bold ml-1">(You)</span>}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Assigner */}
-                      <td className="px-6 py-3.5 whitespace-nowrap text-slate-500 font-medium">
-                        {task.assigner_name} {isCreator && <span className="text-[9px] text-blue-500 font-bold">(You)</span>}
-                      </td>
-
-                      {/* Created Date */}
-                      <td className="px-6 py-3.5 whitespace-nowrap text-slate-500 font-medium">
-                        {task.created_at ? (
-                          <div className="flex items-center space-x-1">
-                            <Clock className="w-3.5 h-3.5 opacity-60 text-slate-400" />
-                            <span>
-                              {new Date(task.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 italic">N/A</span>
-                        )}
-                      </td>
-
-                      {/* Due Date */}
-                      <td className="px-6 py-3.5 whitespace-nowrap font-semibold">
-                        {task.due_date ? (
-                          <div className="flex items-center space-x-1">
-                            <Calendar className="w-3.5 h-3.5 opacity-60" />
-                            <span className={taskOverdue ? 'text-rose-500 font-bold animate-pulse' : 'text-slate-600 dark:text-slate-350'}>
-                              {new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                            </span>
-                            {taskOverdue && <AlertCircle className="w-3 h-3 text-rose-500" />}
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 italic">No Limit</span>
-                        )}
-                      </td>
-
-                      {/* Latest Remark */}
-                      <td className="px-6 py-3.5">
-                        {(() => {
-                          const taskRemarks = getTaskRemarksArray(task.remarks);
-                          if (taskRemarks.length > 0) {
-                            const latest = taskRemarks[taskRemarks.length - 1];
-                            const roleDisplay = latest.by ? latest.by.toUpperCase() : '';
-                            return (
-                              <div className="max-w-[200px] truncate text-slate-500 dark:text-slate-400" title={`[${roleDisplay}] ${latest.username}: ${latest.text}`}>
-                                <span className="font-semibold text-slate-700 dark:text-slate-350">{latest.username}:</span> {latest.text}
-                              </div>
-                            );
-                          }
-                          return <span className="text-slate-400 italic">No remarks</span>;
-                        })()}
-                      </td>
-
-                      {/* Action buttons */}
-                      <td className="px-6 py-3.5 whitespace-nowrap text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => handleViewClick(task)}
-                            className="p-1.5 text-slate-500 hover:bg-slate-500/10 dark:text-slate-400 dark:hover:bg-white/5 rounded-lg transition-colors animate-in fade-in"
-                            title="View Details"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                          </button>
-                          {(isAdmin || isCreator || isManagerOfAssignee) && (
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={() => handleEditClick(task)}
-                                className="p-1.5 text-blue-600 hover:bg-blue-500/10 dark:text-blue-400 rounded-lg transition-colors"
-                                title="Edit Task"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteTask(task.id)}
-                                className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                                title="Delete Task"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+                            <span className="text-slate-400 italic">N/A</span>
                           )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+
+                        {/* Due Date */}
+                        <td className="px-6 py-3.5 whitespace-nowrap font-semibold">
+                          {task.due_date ? (
+                            <div className="flex items-center space-x-1">
+                              <Calendar className="w-3.5 h-3.5 opacity-60" />
+                              <span className={taskOverdue ? 'text-rose-500 font-bold animate-pulse' : 'text-slate-600 dark:text-slate-350'}>
+                                {new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                              </span>
+                              {taskOverdue && <AlertCircle className="w-3 h-3 text-rose-500" />}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 italic">No Limit</span>
+                          )}
+                        </td>
+
+                        {/* Latest Remark */}
+                        <td className="px-6 py-3.5">
+                          {(() => {
+                            const taskRemarks = getTaskRemarksArray(task.remarks);
+                            if (taskRemarks.length > 0) {
+                              const latest = taskRemarks[taskRemarks.length - 1];
+                              const roleDisplay = latest.by ? latest.by.toUpperCase() : '';
+                              return (
+                                <div className="max-w-[200px] truncate text-slate-500 dark:text-slate-400" title={`[${roleDisplay}] ${latest.username}: ${latest.text}`}>
+                                  <span className="font-semibold text-slate-700 dark:text-slate-350">{latest.username}:</span> {latest.text}
+                                </div>
+                              );
+                            }
+                            return <span className="text-slate-400 italic">No remarks</span>;
+                          })()}
+                        </td>
+
+                        {/* Action buttons */}
+                        <td className="px-6 py-3.5 whitespace-nowrap text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => handleViewClick(task)}
+                              className="p-1.5 text-slate-500 hover:bg-slate-500/10 dark:text-slate-400 dark:hover:bg-white/5 rounded-lg transition-colors animate-in fade-in"
+                              title="View Details"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                            {(isAdmin || isCreator || isManagerOfAssignee) && (
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => handleEditClick(task)}
+                                  className="p-1.5 text-blue-600 hover:bg-blue-500/10 dark:text-blue-400 rounded-lg transition-colors"
+                                  title="Edit Task"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTask(task.id)}
+                                  className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                                  title="Delete Task"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls Bar */}
+            <div className="px-6 py-3.5 border-t border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+              <div className="text-slate-500 dark:text-slate-400 font-medium">
+                Showing <span className="font-bold text-slate-800 dark:text-slate-200">{filteredTasks.length === 0 ? 0 : startIndex + 1}</span> to <span className="font-bold text-slate-800 dark:text-slate-200">{endIndex}</span> of <span className="font-bold text-slate-800 dark:text-slate-200">{filteredTasks.length}</span> tasks
+              </div>
+
+              <div className="flex items-center space-x-2">
+                {/* Per Page Selector */}
+                <div className="flex items-center space-x-1.5 mr-2">
+                  <span className="text-slate-400 font-medium text-[11px]">Per page:</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                    className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={15}>15</option>
+                    <option value={20}>20</option>
+                  </select>
+                </div>
+
+                {/* First page button */}
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all"
+                  title="First Page"
+                >
+                  <ChevronsLeft className="w-4 h-4" />
+                </button>
+
+                {/* Previous page button */}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all"
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                {/* Page Number Buttons */}
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(page => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
+                    .map((page, idx, arr) => {
+                      const prevPage = arr[idx - 1];
+                      const showEllipsis = prevPage && page - prevPage > 1;
+                      return (
+                        <React.Fragment key={page}>
+                          {showEllipsis && <span className="px-1 text-slate-400">...</span>}
+                          <button
+                            onClick={() => setCurrentPage(page)}
+                            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                              currentPage === page
+                                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                                : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
+                </div>
+
+                {/* Next page button */}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all"
+                  title="Next Page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+
+                {/* Last page button */}
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all"
+                  title="Last Page"
+                >
+                  <ChevronsRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
@@ -984,12 +1152,19 @@ const TaskManager = () => {
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className={`px-5 py-2 rounded-xl text-white transition-all text-xs font-semibold shadow-md ${isEditModalOpen ? 'bg-blue-600 hover:bg-blue-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
-                >
-                  {isEditModalOpen ? 'Save Changes' : 'Create Task'}
-                </button>
+                {isSubmitting ? (
+                  <div className="px-5 py-2 rounded-xl text-white text-xs font-semibold shadow-md bg-blue-600/60 flex items-center space-x-2 cursor-not-allowed opacity-80 select-none">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>{isEditModalOpen ? 'Saving Changes...' : 'Creating Task...'}</span>
+                  </div>
+                ) : (
+                  <button
+                    type="submit"
+                    className={`px-5 py-2 rounded-xl text-white transition-all text-xs font-semibold shadow-md ${isEditModalOpen ? 'bg-blue-600 hover:bg-blue-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                  >
+                    {isEditModalOpen ? 'Save Changes' : 'Create Task'}
+                  </button>
+                )}
               </div>
             </form>
           </div>
@@ -1252,12 +1427,19 @@ const TaskManager = () => {
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white transition-all text-xs font-semibold shadow-md"
-                >
-                  Update Status
-                </button>
+                {isStatusSubmitting ? (
+                  <div className="px-5 py-2 rounded-xl text-white text-xs font-semibold shadow-md bg-amber-600/60 flex items-center space-x-2 cursor-not-allowed opacity-80 select-none">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Updating Status...</span>
+                  </div>
+                ) : (
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white transition-all text-xs font-semibold shadow-md"
+                  >
+                    Update Status
+                  </button>
+                )}
               </div>
             </form>
           </div>
