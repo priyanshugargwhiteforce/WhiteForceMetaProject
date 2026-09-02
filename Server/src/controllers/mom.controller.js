@@ -151,6 +151,41 @@ exports.getMoMById = async (req, res) => {
     }
 };
 
+// @desc    Get assignable users for MoM task creation based on team hierarchy
+// @route   GET /api/moms/assignable-users
+// @access  Private
+exports.getMoMAssignableUsers = async (req, res) => {
+    try {
+        const user = req.user;
+        let query = 'SELECT id, username, email, role, manager_id FROM users WHERE status = "active"';
+        const params = [];
+
+        if (user.role === 'admin') {
+            // Admin sees all active users across company
+        } else if (user.role === 'manager') {
+            // Manager sees self + team members reporting to them
+            query += ' AND (id = ? OR manager_id = ?)';
+            params.push(user.id, user.id);
+        } else {
+            // Team User sees self + manager + teammates under same manager
+            if (user.manager_id) {
+                query += ' AND (id = ? OR id = ? OR manager_id = ?)';
+                params.push(user.id, user.manager_id, user.manager_id);
+            } else {
+                query += ' AND id = ?';
+                params.push(user.id);
+            }
+        }
+
+        query += ' ORDER BY username ASC';
+        const [users] = await pool.query(query, params);
+        res.status(200).json({ success: true, users });
+    } catch (error) {
+        console.error('getMoMAssignableUsers Error:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 // @desc    Create a new MoM record
 // @route   POST /api/moms
 // @access  Private
@@ -223,10 +258,38 @@ exports.createMoM = async (req, res) => {
             ]
         );
 
+        // Auto-create tasks for assigned discussion points
+        let createdTasksCount = 0;
+        if (Array.isArray(pointsArray)) {
+            for (const pt of pointsArray) {
+                if (pt.assign_to && Number(pt.assign_to) > 0) {
+                    const taskTitle = pt.topic ? `[MoM Task] ${pt.topic}` : `[MoM Task] ${title.trim()}`;
+                    let subPointsText = '';
+                    if (Array.isArray(pt.sub_points) && pt.sub_points.length > 0) {
+                        subPointsText = pt.sub_points.map(s => `- ${s}`).join('\n');
+                    } else {
+                        subPointsText = `- ${pt.topic || 'Action Decision'}`;
+                    }
+                    const taskDesc = `MoM Ref: MOM-#${result.insertId} (${deptVal} Dept)\nMeeting Date: ${formattedDate}\n\nAction Sub-points:\n${subPointsText}`;
+                    const taskPriority = (pt.priority || 'medium').toLowerCase();
+
+                    await pool.query(
+                        `INSERT INTO tasks (title, description, assigned_to, assigned_by, ad_platform, priority, due_date, status)
+                         VALUES (?, ?, ?, ?, 'general', ?, ?, 'pending')`,
+                        [taskTitle, taskDesc, Number(pt.assign_to), createdBy, taskPriority, formattedDate]
+                    );
+                    createdTasksCount++;
+                }
+            }
+        }
+
         res.status(201).json({
             success: true,
-            message: 'Minutes of Meeting (MoM) saved successfully.',
-            momId: result.insertId
+            message: createdTasksCount > 0 
+                ? `Minutes of Meeting saved successfully and ${createdTasksCount} Action Task(s) assigned.`
+                : 'Minutes of Meeting (MoM) saved successfully.',
+            momId: result.insertId,
+            tasksCreated: createdTasksCount
         });
     } catch (error) {
         console.error('createMoM Error:', error.message);

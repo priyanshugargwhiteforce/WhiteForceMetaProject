@@ -15,7 +15,12 @@ import {
   Users, 
   Sparkles,
   Save,
-  MessageSquare
+  MessageSquare,
+  Copy,
+  Check,
+  Link as LinkIcon,
+  Clock,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -27,6 +32,12 @@ const Profile = () => {
   const [phone, setPhone] = useState('');
   const [profileImage, setProfileImage] = useState('');
   const [imagePreview, setImagePreview] = useState('');
+
+  // Manager Invite Link State
+  const [inviteLink, setInviteLink] = useState('');
+  const [timeLeft, setTimeLeft] = useState(0); // seconds
+  const [generatingInvite, setGeneratingInvite] = useState(false);
+  const [copiedInvite, setCopiedInvite] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -41,6 +52,56 @@ const Profile = () => {
       setImagePreview(user.profile_image || '');
     }
   }, [user]);
+
+  // Countdown timer for Invite Link (10-minute validity)
+  useEffect(() => {
+    if (timeLeft <= 0) return;
+    const interval = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timeLeft]);
+
+  const handleGenerateInviteLink = async () => {
+    setGeneratingInvite(true);
+    setCopiedInvite(false);
+    try {
+      const res = await axios.post('/api/auth/generate-invite', {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        const fullLink = `${window.location.origin}/register?token=${res.data.invite_token}`;
+        setInviteLink(fullLink);
+        setTimeLeft(600); // 10 minutes (600 seconds)
+        showToast('10-Minute Team Registration Link generated successfully!');
+      }
+    } catch (err) {
+      console.error('Failed to generate invite link:', err);
+      showToast(err.response?.data?.message || 'Failed to generate invitation link.', 'error');
+    } finally {
+      setGeneratingInvite(false);
+    }
+  };
+
+  const handleCopyInviteLink = () => {
+    if (!inviteLink) return;
+    navigator.clipboard.writeText(inviteLink);
+    setCopiedInvite(true);
+    showToast('Invitation link copied to clipboard!');
+    setTimeout(() => setCopiedInvite(false), 3000);
+  };
+
+  const formatTimer = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -394,6 +455,82 @@ const Profile = () => {
                   Note: This mobile number should be active on <span className="font-extrabold text-emerald-600 dark:text-emerald-400">WhatsApp</span> so you can receive task alerts, updates, and automated notifications.
                 </p>
               </div>
+
+              {/* MANAGER / ADMIN TEAM INVITATION LINK GENERATOR */}
+              {(user?.role === 'manager' || user?.role === 'admin') && (
+                <div className="mt-6 p-5 rounded-2xl bg-indigo-50/80 border border-indigo-200 text-slate-800 dark:bg-gradient-to-br dark:from-indigo-950/60 dark:via-slate-900/80 dark:to-purple-950/50 dark:border-indigo-500/30 dark:text-white space-y-4 shadow-sm dark:shadow-xl">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-100 border border-indigo-200 text-indigo-600 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                        <LinkIcon className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center space-x-2 flex-wrap">
+                          <span>{user.role === 'admin' ? 'Manager Registration Link (10-Min Validity)' : 'Team Registration Link (10-Min Validity)'}</span>
+                          <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 border border-indigo-300 dark:bg-indigo-500/20 dark:text-indigo-300 dark:border-indigo-500/30 text-[10px] font-extrabold uppercase rounded-full">
+                            {user.role === 'admin' ? 'Admin Scope (Creates Managers)' : 'Manager Scope (Creates Team)'}
+                          </span>
+                        </h4>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium mt-0.5 leading-relaxed">
+                          {user.role === 'admin' 
+                            ? `Share this link with new Managers. Registered users will automatically receive Manager access under your Admin system.`
+                            : `Share this link with new team members. When registered, they will automatically be assigned under your team (${user.username}).`
+                          }
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleGenerateInviteLink}
+                      disabled={generatingInvite}
+                      className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-500/20 transition-all flex items-center space-x-2 shrink-0 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Zap className="w-4 h-4 text-amber-300" />
+                      <span>{generatingInvite ? 'Generating...' : (inviteLink && timeLeft > 0 ? 'Re-generate New Link' : '⚡ Generate 10-Min Invite Link')}</span>
+                    </button>
+                  </div>
+
+                  {/* DISPLAY GENERATED LINK & COUNTDOWN TIMER */}
+                  {inviteLink && (
+                    <div className="p-4 rounded-xl bg-white border border-indigo-200 dark:bg-slate-950/80 dark:border-indigo-500/20 space-y-3">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-indigo-900 dark:text-indigo-300 flex items-center space-x-1.5">
+                          <Clock className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+                          <span>Link Expires In:</span>
+                        </span>
+                        <span className={`font-mono font-black text-xs sm:text-sm px-2.5 py-0.5 rounded-lg ${timeLeft > 0 ? 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30 animate-pulse' : 'bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-500/20 dark:text-rose-400 dark:border-rose-500/30'}`}>
+                          {timeLeft > 0 ? formatTimer(timeLeft) : 'EXPIRED (10m Limit Reached)'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={inviteLink}
+                          className="flex-1 bg-slate-100 border border-slate-300 text-slate-900 font-mono text-xs rounded-xl px-3 py-2 dark:bg-black/40 dark:border-white/10 dark:text-indigo-200 select-all focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          disabled={timeLeft <= 0}
+                          onClick={handleCopyInviteLink}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer"
+                        >
+                          {copiedInvite ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
+                          <span>{copiedInvite ? 'Copied!' : 'Copy Link'}</span>
+                        </button>
+                      </div>
+
+                      {timeLeft <= 0 && (
+                        <p className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold italic">
+                          ⚠️ This link has reached the 10-minute validity limit. Click "Re-generate New Link" above to create a fresh 10-minute link.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
           </div>

@@ -149,13 +149,40 @@ exports.createTask = async (req, res) => {
             return res.status(400).json({ success: false, message: 'At least one valid assignee is required.' });
         }
 
-        // Only admin or manager can create tasks for others. Anyone can create a task for themselves.
-        const containsOthers = assignees.some(id => Number(id) !== Number(assigned_by));
-        if (role !== 'admin' && role !== 'manager' && containsOthers) {
-            return res.status(403).json({ 
-                success: false, 
-                message: 'Forbidden: Only administrators, managers, or team leads can assign tasks to other team members.' 
-            });
+        // Assignee permission checks
+        if (role !== 'admin' && role !== 'manager') {
+            // Rule 1: Standard users MUST include themselves as an assignee
+            const includesSelf = assignees.some(id => Number(id) === Number(assigned_by));
+            if (!includesSelf) {
+                return res.status(403).json({ 
+                    success: false, 
+                    message: 'Forbidden: Team members must include themselves as an assignee when creating a task.' 
+                });
+            }
+
+            // Rule 2: Verify that any additional assignees are active team members under the same manager (no managers/admins)
+            const otherAssignees = assignees.filter(id => Number(id) !== Number(assigned_by));
+            if (otherAssignees.length > 0) {
+                const userManagerId = req.user.manager_id;
+                if (!userManagerId) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Forbidden: You are not assigned to a manager team, so you cannot collaborate with other team members.'
+                    });
+                }
+
+                const [teamRows] = await pool.query(
+                    'SELECT id FROM users WHERE id IN (?) AND manager_id = ? AND role = "user" AND status = "active"',
+                    [otherAssignees, userManagerId]
+                );
+
+                if (teamRows.length !== new Set(otherAssignees).size) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Forbidden: You can only collaborate with fellow team members under your manager. You cannot assign tasks to your Manager or other teams.'
+                    });
+                }
+            }
         }
 
         // Check if all assignees exist in DB
@@ -454,9 +481,14 @@ exports.getAssignableUsers = async (req, res) => {
             query += ' AND (manager_id = ? OR id = ?)';
             params.push(userId, userId);
         } else {
-            // Standard users can only assign to themselves
-            query += ' AND id = ?';
-            params.push(userId);
+            // Standard users can collaborate with teammates under the same manager (excluding manager/admin)
+            if (req.user.manager_id) {
+                query += ' AND ((manager_id = ? AND role = "user") OR id = ?)';
+                params.push(req.user.manager_id, userId);
+            } else {
+                query += ' AND id = ?';
+                params.push(userId);
+            }
         }
 
         query += ' ORDER BY username ASC';

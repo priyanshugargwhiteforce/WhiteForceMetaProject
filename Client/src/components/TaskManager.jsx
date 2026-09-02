@@ -482,7 +482,7 @@ const TaskManager = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-4 md:p-6 lg:p-8 max-w-100% mx-auto space-y-8">
       {/* Title & Actions Block */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900/40 p-5 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm dark:shadow-md">
         <div>
@@ -1004,19 +1004,24 @@ const TaskManager = () => {
                       <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1 scrollbar-thin">
                         {assignees.map(u => {
                           const isChecked = Array.isArray(formData.assigned_to) && formData.assigned_to.includes(u.id);
+                          const isSelfUser = user?.role === 'user' && Number(u.id) === Number(user?.id);
                           return (
                             <label
                               key={u.id}
-                              className={`flex items-center space-x-2.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all ${
-                                isChecked
-                                  ? 'bg-blue-600/10 border-blue-500/30 text-blue-600 dark:text-blue-400'
-                                  : 'border-transparent hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-350'
+                              className={`flex items-center space-x-2.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                                isSelfUser
+                                  ? 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-500/20 dark:border-blue-500/30 dark:text-blue-300 cursor-not-allowed opacity-90'
+                                  : isChecked
+                                    ? 'bg-blue-600/10 border-blue-500/30 text-blue-600 dark:text-blue-400 cursor-pointer'
+                                    : 'border-transparent hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-350 cursor-pointer'
                               }`}
                             >
                               <input
                                 type="checkbox"
-                                checked={isChecked}
+                                checked={isChecked || isSelfUser}
+                                disabled={isSelfUser}
                                 onChange={(e) => {
+                                  if (isSelfUser) return;
                                   const checkedList = Array.isArray(formData.assigned_to) ? [...formData.assigned_to] : [];
                                   if (e.target.checked) {
                                     if (!checkedList.includes(u.id)) checkedList.push(u.id);
@@ -1026,9 +1031,9 @@ const TaskManager = () => {
                                   }
                                   setFormData(prev => ({ ...prev, assigned_to: checkedList }));
                                 }}
-                                className="w-3.5 h-3.5 rounded border-slate-300 dark:border-white/10 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-900"
+                                className="w-3.5 h-3.5 rounded border-slate-300 dark:border-white/10 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-900 disabled:opacity-80"
                               />
-                              <span>{u.username} ({u.role.toUpperCase()})</span>
+                              <span>{u.username} {isSelfUser ? '(You - Primary Assignee)' : `(${u.role.toUpperCase()})`}</span>
                             </label>
                           );
                         })}
@@ -1037,19 +1042,22 @@ const TaskManager = () => {
                         <div className="pt-2 border-t border-slate-200 dark:border-white/5 flex flex-wrap gap-1">
                           {formData.assigned_to.map(id => {
                             const found = assignees.find(u => u.id === id);
+                            const isSelfUser = user?.role === 'user' && Number(id) === Number(user?.id);
                             return found ? (
                               <span key={id} className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-blue-600 text-white text-[9px] font-bold">
-                                <span>{found.username}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const checkedList = (formData.assigned_to || []).filter(item => item !== id);
-                                    setFormData(prev => ({ ...prev, assigned_to: checkedList }));
-                                  }}
-                                  className="hover:text-red-300 font-bold focus:outline-none"
-                                >
-                                  ×
-                                </button>
+                                <span>{found.username} {isSelfUser ? '(You)' : ''}</span>
+                                {!isSelfUser && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const checkedList = (formData.assigned_to || []).filter(item => item !== id);
+                                      setFormData(prev => ({ ...prev, assigned_to: checkedList }));
+                                    }}
+                                    className="hover:text-red-300 font-bold focus:outline-none cursor-pointer"
+                                  >
+                                    ×
+                                  </button>
+                                )}
                               </span>
                             ) : null;
                           })}
