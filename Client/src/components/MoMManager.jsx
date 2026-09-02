@@ -30,9 +30,11 @@ import {
   HelpCircle,
   PlusCircle,
   MinusCircle,
-  Layers
+  Layers,
+  FileSpreadsheet
 } from 'lucide-react';
 import axios from 'axios';
+import * as XLSX from 'xlsx';
 import logoImg from '../assets/white-forcelogo.png';
 
 const DEPARTMENTS = ['SEO', 'Marketing', 'IT', 'HR', 'Payroll', 'Other'];
@@ -370,6 +372,102 @@ const MoMManager = () => {
     return dateStr;
   };
 
+  // Single MoM Excel Export
+  const exportMoMToExcel = (item) => {
+    if (!item) return;
+
+    let pointsText = '';
+    if (Array.isArray(item.discussion_points) && item.discussion_points.length > 0) {
+      pointsText = item.discussion_points.map((pt, idx) => {
+        let text = `Point ${idx + 1}: ${pt.topic}`;
+        if (Array.isArray(pt.sub_points) && pt.sub_points.length > 0) {
+          text += `\n  - ${pt.sub_points.join('\n  - ')}`;
+        }
+        return text;
+      }).join('\n\n');
+    } else {
+      pointsText = 'No detailed discussion points recorded.';
+    }
+
+    const data = [
+      { Parameter: 'REF NUMBER', Value: `MOM-#${item.id}` },
+      { Parameter: 'MEETING TITLE', Value: item.title || '' },
+      { Parameter: 'DEPARTMENT', Value: item.department || '' },
+      { Parameter: 'MEETING DATE', Value: `${formatDateDisplay(item.meeting_date)} (${item.meeting_day || ''})` },
+      { Parameter: 'MEETING WITH', Value: item.meeting_with === 'Other' ? (item.custom_meeting_with || 'Other') : (item.meeting_with || '') },
+      { Parameter: 'LOGGED BY', Value: item.created_by_name || 'User' },
+      { Parameter: 'ATTENDEES', Value: item.attendees || 'N/A' },
+      { Parameter: 'AGENDA / PURPOSE', Value: item.agenda || 'N/A' },
+      { Parameter: 'DISCUSSION POINTS & ACTION ITEMS', Value: pointsText },
+      { Parameter: 'CREATED TIMESTAMP', Value: item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A' }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    worksheet['!cols'] = [{ wch: 35 }, { wch: 85 }];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'MoM Report');
+
+    const fileName = `MoM_Ref_${item.id}_${(item.department || 'Dept')}_${item.meeting_date || 'Date'}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
+  // Bulk / Filtered MoM List Excel Export
+  const exportAllMoMsToExcel = (momsList) => {
+    if (!momsList || momsList.length === 0) {
+      alert('No MoMs available to export.');
+      return;
+    }
+
+    const exportRows = momsList.map(item => {
+      let pointsText = '';
+      if (Array.isArray(item.discussion_points) && item.discussion_points.length > 0) {
+        pointsText = item.discussion_points.map((pt, idx) => {
+          let text = `Point ${idx + 1}: ${pt.topic}`;
+          if (Array.isArray(pt.sub_points) && pt.sub_points.length > 0) {
+            text += ` (Actions: ${pt.sub_points.join('; ')})`;
+          }
+          return text;
+        }).join(' | ');
+      }
+
+      return {
+        'Ref No': `MOM-#${item.id}`,
+        'Meeting Title': item.title || '',
+        'Department': item.department || '',
+        'Meeting Date': item.meeting_date || '',
+        'Day': item.meeting_day || '',
+        'Meeting With': item.meeting_with === 'Other' ? (item.custom_meeting_with || 'Other') : (item.meeting_with || ''),
+        'Logged By': item.created_by_name || 'User',
+        'Attendees': item.attendees || '',
+        'Agenda': item.agenda || '',
+        'Discussion Points & Actions': pointsText,
+        'Created At': item.created_at ? new Date(item.created_at).toLocaleString() : ''
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportRows);
+    worksheet['!cols'] = [
+      { wch: 12 },
+      { wch: 30 },
+      { wch: 15 },
+      { wch: 14 },
+      { wch: 12 },
+      { wch: 24 },
+      { wch: 20 },
+      { wch: 25 },
+      { wch: 30 },
+      { wch: 50 },
+      { wch: 20 }
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'MoM Records Summary');
+
+    const fileName = `Whiteforce_MoMs_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
   const stats = useMemo(() => {
     const total = moms.length;
     const ceoMeetings = moms.filter(m => m.meeting_with === 'CEO Shailesh Rajpal' || m.meeting_with === 'Boss Shailesh Rajpal').length;
@@ -404,10 +502,19 @@ const MoMManager = () => {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => exportAllMoMsToExcel(filteredMoms)}
+            className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
+            title="Export all MoMs to Excel (.xlsx)"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>Export Excel</span>
+          </button>
+
           <button
             onClick={handleOpenCreateModal}
-            className="flex items-center space-x-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-lg shadow-rose-500/10 transition-all font-semibold text-xs"
+            className="flex items-center space-x-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-lg shadow-rose-500/10 transition-all font-semibold text-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>+ Create New MoM</span>
@@ -598,10 +705,19 @@ const MoMManager = () => {
                             {/* Print / Export PDF */}
                             <button
                               onClick={() => { setSelectedMoM(item); setIsPrintModalOpen(true); }}
-                              className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                              className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"
                               title="Print / Download PDF"
                             >
                               <Printer className="w-4 h-4" />
+                            </button>
+
+                            {/* Export to Excel */}
+                            <button
+                              onClick={() => exportMoMToExcel(item)}
+                              className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                              title="Export MoM to Excel (.xlsx)"
+                            >
+                              <FileSpreadsheet className="w-4 h-4" />
                             </button>
 
                             {/* Edit */}
@@ -1006,13 +1122,23 @@ const MoMManager = () => {
               </div>
 
               <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-white/10">
-                <button
-                  onClick={() => { setIsViewModalOpen(false); setIsPrintModalOpen(true); }}
-                  className="flex items-center space-x-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition-all"
-                >
-                  <Printer className="w-4 h-4" />
-                  <span>Print / Download PDF</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => { setIsViewModalOpen(false); setIsPrintModalOpen(true); }}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md transition-all"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Print / Download PDF</span>
+                  </button>
+
+                  <button
+                    onClick={() => exportMoMToExcel(selectedMoM)}
+                    className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition-all"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    <span>Excel Export</span>
+                  </button>
+                </div>
 
                 <button
                   onClick={() => setIsViewModalOpen(false)}
@@ -1038,19 +1164,10 @@ const MoMManager = () => {
               }
               *,
               *::before,
-              *::after,
-              html,
-              html.dark,
-              body,
-              body.dark,
-              #root,
-              #root > div,
-              main {
+              *::after {
                 background-color: #ffffff !important;
                 background: #ffffff !important;
                 color: #0f172a !important;
-                margin: 0 !important;
-                padding: 0 !important;
                 box-shadow: none !important;
                 text-shadow: none !important;
                 backdrop-filter: none !important;
@@ -1058,56 +1175,73 @@ const MoMManager = () => {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
               }
-              /* Hide main page by default */
+              html,
+              html.dark,
+              body,
+              body.dark {
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+                font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+              }
+              /* Hide default page elements */
               body * {
                 visibility: hidden !important;
               }
-              /* Unhide printable modal tree */
+              /* Unhide ONLY print modal overlay, card, and print area */
               .print-overlay,
               .print-modal-card,
               #mom-printable-area,
               #mom-printable-area * {
                 visibility: visible !important;
               }
-              /* Lock print-overlay to top-left (0,0) of Page 1 */
+              /* Anchor print-overlay to top-left (0,0) of Page 1 without fixed height clipping */
               .print-overlay {
-                position: fixed !important;
+                position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
                 width: 100% !important;
-                height: 100% !important;
+                height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 display: block !important;
                 background: #ffffff !important;
-                align-items: flex-start !important;
-                justify-content: flex-start !important;
-                transform: none !important;
+                overflow: visible !important;
                 z-index: 999999 !important;
               }
               .print-modal-card {
-                position: static !important;
+                position: relative !important;
                 left: 0 !important;
                 top: 0 !important;
                 width: 100% !important;
                 max-width: 100% !important;
+                height: auto !important;
+                max-height: none !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 border: none !important;
                 box-shadow: none !important;
                 border-radius: 0 !important;
                 background: #ffffff !important;
-                max-height: none !important;
                 overflow: visible !important;
                 display: block !important;
-                transform: none !important;
               }
               #mom-printable-area {
-                position: static !important;
+                position: relative !important;
                 left: 0 !important;
                 top: 0 !important;
                 width: 100% !important;
                 max-width: 100% !important;
+                height: auto !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 border: none !important;
@@ -1156,8 +1290,16 @@ const MoMManager = () => {
               </div>
               <div className="flex items-center space-x-3">
                 <button
-                  onClick={() => window.print()}
+                  onClick={() => exportMoMToExcel(selectedMoM)}
                   className="flex items-center space-x-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition-all"
+                  title="Export to Excel (.xlsx)"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span>Excel Export</span>
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md transition-all"
                 >
                   <Printer className="w-4 h-4" />
                   <span>Print Document (A4)</span>
@@ -1172,28 +1314,28 @@ const MoMManager = () => {
             </div>
 
             {/* PRINTABLE DOCUMENT A4 PAGE */}
-            <div className="bg-white text-slate-900 space-y-4 font-sans border border-slate-200 p-6 sm:p-8 rounded-xl shadow-sm" id="mom-printable-area">
+            <div className="bg-white text-slate-900 space-y-3 font-sans border border-slate-200 p-5 sm:p-7 rounded-xl shadow-sm" id="mom-printable-area">
               {/* EXECUTIVE LOGO & TITLE HEADER BANNER */}
-              <div className="flex items-start justify-between pb-3 border-b-2 border-slate-900">
-                <div className="flex items-center space-x-3.5">
+              <div className="flex items-start justify-between pb-2 border-b-2 border-slate-900">
+                <div className="flex items-center space-x-3">
                   <img
                     src={logoImg}
                     alt="Whiteforce Logo"
-                    className="h-11 w-auto object-contain"
+                    className="h-10 w-auto object-contain"
                   />
                   <div>
-                    <h1 className="text-xl font-black uppercase tracking-tight text-slate-900">MINUTES OF MEETING</h1>
-                    <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest mt-0.5">
+                    <h1 className="text-lg font-black uppercase tracking-tight text-slate-900">MINUTES OF MEETING</h1>
+                    <p className="text-[9px] font-bold text-rose-600 uppercase tracking-widest mt-0.5">
                       WHITEFORCE CORPORATE LOG &bull; {selectedMoM.department} DEPARTMENT
                     </p>
                   </div>
                 </div>
 
                 <div className="text-right space-y-0.5">
-                  <span className="inline-block px-2.5 py-0.5 bg-slate-900 text-white text-[10px] font-extrabold tracking-wider uppercase rounded">
+                  <span className="inline-block px-2 py-0.5 bg-slate-900 text-white text-[9px] font-extrabold tracking-wider uppercase rounded">
                     REF: MOM-#{selectedMoM.id}
                   </span>
-                  <div className="text-[11px] font-bold text-slate-700 pt-0.5">
+                  <div className="text-[10px] font-bold text-slate-700 pt-0.5">
                     {formatDateDisplay(selectedMoM.meeting_date)} <span className="text-slate-500 font-medium">({selectedMoM.meeting_day})</span>
                   </div>
                 </div>
@@ -1204,37 +1346,37 @@ const MoMManager = () => {
                 <table className="w-full border-collapse">
                   <tbody>
                     <tr className="border-b border-slate-300 bg-slate-100/80">
-                      <td className="p-1.5 px-2.5 font-bold text-slate-500 uppercase tracking-wider w-1/4 border-r border-slate-300 text-[10px]">Meeting Title</td>
-                      <td className="p-1.5 px-2.5 font-extrabold text-slate-900 text-xs w-3/4" colSpan={3}>
+                      <td className="p-1 px-2 font-bold text-slate-500 uppercase tracking-wider w-1/4 border-r border-slate-300 text-[9px]">Meeting Title</td>
+                      <td className="p-1 px-2 font-extrabold text-slate-900 text-[11px] w-3/4" colSpan={3}>
                         {selectedMoM.title}
                       </td>
                     </tr>
                     <tr className="border-b border-slate-200">
-                      <td className="p-1.5 px-2.5 font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 text-[10px]">Department</td>
-                      <td className="p-1.5 px-2.5 font-bold text-rose-600 uppercase border-r border-slate-200 text-[11px]">{selectedMoM.department}</td>
-                      <td className="p-1.5 px-2.5 font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 text-[10px]">Meeting With</td>
-                      <td className="p-1.5 px-2.5 font-bold text-slate-900 text-[11px]">
+                      <td className="p-1 px-2 font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 text-[9px]">Department</td>
+                      <td className="p-1 px-2 font-bold text-rose-600 uppercase border-r border-slate-200 text-[10px]">{selectedMoM.department}</td>
+                      <td className="p-1 px-2 font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 text-[9px]">Meeting With</td>
+                      <td className="p-1 px-2 font-bold text-slate-900 text-[10px]">
                         {selectedMoM.meeting_with === 'Other' ? (selectedMoM.custom_meeting_with || 'Other') : selectedMoM.meeting_with}
                       </td>
                     </tr>
                     <tr className="border-b border-slate-200 bg-slate-50/50">
-                      <td className="p-1.5 px-2.5 font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 text-[10px]">Meeting Date & Day</td>
-                      <td className="p-1.5 px-2.5 font-semibold text-slate-800 border-r border-slate-200 text-[11px]">
+                      <td className="p-1 px-2 font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 text-[9px]">Meeting Date & Day</td>
+                      <td className="p-1 px-2 font-semibold text-slate-800 border-r border-slate-200 text-[10px]">
                         {formatDateDisplay(selectedMoM.meeting_date)} ({selectedMoM.meeting_day})
                       </td>
-                      <td className="p-1.5 px-2.5 font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 text-[10px]">Logged By</td>
-                      <td className="p-1.5 px-2.5 font-semibold text-slate-800 text-[11px]">{selectedMoM.created_by_name || 'User'}</td>
+                      <td className="p-1 px-2 font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 text-[9px]">Logged By</td>
+                      <td className="p-1 px-2 font-semibold text-slate-800 text-[10px]">{selectedMoM.created_by_name || 'User'}</td>
                     </tr>
                     {selectedMoM.attendees && (
                       <tr className="border-b border-slate-200">
-                        <td className="p-1.5 px-2.5 font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 text-[10px]">Attendees</td>
-                        <td className="p-1.5 px-2.5 font-semibold text-slate-800 text-[11px]" colSpan={3}>{selectedMoM.attendees}</td>
+                        <td className="p-1 px-2 font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 text-[9px]">Attendees</td>
+                        <td className="p-1 px-2 font-semibold text-slate-800 text-[10px]" colSpan={3}>{selectedMoM.attendees}</td>
                       </tr>
                     )}
                     {selectedMoM.agenda && (
                       <tr>
-                        <td className="p-1.5 px-2.5 font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 text-[10px]">Agenda / Purpose</td>
-                        <td className="p-1.5 px-2.5 font-semibold text-slate-800 text-[11px]" colSpan={3}>{selectedMoM.agenda}</td>
+                        <td className="p-1 px-2 font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 text-[9px]">Agenda / Purpose</td>
+                        <td className="p-1 px-2 font-semibold text-slate-800 text-[10px]" colSpan={3}>{selectedMoM.agenda}</td>
                       </tr>
                     )}
                   </tbody>
@@ -1242,24 +1384,24 @@ const MoMManager = () => {
               </div>
 
               {/* POINT-WISE DISCUSSION & ACTION DECISIONS */}
-              <div className="space-y-3 pt-1">
+              <div className="space-y-2 pt-0.5">
                 <div className="flex items-center justify-between border-b-2 border-slate-800 pb-1">
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-900">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-900">
                     AGENDA, DISCUSSION & ACTION DECISIONS
                   </h3>
-                  <span className="text-[9px] font-bold text-slate-500 uppercase">
+                  <span className="text-[8px] font-bold text-slate-500 uppercase">
                     {Array.isArray(selectedMoM.discussion_points) ? selectedMoM.discussion_points.length : 0} Main Topics Logged
                   </span>
                 </div>
 
                 {Array.isArray(selectedMoM.discussion_points) && selectedMoM.discussion_points.length > 0 ? (
-                  <div className="space-y-2.5">
+                  <div className="space-y-1.5">
                     {selectedMoM.discussion_points.map((pt, idx) => (
                       <div key={idx} className="border border-slate-200 rounded-lg overflow-hidden bg-slate-50/40 mom-topic-card">
                         {/* Topic Title Header */}
-                        <div className="bg-slate-100 border-b border-slate-200 px-3 py-1.5 flex items-center justify-between">
-                          <h4 className="font-bold text-xs text-slate-900">
-                            <span className="px-1.5 py-0.5 bg-rose-600 text-white rounded text-[9px] font-extrabold mr-2 uppercase tracking-wider">
+                        <div className="bg-slate-100 border-b border-slate-200 px-2.5 py-1 flex items-center justify-between">
+                          <h4 className="font-bold text-[11px] text-slate-900">
+                            <span className="px-1.5 py-0.5 bg-rose-600 text-white rounded text-[8px] font-extrabold mr-1.5 uppercase tracking-wider">
                               POINT {idx + 1}
                             </span>
                             {pt.topic}
@@ -1268,19 +1410,19 @@ const MoMManager = () => {
 
                         {/* Sub-Points */}
                         {Array.isArray(pt.sub_points) && pt.sub_points.length > 0 ? (
-                          <div className="p-3 pt-2">
-                            <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-1">Key Decisions & Action Steps:</span>
-                            <ul className="space-y-1 pl-1">
+                          <div className="p-2 pt-1">
+                            <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Key Decisions & Action Steps:</span>
+                            <ul className="space-y-0.5 pl-1">
                               {pt.sub_points.map((sub, sIdx) => (
-                                <li key={sIdx} className="text-[11px] text-slate-800 font-medium flex items-start space-x-2 leading-tight">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1 shrink-0"></span>
+                                <li key={sIdx} className="text-[10px] text-slate-800 font-medium flex items-start space-x-1.5 leading-snug">
+                                  <span className="w-1.2 h-1.2 rounded-full bg-rose-500 mt-1 shrink-0"></span>
                                   <span>{sub}</span>
                                 </li>
                               ))}
                             </ul>
                           </div>
                         ) : (
-                          <div className="p-2 px-3 text-[10px] text-slate-400 italic">No action items logged for this topic.</div>
+                          <div className="p-1.5 px-2 text-[9px] text-slate-400 italic">No action items logged for this topic.</div>
                         )}
                       </div>
                     ))}
@@ -1293,28 +1435,28 @@ const MoMManager = () => {
               </div>
 
               {/* OFFICIAL SIGN-OFF BLOCK */}
-              <div className="pt-4 mt-4 border-t border-slate-300 grid grid-cols-3 gap-6 text-center text-[11px] mom-signoff-block">
+              <div className="pt-2 mt-2 border-t border-slate-300 grid grid-cols-3 gap-4 text-center text-[10px] mom-signoff-block">
                 <div>
-                  <div className="border-b border-slate-400 pb-5 mb-1"></div>
+                  <div className="border-b border-slate-400 pb-3 mb-1"></div>
                   <span className="block font-bold text-slate-900">Meeting Presided By</span>
-                  <span className="text-[9px] font-semibold text-slate-500">({selectedMoM.meeting_with === 'Other' ? (selectedMoM.custom_meeting_with || 'Meeting Chair') : selectedMoM.meeting_with})</span>
+                  <span className="text-[8px] font-semibold text-slate-500">({selectedMoM.meeting_with === 'Other' ? (selectedMoM.custom_meeting_with || 'Meeting Chair') : selectedMoM.meeting_with})</span>
                 </div>
 
                 <div>
-                  <div className="border-b border-slate-400 pb-5 mb-1"></div>
+                  <div className="border-b border-slate-400 pb-3 mb-1"></div>
                   <span className="block font-bold text-slate-900">Prepared & Logged By</span>
-                  <span className="text-[9px] font-semibold text-slate-500">({selectedMoM.created_by_name || 'User'})</span>
+                  <span className="text-[8px] font-semibold text-slate-500">({selectedMoM.created_by_name || 'User'})</span>
                 </div>
 
                 <div>
-                  <div className="border-b border-slate-400 pb-5 mb-1"></div>
+                  <div className="border-b border-slate-400 pb-3 mb-1"></div>
                   <span className="block font-bold text-slate-900">Approved By</span>
-                  <span className="text-[9px] font-semibold text-slate-500">(Department Head / Admin)</span>
+                  <span className="text-[8px] font-semibold text-slate-500">(Department Head / Admin)</span>
                 </div>
               </div>
 
               {/* DOCUMENT FOOTER WITH DEVELOPER CREDITS */}
-              <div className="pt-3 mt-3 border-t-2 border-slate-900 flex justify-between items-center text-[9px] text-slate-500 font-semibold">
+              <div className="pt-2 mt-2 border-t-2 border-slate-900 flex justify-between items-center text-[8px] text-slate-500 font-semibold">
                 <div>
                   <span className="block font-bold text-slate-900">Confidential Corporate Document</span>
                   <span>Whiteforce & Meta API Task Management System</span>
