@@ -1,4 +1,5 @@
 const cron = require('node-cron');
+const axios = require('axios');
 const { pool } = require('../config/db');
 const campaignsService = require('./whatsapp-campaigns.service');
 const { cleanPhoneNumber } = require('./dailyTaskReminder.service');
@@ -171,15 +172,13 @@ async function getWeeklyReportMetrics() {
     const metaAcc1Obj = activeMetaAccountsList[0] || { name: 'N/A', weekly: { spend: 0, leads: 0, impressions: 0, clicks: 0 } };
     const metaAcc2Obj = activeMetaAccountsList[1] || { name: 'N/A', weekly: { spend: 0, leads: 0, impressions: 0, clicks: 0 } };
 
-    let rawAcc1Name = metaAcc1Obj.name.replace('Outsourcing', '').replace(/\s+/g, ' ').trim();
-    const acc1Name = rawAcc1Name.length > 14 ? rawAcc1Name.substring(0, 12) + '..' : rawAcc1Name;
+    const acc1Name = metaAcc1Obj.name ? (metaAcc1Obj.name.length > 10 ? metaAcc1Obj.name.substring(0, 10) : metaAcc1Obj.name) : 'WF Ads 1';
     const acc1Spend = metaAcc1Obj.weekly.spend;
     const acc1Leads = metaAcc1Obj.weekly.leads;
     const acc1Impressions = metaAcc1Obj.weekly.impressions;
     const acc1Clicks = metaAcc1Obj.weekly.clicks;
 
-    let rawAcc2Name = metaAcc2Obj.name.replace('Outsourcing Services Limited', 'Svcs Ltd').replace(/\s+/g, ' ').trim();
-    const acc2Name = rawAcc2Name.length > 12 ? rawAcc2Name.substring(0, 10) + '..' : rawAcc2Name;
+    const acc2Name = metaAcc2Obj.name ? (metaAcc2Obj.name.length > 10 ? metaAcc2Obj.name.substring(0, 10) : metaAcc2Obj.name) : 'WF Ads 2';
     const acc2Spend = metaAcc2Obj.weekly.spend;
     const acc2Leads = metaAcc2Obj.weekly.leads;
     const acc2Impressions = metaAcc2Obj.weekly.impressions;
@@ -193,7 +192,8 @@ async function getWeeklyReportMetrics() {
     // ==========================================
     // 3. GOOGLE ADS METRICS
     // ==========================================
-    let googleAccountName = process.env.GOOGLE_CUSTOMER_ID || 'Google Ads Account';
+    let googleAccountName = process.env.GOOGLE_CUSTOMER_ID || 'Google Ads';
+    if (googleAccountName.length > 10) googleAccountName = googleAccountName.substring(0, 10);
     
     // Google Weekly
     const [[googleWeeklyTrend]] = await pool.query(
@@ -235,7 +235,7 @@ async function getWeeklyReportMetrics() {
 
     return {
         dateRangeLabel,
-        waWeeklySpend: formatNum(waWeeklySpend, 2),
+        waWeeklySpend: formatNum(waWeeklySpend, 0),
         waWeeklySent: formatNum(waWeeklySent),
         waWeeklyDelivered: formatNum(waWeeklyDelivered),
         waWeeklyFailed: formatNum(waWeeklyFailed),
@@ -243,34 +243,34 @@ async function getWeeklyReportMetrics() {
 
         waOverallSent: formatNum(waOverallSent),
         waOverallDelivered: formatNum(waOverallDelivered),
-        waOverallSpend: formatNum(waOverallSpend, 2),
-        waPaidAmount: formatNum(waPaidAmount, 2),
-        waDueAmount: formatNum(waDueAmount, 2),
+        waOverallSpend: formatNum(waOverallSpend, 0),
+        waPaidAmount: formatNum(waPaidAmount, 0),
+        waDueAmount: formatNum(waDueAmount, 0),
 
         acc1Name,
-        acc1Spend: formatNum(acc1Spend, 2),
+        acc1Spend: formatNum(acc1Spend, 0),
         acc1Leads: formatNum(acc1Leads),
         acc1Impressions: formatNum(acc1Impressions),
         acc1Clicks: formatNum(acc1Clicks),
 
         acc2Name,
-        acc2Spend: formatNum(acc2Spend, 2),
+        acc2Spend: formatNum(acc2Spend, 0),
         acc2Leads: formatNum(acc2Leads),
         acc2Impressions: formatNum(acc2Impressions),
         acc2Clicks: formatNum(acc2Clicks),
 
-        metaMonthSpend: formatNum(metaMonthSpend, 2),
+        metaMonthSpend: formatNum(metaMonthSpend, 0),
         metaMonthLeads: formatNum(metaMonthLeads),
         metaMonthClicks: formatNum(metaMonthClicks),
         metaMonthImpressions: formatNum(metaMonthImpressions),
 
         googleAccountName,
-        googleWeeklySpend: formatNum(googleWeeklySpend, 2),
+        googleWeeklySpend: formatNum(googleWeeklySpend, 0),
         googleWeeklyLeads: formatNum(googleWeeklyLeads),
         googleWeeklyImpressions: formatNum(googleWeeklyImpressions),
         googleWeeklyClicks: formatNum(googleWeeklyClicks),
 
-        googleMonthSpend: formatNum(googleMonthSpend, 2),
+        googleMonthSpend: formatNum(googleMonthSpend, 0),
         googleMonthLeads: formatNum(googleMonthLeads),
         googleMonthClicks: formatNum(googleMonthClicks),
         googleMonthImpressions: formatNum(googleMonthImpressions)
@@ -417,11 +417,51 @@ async function sendWeeklyBusinessReport(overridePhone = null) {
             templateId: templateObj.id,
             contactListId: defaultListId,
             campaignType: 'broadcast',
-            status: 'queued',
+            status: 'draft',
             recipients
         });
 
-        console.log(`✅ [Weekly Business Report] WhatsApp report queued successfully for Boss "${recipientName}" (${targetPhone}). Campaign ID: ${campaignRes.campaignId}`);
+        // Direct instant dispatch via Meta Graph API for immediate delivery
+        try {
+            const { resolveWhatsAppConfig, logSentMessage } = require('./whatsapp.service');
+            const { phoneId, token } = await resolveWhatsAppConfig(0);
+
+            const payload = {
+                messaging_product: 'whatsapp',
+                to: targetPhone,
+                type: 'template',
+                template: {
+                    name: 'weekly_business_report',
+                    language: { code: 'en' },
+                    components: [
+                        {
+                            type: 'body',
+                            parameters: parameters.map(p => ({ type: 'text', text: String(p) }))
+                        }
+                    ]
+                }
+            };
+
+            const response = await axios.post(`https://graph.facebook.com/v24.0/${phoneId}/messages`, payload, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            const messageId = response.data?.messages?.[0]?.id;
+
+            if (messageId) {
+                await pool.query(
+                    `UPDATE whatsapp_campaign_recipients 
+                     SET status = "sent", message_id = ?, error_message = NULL, sent_at = CURRENT_TIMESTAMP 
+                     WHERE campaign_id = ? AND phone = ?`,
+                    [messageId, campaignRes.campaignId, targetPhone]
+                );
+                await pool.query('UPDATE whatsapp_campaigns SET status = "completed" WHERE id = ?', [campaignRes.campaignId]);
+                await logSentMessage(phoneId, targetPhone, 'weekly_business_report', 'sent', messageId, null).catch(() => {});
+                console.log(`✅ [Weekly Business Report] WhatsApp report INSTANTLY DELIVERED to "${recipientName}" (${targetPhone}). Message ID: ${messageId}`);
+            }
+        } catch (directErr) {
+            console.error('[Weekly Business Report Direct Send Error]:', directErr.response?.data || directErr.message);
+        }
 
         return {
             success: true,
