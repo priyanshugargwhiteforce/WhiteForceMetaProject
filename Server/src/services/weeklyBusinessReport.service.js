@@ -89,86 +89,106 @@ async function getWeeklyReportMetrics() {
     const waDueAmount = Math.max(0, waOverallSpend - waNetPaid);
 
     // ==========================================
-    // 2. META ADS METRICS
+    // 2. META ADS METRICS (LIVE GRAPH API + DB FALLBACK)
     // ==========================================
-    const [metaAccounts] = await pool.query('SELECT id, name FROM meta_ad_accounts LIMIT 2');
+    const axios = require('axios');
     
-    // Account 1
-    let acc1Name = 'N/A';
-    let acc1Spend = 0, acc1Leads = 0, acc1Impressions = 0, acc1Clicks = 0;
-
-    if (metaAccounts.length > 0) {
-        let rawName = metaAccounts[0].name.replace(/\(Read-Only\)/gi, '').trim() || metaAccounts[0].id;
-        rawName = rawName.replace('Outsourcing', '').replace(/\s+/g, ' ').trim();
-        acc1Name = rawName.length > 14 ? rawName.substring(0, 12) + '..' : rawName;
-
-        const [[acc1Trend]] = await pool.query(
-            `SELECT SUM(spend) AS spend, SUM(impressions) AS impressions, SUM(clicks) AS clicks 
-             FROM meta_insights_trend 
-             WHERE account_id = ? AND date_start BETWEEN ? AND ?`,
-            [metaAccounts[0].id, startWeeklyStr, endWeeklyStr]
+    function extractLeads(actionsArr) {
+        if (!Array.isArray(actionsArr)) return 0;
+        const leadAction = actionsArr.find(a => 
+            a.action_type === 'lead' || 
+            a.action_type === 'onsite_conversion.lead_grouped' || 
+            a.action_type === 'offsite_complete_registration_add_meta_leads'
         );
-        acc1Spend = parseFloat(acc1Trend?.spend || 0);
-        acc1Impressions = parseInt(acc1Trend?.impressions || 0);
-        acc1Clicks = parseInt(acc1Trend?.clicks || 0);
-
-        const [[acc1LeadsRow]] = await pool.query(
-            `SELECT COUNT(*) AS leads 
-             FROM meta_leads l 
-             JOIN meta_ads a ON l.ad_id = a.id 
-             WHERE a.account_id = ? AND DATE(l.created_time) BETWEEN ? AND ?`,
-            [metaAccounts[0].id, startWeeklyStr, endWeeklyStr]
-        );
-        acc1Leads = parseInt(acc1LeadsRow?.leads || 0);
+        return leadAction ? parseInt(leadAction.value || 0) : 0;
     }
 
-    // Account 2
-    let acc2Name = 'N/A';
-    let acc2Spend = 0, acc2Leads = 0, acc2Impressions = 0, acc2Clicks = 0;
+    const [metaConfigs] = await pool.query('SELECT id, access_token FROM meta_configs');
+    const accountMetricsMap = {};
 
-    if (metaAccounts.length > 1) {
-        let rawName = metaAccounts[1].name.replace(/\(Read-Only\)/gi, '').trim() || metaAccounts[1].id;
-        rawName = rawName.replace('Outsourcing Services Limited', 'Svcs Ltd').replace(/\s+/g, ' ').trim();
-        acc2Name = rawName.length > 12 ? rawName.substring(0, 10) + '..' : rawName;
+    for (const cfg of metaConfigs) {
+        const token = cfg.access_token;
+        if (!token) continue;
 
-        const [[acc2Trend]] = await pool.query(
-            `SELECT SUM(spend) AS spend, SUM(impressions) AS impressions, SUM(clicks) AS clicks 
-             FROM meta_insights_trend 
-             WHERE account_id = ? AND date_start BETWEEN ? AND ?`,
-            [metaAccounts[1].id, startWeeklyStr, endWeeklyStr]
+        const [accs] = await pool.query(
+            'SELECT id, name, amount_spent FROM meta_ad_accounts WHERE config_id = ? AND amount_spent > 0 ORDER BY amount_spent DESC',
+            [cfg.id]
         );
-        acc2Spend = parseFloat(acc2Trend?.spend || 0);
-        acc2Impressions = parseInt(acc2Trend?.impressions || 0);
-        acc2Clicks = parseInt(acc2Trend?.clicks || 0);
 
-        const [[acc2LeadsRow]] = await pool.query(
-            `SELECT COUNT(*) AS leads 
-             FROM meta_leads l 
-             JOIN meta_ads a ON l.ad_id = a.id 
-             WHERE a.account_id = ? AND DATE(l.created_time) BETWEEN ? AND ?`,
-            [metaAccounts[1].id, startWeeklyStr, endWeeklyStr]
-        );
-        acc2Leads = parseInt(acc2LeadsRow?.leads || 0);
+        for (const acc of accs) {
+            if (accountMetricsMap[acc.id]) continue;
+
+            let weeklyData = { spend: 0, impressions: 0, clicks: 0, leads: 0 };
+            let monthlyData = { spend: 0, impressions: 0, clicks: 0, leads: 0 };
+
+            // Fetch last_7d live insights
+            try {
+                const url7d = `https://graph.facebook.com/v24.0/${acc.id}/insights?date_preset=last_7d&fields=spend,impressions,clicks,actions&access_token=${token}`;
+                const res7d = await axios.get(url7d);
+                if (res7d.data?.data?.[0]) {
+                    const d = res7d.data.data[0];
+                    weeklyData = {
+                        spend: parseFloat(d.spend || 0),
+                        impressions: parseInt(d.impressions || 0),
+                        clicks: parseInt(d.clicks || 0),
+                        leads: extractLeads(d.actions)
+                    };
+                }
+            } catch (e) {
+                console.error(`Failed live 7d insights for Meta acc ${acc.id}:`, e.message);
+            }
+
+            // Fetch this_month live insights
+            try {
+                const urlMonth = `https://graph.facebook.com/v24.0/${acc.id}/insights?date_preset=this_month&fields=spend,impressions,clicks,actions&access_token=${token}`;
+                const resMonth = await axios.get(urlMonth);
+                if (resMonth.data?.data?.[0]) {
+                    const d = resMonth.data.data[0];
+                    monthlyData = {
+                        spend: parseFloat(d.spend || 0),
+                        impressions: parseInt(d.impressions || 0),
+                        clicks: parseInt(d.clicks || 0),
+                        leads: extractLeads(d.actions)
+                    };
+                }
+            } catch (e) {
+                console.error(`Failed live month insights for Meta acc ${acc.id}:`, e.message);
+            }
+
+            if (weeklyData.spend > 0 || monthlyData.spend > 0 || parseFloat(acc.amount_spent) > 0) {
+                accountMetricsMap[acc.id] = {
+                    id: acc.id,
+                    name: acc.name.replace(/\(Read-Only\)/gi, '').trim(),
+                    weekly: weeklyData,
+                    monthly: monthlyData
+                };
+            }
+        }
     }
 
-    // Overall Month Meta Performance
-    const [[metaMonthTrend]] = await pool.query(
-        `SELECT SUM(spend) AS spend, SUM(impressions) AS impressions, SUM(clicks) AS clicks 
-         FROM meta_insights_trend 
-         WHERE date_start BETWEEN ? AND ?`,
-        [startMonthlyStr, endWeeklyStr]
-    );
-    const metaMonthSpend = parseFloat(metaMonthTrend?.spend || 0);
-    const metaMonthImpressions = parseInt(metaMonthTrend?.impressions || 0);
-    const metaMonthClicks = parseInt(metaMonthTrend?.clicks || 0);
+    const activeMetaAccountsList = Object.values(accountMetricsMap).sort((a, b) => b.weekly.spend - a.weekly.spend);
 
-    const [[metaMonthLeadsRow]] = await pool.query(
-        `SELECT COUNT(*) AS leads 
-         FROM meta_leads 
-         WHERE DATE(created_time) BETWEEN ? AND ?`,
-        [startMonthlyStr, endWeeklyStr]
-    );
-    const metaMonthLeads = parseInt(metaMonthLeadsRow?.leads || 0);
+    const metaAcc1Obj = activeMetaAccountsList[0] || { name: 'N/A', weekly: { spend: 0, leads: 0, impressions: 0, clicks: 0 } };
+    const metaAcc2Obj = activeMetaAccountsList[1] || { name: 'N/A', weekly: { spend: 0, leads: 0, impressions: 0, clicks: 0 } };
+
+    let rawAcc1Name = metaAcc1Obj.name.replace('Outsourcing', '').replace(/\s+/g, ' ').trim();
+    const acc1Name = rawAcc1Name.length > 14 ? rawAcc1Name.substring(0, 12) + '..' : rawAcc1Name;
+    const acc1Spend = metaAcc1Obj.weekly.spend;
+    const acc1Leads = metaAcc1Obj.weekly.leads;
+    const acc1Impressions = metaAcc1Obj.weekly.impressions;
+    const acc1Clicks = metaAcc1Obj.weekly.clicks;
+
+    let rawAcc2Name = metaAcc2Obj.name.replace('Outsourcing Services Limited', 'Svcs Ltd').replace(/\s+/g, ' ').trim();
+    const acc2Name = rawAcc2Name.length > 12 ? rawAcc2Name.substring(0, 10) + '..' : rawAcc2Name;
+    const acc2Spend = metaAcc2Obj.weekly.spend;
+    const acc2Leads = metaAcc2Obj.weekly.leads;
+    const acc2Impressions = metaAcc2Obj.weekly.impressions;
+    const acc2Clicks = metaAcc2Obj.weekly.clicks;
+
+    const metaMonthSpend = activeMetaAccountsList.reduce((sum, a) => sum + a.monthly.spend, 0);
+    const metaMonthLeads = activeMetaAccountsList.reduce((sum, a) => sum + a.monthly.leads, 0);
+    const metaMonthClicks = activeMetaAccountsList.reduce((sum, a) => sum + a.monthly.clicks, 0);
+    const metaMonthImpressions = activeMetaAccountsList.reduce((sum, a) => sum + a.monthly.impressions, 0);
 
     // ==========================================
     // 3. GOOGLE ADS METRICS
