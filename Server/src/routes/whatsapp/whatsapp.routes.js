@@ -180,6 +180,28 @@ router.get('/dashboard/external-apps', whatsappExternalController.getDashboardEx
 router.get('/dashboard/external-templates', whatsappExternalController.getDashboardExternalTemplates);
 router.get('/dashboard/external-users', whatsappExternalController.getDashboardExternalUsers);
 
+// --- Weekly Business Report Routes ---
+const { sendWeeklyBusinessReport, getWeeklyReportMetrics } = require('../../services/weeklyBusinessReport.service');
+
+router.get('/weekly-report/preview', async (req, res) => {
+    try {
+        const metrics = await getWeeklyReportMetrics();
+        res.json({ success: true, metrics });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+router.post('/weekly-report/trigger', async (req, res) => {
+    try {
+        const { phone } = req.body;
+        const result = await sendWeeklyBusinessReport(phone);
+        res.json({ success: true, message: 'Weekly business report triggered successfully', data: result });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 module.exports = router;
 
 

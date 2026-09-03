@@ -21,6 +21,9 @@ const startServer = async () => {
     const { initDailyTaskCron } = require('./src/services/dailyTaskReminder.service');
     initDailyTaskCron();
 
+    const { initWeeklyBusinessReportCron } = require('./src/services/weeklyBusinessReport.service');
+    initWeeklyBusinessReportCron();
+
     // Start listening
     app.listen(PORT, () => {
         console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on http://localhost:${PORT}`);
