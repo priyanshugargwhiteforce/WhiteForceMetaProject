@@ -178,6 +178,79 @@ const initSchema = async () => {
             await pool.query("ALTER TABLE meta_ads ADD COLUMN owner_updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP");
         } catch (e) { /* Column might exist */ }
 
+        // 6f. Connected Google OAuth Accounts
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS google_accounts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NULL,
+                google_account_id VARCHAR(100) NOT NULL UNIQUE,
+                email VARCHAR(255) NOT NULL,
+                name VARCHAR(255) NULL,
+                picture VARCHAR(500) NULL,
+                refresh_token TEXT NOT NULL,
+                access_token TEXT NULL,
+                token_expires_at TIMESTAMP NULL,
+                scopes TEXT NULL,
+                status ENUM('active', 'revoked', 'expired') DEFAULT 'active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                CONSTRAINT fk_google_account_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        `);
+        console.log(' - google_accounts table created/verified');
+
+        // 6g. YouTube Channels Table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS youtube_channels (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                google_account_id INT NOT NULL,
+                channel_id VARCHAR(100) NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                description TEXT NULL,
+                custom_url VARCHAR(100) NULL,
+                thumbnail VARCHAR(500) NULL,
+                banner_url VARCHAR(500) NULL,
+                subscriber_count BIGINT DEFAULT 0,
+                video_count INT DEFAULT 0,
+                view_count BIGINT DEFAULT 0,
+                uploads_playlist_id VARCHAR(100) NULL,
+                published_at TIMESTAMP NULL,
+                status ENUM('active', 'inactive') DEFAULT 'active',
+                last_synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_acc_channel (google_account_id, channel_id),
+                CONSTRAINT fk_yt_channel_google_acc FOREIGN KEY (google_account_id) REFERENCES google_accounts(id) ON DELETE CASCADE
+            )
+        `);
+        console.log(' - youtube_channels table created/verified');
+
+        // 6h. YouTube Videos Table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS youtube_videos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                youtube_channel_id INT NOT NULL,
+                video_id VARCHAR(100) NOT NULL,
+                title VARCHAR(500) NOT NULL,
+                description TEXT NULL,
+                thumbnail VARCHAR(500) NULL,
+                published_at TIMESTAMP NULL,
+                duration VARCHAR(50) NULL,
+                privacy_status VARCHAR(50) DEFAULT 'public',
+                upload_status VARCHAR(50) DEFAULT 'processed',
+                live_broadcast_content VARCHAR(50) DEFAULT 'none',
+                view_count BIGINT DEFAULT 0,
+                like_count BIGINT DEFAULT 0,
+                comment_count BIGINT DEFAULT 0,
+                last_synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_channel_video (youtube_channel_id, video_id),
+                CONSTRAINT fk_youtube_video_channel FOREIGN KEY (youtube_channel_id) REFERENCES youtube_channels(id) ON DELETE CASCADE
+            )
+        `);
+        console.log(' - youtube_videos table created/verified');
+
         // 7. Google Ads Snapshots
         await pool.query(`
             CREATE TABLE IF NOT EXISTS google_ads_snapshots (

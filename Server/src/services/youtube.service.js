@@ -279,6 +279,367 @@ const getFailsafeShortsAnalytics = (views) => {
     };
 };
 
+/**
+ * Discover & Sync YouTube Channels for a connected Google Account
+ */
+const GoogleAccount = require('../models/googleAccount.model');
+const YoutubeChannel = require('../models/youtubeChannel.model');
+const googleAuthService = require('./googleAuth.service');
+
+const discoverChannelsForGoogleAccount = async (googleAccountId) => {
+    console.log(`[YouTube Channel Discovery] Discovering channels for Google Account DB ID: ${googleAccountId}...`);
+    
+    const account = await GoogleAccount.findByIdWithTokens(googleAccountId);
+    if (!account) {
+        throw new Error(`Google Account DB record ${googleAccountId} not found.`);
+    }
+
+    // Obtain valid access token using account's refresh_token
+    const accessToken = await googleAuthService.getValidAccessToken(googleAccountId);
+
+    const url = 'https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails,statistics&mine=true';
+    const response = await fetch(url, {
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json'
+        }
+    });
+
+    const data = await response.json();
+    const items = data.items || [];
+    const tokenRefreshSuccessful = !!accessToken;
+    const httpStatus = response.status;
+    const apiErrorReason = !response.ok ? (data.error?.message || JSON.stringify(data)) : null;
+    const returnedChannelIds = items.map(it => it.id);
+    const returnedChannelTitles = items.map(it => it.snippet?.title || 'Untitled');
+
+    console.log(`==================== YOUTUBE DIAGNOSTIC AUDIT ====================`);
+    console.log(`- Google Database Account ID : ${account.id}`);
+    console.log(`- Google Subject / Sub       : ${account.google_account_id}`);
+    console.log(`- Email                      : ${account.email}`);
+    console.log(`- OAuth Scopes               : ${account.scopes || 'N/A'}`);
+    console.log(`- Token Refresh Successful   : ${tokenRefreshSuccessful}`);
+    console.log(`- channels.list HTTP Status  : ${httpStatus}`);
+    console.log(`- channels.list Items Length : ${items.length}`);
+    console.log(`- Returned YouTube Channel IDs: ${returnedChannelIds.length > 0 ? returnedChannelIds.join(', ') : 'NONE'}`);
+    console.log(`- Returned Channel Titles    : ${returnedChannelTitles.length > 0 ? returnedChannelTitles.join(', ') : 'NONE'}`);
+    if (apiErrorReason) {
+        console.log(`- API Error Reason           : ${apiErrorReason}`);
+    }
+    console.log(`=================================================================`);
+
+    if (!response.ok) {
+        const errorMsg = data.error?.message || JSON.stringify(data);
+        if (response.status === 401 || errorMsg.includes('invalid_grant') || errorMsg.includes('revoked')) {
+            await GoogleAccount.updateStatus(account.id, 'revoked');
+            const err = new Error(`Authorization revoked or expired for ${account.email}`);
+            err.code = 'AUTH_REQUIRED';
+            throw err;
+        }
+        throw new Error(`YouTube API returned status ${response.status}: ${errorMsg}`);
+    }
+
+    const syncedChannels = [];
+    for (const item of items) {
+        const snippet = item.snippet || {};
+        const stats = item.statistics || {};
+        const contentDetails = item.contentDetails || {};
+
+        const channelData = {
+            google_account_id: account.id,
+            channel_id: item.id,
+            title: snippet.title || 'Untitled Channel',
+            description: snippet.description || '',
+            custom_url: snippet.customUrl || null,
+            thumbnail: snippet.thumbnails?.high?.url || snippet.thumbnails?.medium?.url || snippet.thumbnails?.default?.url || null,
+            banner_url: item.brandingSettings?.image?.bannerExternalUrl || null,
+            subscriber_count: parseInt(stats.subscriberCount) || 0,
+            video_count: parseInt(stats.videoCount) || 0,
+            view_count: parseInt(stats.viewCount) || 0,
+            uploads_playlist_id: contentDetails.relatedPlaylists?.uploads || null,
+            published_at: snippet.publishedAt ? new Date(snippet.publishedAt) : null,
+            status: 'active'
+        };
+
+        await YoutubeChannel.upsertChannel(channelData);
+        syncedChannels.push(channelData);
+    }
+
+    return {
+        success: true,
+        googleAccountId: account.id,
+        email: account.email,
+        channelCount: syncedChannels.length,
+        channels: syncedChannels
+    };
+};
+
+/**
+ * Sync YouTube Channels across all connected Google Accounts for a user
+ */
+const syncAllUserChannels = async (userId = null) => {
+    console.log(`[YouTube Channel Discovery] Starting full sync across connected Google Accounts (User ID: ${userId || 'All/Admin'})...`);
+    
+    const accounts = await GoogleAccount.findAll(userId);
+    if (accounts.length === 0) {
+        return {
+            summary: { accountsProcessed: 0, channelsDiscovered: 0, errors: 0 },
+            accountResults: [],
+            channels: []
+        };
+    }
+
+    const accountResults = [];
+    let totalDiscovered = 0;
+    let totalErrors = 0;
+
+    for (const account of accounts) {
+        try {
+            const result = await discoverChannelsForGoogleAccount(account.id);
+            totalDiscovered += result.channelCount;
+            accountResults.push({
+                accountId: account.id,
+                email: account.email,
+                name: account.name,
+                status: 'SUCCESS',
+                channelCount: result.channelCount
+            });
+        } catch (err) {
+            totalErrors++;
+            console.error(`[YouTube Channel Discovery Error] Failed to sync account ${account.email}:`, err.message);
+            accountResults.push({
+                accountId: account.id,
+                email: account.email,
+                name: account.name,
+                status: err.code === 'AUTH_REQUIRED' ? 'AUTH_REQUIRED' : 'ERROR',
+                error: err.message
+            });
+        }
+    }
+
+    // Fetch updated channels list
+    const allChannels = await YoutubeChannel.findAllForUser(userId);
+
+    return {
+        summary: {
+            accountsProcessed: accounts.length,
+            channelsDiscovered: totalDiscovered,
+            errors: totalErrors
+        },
+        accountResults,
+        channels: allChannels
+    };
+};
+
+/**
+ * Discover & Sync Videos for a specific YouTube Channel using uploads playlist
+ */
+const YoutubeVideo = require('../models/youtubeVideo.model');
+const { pool } = require('../config/db');
+
+const syncChannelVideos = async (channelDbId, userId = null) => {
+    console.log(`[YouTube Video Sync] Starting video sync for Channel DB ID: ${channelDbId}...`);
+
+    const channel = await YoutubeChannel.findById(channelDbId, userId);
+    if (!channel) {
+        throw new Error(`YouTube Channel record ${channelDbId} not found or unauthorized.`);
+    }
+
+    // Get valid access token using channel's Google Account ID
+    const accessToken = await googleAuthService.getValidAccessToken(channel.google_account_id);
+
+    let uploadsPlaylistId = channel.uploads_playlist_id;
+
+    // Fallback: If uploads_playlist_id is missing, query channel details to fetch it
+    if (!uploadsPlaylistId) {
+        console.log(`[YouTube Video Sync] Channel ${channel.title} missing uploads_playlist_id. Querying channel contentDetails...`);
+        const chUrl = `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channel.channel_id}`;
+        const chRes = await fetch(chUrl, {
+            headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' }
+        });
+        const chData = await chRes.json();
+        if (chData.items && chData.items.length > 0) {
+            uploadsPlaylistId = chData.items[0].contentDetails?.relatedPlaylists?.uploads;
+            if (uploadsPlaylistId) {
+                await pool.query('UPDATE youtube_channels SET uploads_playlist_id = ? WHERE id = ?', [uploadsPlaylistId, channel.id]);
+            }
+        }
+    }
+
+    if (!uploadsPlaylistId) {
+        throw new Error(`No uploads playlist ID found for YouTube Channel "${channel.title}".`);
+    }
+
+    // STEP 1: Paginate playlistItems.list to discover all uploaded video IDs
+    const discoveredVideoIds = [];
+    let pageToken = '';
+    let pageCount = 0;
+
+    console.log(`[YouTube Video Sync] Fetching playlistItems for uploads playlist: ${uploadsPlaylistId}...`);
+
+    do {
+        let playlistUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails,status&playlistId=${uploadsPlaylistId}&maxResults=50`;
+        if (pageToken) {
+            playlistUrl += `&pageToken=${pageToken}`;
+        }
+
+        const playlistRes = await fetch(playlistUrl, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/json'
+            }
+        });
+
+        const playlistData = await playlistRes.json();
+        if (!playlistRes.ok) {
+            const errReason = playlistData.error?.message || JSON.stringify(playlistData);
+            console.error(`[YouTube Video Sync Error] playlistItems.list failed for channel ${channel.title}:`, errReason);
+            throw new Error(`YouTube API playlistItems.list error: ${errReason}`);
+        }
+
+        const items = playlistData.items || [];
+        for (const item of items) {
+            const videoId = item.contentDetails?.videoId || item.snippet?.resourceId?.videoId;
+            if (videoId) {
+                discoveredVideoIds.push(videoId);
+            }
+        }
+
+        pageToken = playlistData.nextPageToken || null;
+        pageCount++;
+        console.log(`[YouTube Video Sync] Page ${pageCount}: Fetched ${items.length} items (Total IDs: ${discoveredVideoIds.length}).`);
+    } while (pageToken);
+
+    console.log(`[YouTube Video Sync] Channel "${channel.title}": Discovered ${discoveredVideoIds.length} total video ID(s) across ${pageCount} page(s).`);
+
+    if (discoveredVideoIds.length === 0) {
+        return {
+            success: true,
+            channelId: channel.channel_id,
+            channelTitle: channel.title,
+            discoveredCount: 0,
+            syncedCount: 0,
+            pagesFetched: pageCount
+        };
+    }
+
+    // STEP 2: Batch query videos.list in chunks of max 50 video IDs
+    const videoRecords = [];
+    const BATCH_SIZE = 50;
+
+    for (let i = 0; i < discoveredVideoIds.length; i += BATCH_SIZE) {
+        const batchIds = discoveredVideoIds.slice(i, i + BATCH_SIZE);
+        console.log(`[YouTube Video Sync] Batch fetching details for ${batchIds.length} video(s) (${i + 1} to ${i + batchIds.length})...`);
+
+        const videosUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics,status,liveStreamingDetails&id=${batchIds.join(',')}`;
+        const videosRes = await fetch(videosUrl, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/json'
+            }
+        });
+
+        const videosData = await videosRes.json();
+        if (!videosRes.ok) {
+            const errReason = videosData.error?.message || JSON.stringify(videosData);
+            console.error(`[YouTube Video Sync Error] videos.list batch failed for channel ${channel.title}:`, errReason);
+            throw new Error(`YouTube API videos.list error: ${errReason}`);
+        }
+
+        const items = videosData.items || [];
+        for (const item of items) {
+            const snippet = item.snippet || {};
+            const stats = item.statistics || {};
+            const details = item.contentDetails || {};
+            const status = item.status || {};
+
+            videoRecords.push({
+                youtube_channel_id: channel.id,
+                video_id: item.id,
+                title: snippet.title || 'Untitled Video',
+                description: snippet.description || '',
+                thumbnail: snippet.thumbnails?.maxres?.url || snippet.thumbnails?.high?.url || snippet.thumbnails?.medium?.url || snippet.thumbnails?.default?.url || null,
+                published_at: snippet.publishedAt ? new Date(snippet.publishedAt) : null,
+                duration: details.duration || null,
+                privacy_status: status.privacyStatus || 'public',
+                upload_status: status.uploadStatus || 'processed',
+                live_broadcast_content: snippet.liveBroadcastContent || 'none',
+                view_count: parseInt(stats.viewCount) || 0,
+                like_count: parseInt(stats.likeCount) || 0,
+                comment_count: parseInt(stats.commentCount) || 0
+            });
+        }
+    }
+
+    // STEP 3: Bulk Upsert into youtube_videos
+    if (videoRecords.length > 0) {
+        await YoutubeVideo.bulkUpsertVideos(videoRecords);
+        await pool.query('UPDATE youtube_channels SET last_synced_at = CURRENT_TIMESTAMP WHERE id = ?', [channel.id]);
+    }
+
+    return {
+        success: true,
+        channelId: channel.channel_id,
+        channelTitle: channel.title,
+        discoveredCount: discoveredVideoIds.length,
+        syncedCount: videoRecords.length,
+        pagesFetched: pageCount,
+        batchesProcessed: Math.ceil(discoveredVideoIds.length / BATCH_SIZE)
+    };
+};
+
+/**
+ * Sync videos across all accessible YouTube channels for a user
+ */
+const syncAllUserChannelsVideos = async (userId = null) => {
+    const channels = await YoutubeChannel.findAllForUser(userId);
+    if (channels.length === 0) {
+        return {
+            summary: { channelsProcessed: 0, totalDiscovered: 0, totalSynced: 0, errors: 0 },
+            results: []
+        };
+    }
+
+    const results = [];
+    let totalDiscovered = 0;
+    let totalSynced = 0;
+    let totalErrors = 0;
+
+    for (const ch of channels) {
+        try {
+            const res = await syncChannelVideos(ch.id, userId);
+            totalDiscovered += res.discoveredCount;
+            totalSynced += res.syncedCount;
+            results.push({
+                channelDbId: ch.id,
+                channelTitle: ch.title,
+                status: 'SUCCESS',
+                discoveredCount: res.discoveredCount,
+                syncedCount: res.syncedCount
+            });
+        } catch (err) {
+            totalErrors++;
+            console.error(`[YouTube Video Sync Error] Channel "${ch.title}":`, err.message);
+            results.push({
+                channelDbId: ch.id,
+                channelTitle: ch.title,
+                status: 'ERROR',
+                error: err.message
+            });
+        }
+    }
+
+    return {
+        summary: {
+            channelsProcessed: channels.length,
+            totalDiscovered,
+            totalSynced,
+            errors: totalErrors
+        },
+        results
+    };
+};
+
 module.exports = {
     getAccessToken,
     getVideoDetails,
@@ -286,5 +647,11 @@ module.exports = {
     getFailsafeAnalytics,
     getChannelShorts,
     getFailsafeShorts,
-    getFailsafeShortsAnalytics
+    getFailsafeShortsAnalytics,
+    discoverChannelsForGoogleAccount,
+    syncAllUserChannels,
+    syncChannelVideos,
+    syncAllUserChannelsVideos
 };
+
+

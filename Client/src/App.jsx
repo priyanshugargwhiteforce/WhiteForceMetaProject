@@ -14,10 +14,13 @@ import GoogleCampaigns from './components/GoogleCampaigns';
 import GooglePerformance from './components/GooglePerformance';
 import GoogleInsights from './components/GoogleInsights';
 import GoogleLeads from './components/GoogleLeads';
+import GoogleAccountManager from './components/GoogleAccountManager';
 import YoutubeAds from './components/YoutubeAds';
 import YoutubeAdDetail from './components/YoutubeAdDetail';
 import YoutubeShortsManager from './components/YoutubeShortsManager';
 import YoutubeShorts from './components/YoutubeShorts';
+import YoutubeChannelDashboard from './components/YoutubeChannelDashboard';
+import YoutubeVideoDashboard from './components/YoutubeVideoDashboard';
 import Overview from './components/Overview';
 import Reports from './components/Reports';
 import WhatsAppManager from './components/whatsapp/WhatsAppManager';
@@ -246,6 +249,36 @@ function App() {
                                 <ProtectedRoute>
                                     <PermissionRoute permission="google_access">
                                         <GoogleLeads />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/google-accounts" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="google_access">
+                                        <GoogleAccountManager />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/youtube-channel-dashboard" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="google_access">
+                                        <YoutubeChannelDashboard />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/youtube-video-dashboard" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="google_access">
+                                        <YoutubeVideoDashboard />
                                     </PermissionRoute>
                                 </ProtectedRoute>
                             } 
