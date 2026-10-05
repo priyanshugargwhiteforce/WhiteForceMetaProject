@@ -13,11 +13,16 @@ import GoogleDashboard from './components/GoogleDashboard';
 import GoogleCampaigns from './components/GoogleCampaigns';
 import GooglePerformance from './components/GooglePerformance';
 import GoogleInsights from './components/GoogleInsights';
+import GoogleLeads from './components/GoogleLeads';
+import GoogleAccountManager from './components/GoogleAccountManager';
 import YoutubeAds from './components/YoutubeAds';
 import YoutubeAdDetail from './components/YoutubeAdDetail';
 import YoutubeShortsManager from './components/YoutubeShortsManager';
 import YoutubeShorts from './components/YoutubeShorts';
+import YoutubeChannelDashboard from './components/YoutubeChannelDashboard';
+import YoutubeVideoDashboard from './components/YoutubeVideoDashboard';
 import Overview from './components/Overview';
+import Reports from './components/Reports';
 import WhatsAppManager from './components/whatsapp/WhatsAppManager';
 import WATemplates from './components/whatsapp/WATemplates';
 import SendMessage from './components/whatsapp/SendMessage';
@@ -28,7 +33,9 @@ import WAAnalytics from './components/whatsapp/WAAnalytics';
 import WACampaigns from './components/whatsapp/WACampaigns';
 import WASchedules from './components/whatsapp/WASchedules';
 import WAChatWindow from './components/whatsapp/WAChatWindow';
+import WACalls from './components/whatsapp/WACalls';
 import WAExternalTracker from './components/whatsapp/WAExternalTracker';
+import PageTracker from './components/PageTracker';
 
 import UserManagement from './components/UserManagement';
 import AllLeads from './components/AllLeads';
@@ -45,11 +52,14 @@ import MetaSettings from './components/MetaSettings';
 import WhatsAppSettings from './components/WhatsAppSettings';
 import AdOwner from './components/AdOwner';
 import TaskManager from './components/TaskManager';
+import DailyTaskManager from './components/DailyTaskManager';
+import MoMManager from './components/MoMManager';
 import MediaLibrary from './components/media/MediaLibrary';
 import LinkedInAssetManager from './components/linkedin/LinkedInAssetManager';
 import CreativeBuilder from './components/linkedin/CreativeBuilder';
 import CreativeLibrary from './components/linkedin/CreativeLibrary';
 import MetaPosting from './components/MetaPosting';
+import Profile from './components/Profile';
 import './App.css';
 
 import Layout from './components/Layout';
@@ -174,6 +184,16 @@ function App() {
                             } 
                         />
                         <Route 
+                            path="/page-tracker" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="meta_access">
+                                        <PageTracker />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
                             path="/meta-posting" 
                             element={
                                 <ProtectedRoute>
@@ -219,6 +239,46 @@ function App() {
                                 <ProtectedRoute>
                                     <PermissionRoute permission="google_access">
                                         <GoogleInsights />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/google-leads" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="google_access">
+                                        <GoogleLeads />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/google-accounts" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="google_access">
+                                        <GoogleAccountManager />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/youtube-channel-dashboard" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="google_access">
+                                        <YoutubeChannelDashboard />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/youtube-video-dashboard" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="google_access">
+                                        <YoutubeVideoDashboard />
                                     </PermissionRoute>
                                 </ProtectedRoute>
                             } 
@@ -343,6 +403,16 @@ function App() {
                                 </ProtectedRoute>
                             } 
                         />
+                        <Route 
+                            path="/wa-calls" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="whatsapp_access">
+                                        <WACalls />
+                                    </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
 
                         <Route 
                             path="/wa-campaigns" 
@@ -371,6 +441,14 @@ function App() {
                                     <PermissionRoute permission="whatsapp_access">
                                         <WAExternalTracker />
                                     </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/reports" 
+                            element={
+                                <ProtectedRoute>
+                                    <Reports />
                                 </ProtectedRoute>
                             } 
                         />
@@ -429,6 +507,22 @@ function App() {
                             element={
                                 <ProtectedRoute>
                                     <TaskManager />
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/daily-tasks" 
+                            element={
+                                <ProtectedRoute>
+                                    <DailyTaskManager />
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/mom" 
+                            element={
+                                <ProtectedRoute>
+                                    <MoMManager />
                                 </ProtectedRoute>
                             } 
                         />
@@ -530,13 +624,53 @@ function App() {
                                 </ProtectedRoute>
                             } 
                         />
-                        <Route path="/linkedin-ads" element={<ProtectedRoute><PermissionRoute permission="linkedin_access"><AdLibrary /></PermissionRoute></ProtectedRoute>} />
-                        <Route path="/linkedin-ads/new" element={<ProtectedRoute><PermissionRoute permission="linkedin_access"><LinkedInAdBuilder /></PermissionRoute></ProtectedRoute>} />
-                        <Route path="/linkedin-ads/:id" element={<ProtectedRoute><PermissionRoute permission="linkedin_access"><AdDetail /></PermissionRoute></ProtectedRoute>} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
-                        <Route path="/forgot-password" element={<ForgotPassword />} />
-                        <Route path="/reset-password/:token" element={<ResetPassword />} />
+                        <Route 
+                            path="/linkedin-ads" 
+                            element={<ProtectedRoute><PermissionRoute permission="linkedin_access"><AdLibrary /></PermissionRoute></ProtectedRoute>} />
+                        <Route 
+                            path="/linkedin-ads/new" 
+                            element={
+                            <ProtectedRoute>
+                                <PermissionRoute permission="linkedin_access">
+                                    <LinkedInAdBuilder />
+                                    </PermissionRoute>
+                            </ProtectedRoute>
+                            } 
+                           />
+                        <Route 
+                            path="/linkedin-ads/:id" 
+                            element={
+                                <ProtectedRoute>
+                                    <PermissionRoute permission="linkedin_access">
+                                        <AdDetail />
+                                        </PermissionRoute>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/profile" 
+                            element={
+                                <ProtectedRoute>
+                                    <Profile />
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/login" 
+                                element={<Login />} 
+                        />
+                        <Route 
+                            path="/register" 
+                            element={<Register />} 
+                        />
+                        <Route 
+                            path="/forgot-password" 
+                            element={<ForgotPassword />} 
+                        />
+                        <Route 
+                            path="/reset-password/:token" 
+                            element={<ResetPassword />} 
+                        />
                     </Routes>
                     </Router>
                 </AdBuilderProvider>

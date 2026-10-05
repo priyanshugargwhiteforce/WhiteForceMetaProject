@@ -9,6 +9,7 @@ import {
   Globe, Filter, FileText, CheckCircle, Database
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import CustomSelect from './CustomSelect';
 
 const TIME_RANGES = {
   TODAY: 'today',
@@ -429,18 +430,20 @@ const MetaDashboard = () => {
 
         <div className="flex flex-wrap items-center gap-3">
           {/* Meta Account Connection Dropdown */}
-          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 transition-colors">
+          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-1 transition-colors">
             <Database className="w-4 h-4 text-blue-500" />
-            <select
+            <CustomSelect
               value={selectedConfigId}
-              onChange={handleConfigChange}
-              className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-200"
-            >
-              <option value="" className="bg-white dark:bg-slate-900">Default Server Account</option>
-              {metaConfigs.map(cfg => (
-                <option key={cfg.id} value={cfg.id} className="bg-white dark:bg-slate-900">{cfg.name}</option>
-              ))}
-            </select>
+              onChange={(val) => {
+                setSelectedConfigId(val);
+                localStorage.setItem('selectedMetaConfigId', val);
+              }}
+              options={[
+                { value: "", label: "Default Server Account" },
+                ...metaConfigs.map(cfg => ({ value: cfg.id, label: cfg.name }))
+              ]}
+              className="border-none bg-transparent py-1 text-xs px-1 min-w-[160px]"
+            />
           </div>
 
           {/* Sync Button */}
@@ -454,19 +457,12 @@ const MetaDashboard = () => {
           </button>
 
           {/* Ad Account Selector */}
-          <select
+          <CustomSelect
             value={selectedAccount?.id || ""}
-            onChange={(e) => setSelectedAccount(adAccounts.find(a => a.id === e.target.value))}
-            className="bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-white cursor-pointer"
-          >
-            {adAccounts.length === 0 ? (
-              <option value="">No Ad Accounts</option>
-            ) : (
-              adAccounts.map(acc => (
-                <option key={acc.id} value={acc.id}>{acc.name}</option>
-              ))
-            )}
-          </select>
+            onChange={(val) => setSelectedAccount(adAccounts.find(a => a.id === val))}
+            options={adAccounts.length === 0 ? [{ value: "", label: "No Ad Accounts" }] : adAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
+            className="rounded-2xl px-4 py-2.5 text-sm min-w-[200px]"
+          />
         </div>
       </div>
 
@@ -493,20 +489,19 @@ const MetaDashboard = () => {
             {/* Dynamic Month Selector */}
             <div className="flex items-center space-x-1.5">
               <span className="text-[10px] text-slate-400 font-bold uppercase">Month:</span>
-              <select
+              <CustomSelect
                 value={selectedMonth}
-                onChange={(e) => {
+                onChange={(val) => {
                   setStartDate('');
                   setEndDate('');
-                  setSelectedMonth(e.target.value);
+                  setSelectedMonth(val);
                 }}
-                className="bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-2xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-700 dark:text-slate-300 min-w-[150px]"
-              >
-                <option value="">All Months</option>
-                {getRecentMonths().map(m => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
-                ))}
-              </select>
+                options={[
+                  { value: "", label: "All Months" },
+                  ...getRecentMonths().map(m => ({ value: m.value, label: m.label }))
+                ]}
+                className="rounded-2xl px-3 py-2 text-xs min-w-[150px]"
+              />
             </div>
 
             {/* Custom Date Range Pickers */}
@@ -707,19 +702,20 @@ const MetaDashboard = () => {
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className="text-[10px] text-slate-400 font-bold uppercase">Showing:</span>
-                  <select
+                  <CustomSelect
                     value={leadsPerPage}
-                    onChange={(e) => {
-                      setLeadsPerPage(Number(e.target.value));
+                    onChange={(val) => {
+                      setLeadsPerPage(Number(val));
                       setLeadsCurrentPage(1);
                     }}
-                    className="bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-xl px-2.5 py-1 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-700 dark:text-slate-300 cursor-pointer"
-                  >
-                    <option value={5}>5 per page</option>
-                    <option value={10}>10 per page</option>
-                    <option value={20}>20 per page</option>
-                    <option value={50}>50 per page</option>
-                  </select>
+                    options={[
+                      { value: 5, label: "5 per page" },
+                      { value: 10, label: "10 per page" },
+                      { value: 20, label: "20 per page" },
+                      { value: 50, label: "50 per page" }
+                    ]}
+                    className="rounded-xl px-2.5 py-1 text-xs"
+                  />
                 </div>
               </div>
 

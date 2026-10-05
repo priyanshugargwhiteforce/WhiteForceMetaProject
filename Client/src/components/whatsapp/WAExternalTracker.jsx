@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import CustomSelect from '../CustomSelect';
 import {
     Database,
     Calendar,
@@ -16,8 +17,304 @@ import {
     SlidersHorizontal,
     MessageSquare,
     AlertCircle,
-    X
+    X,
+    MapPin,
+    Mic,
+    Image,
+    Video,
+    FileText,
+    Smile,
+    UserCheck,
+    MousePointerClick,
+    ShoppingBag,
+    ExternalLink
 } from 'lucide-react';
+
+const renderTemplateMessage = (templateComponents, params) => {
+    if (!templateComponents || !Array.isArray(templateComponents)) {
+        return null;
+    }
+
+    const headerComp = templateComponents.find(c => c.type === 'HEADER');
+    const bodyComp = templateComponents.find(c => c.type === 'BODY');
+    const footerComp = templateComponents.find(c => c.type === 'FOOTER');
+    const buttonComp = templateComponents.find(c => c.type === 'BUTTONS');
+
+    const replaceParams = (text) => {
+        if (!text) return '';
+        let result = text;
+        if (params) {
+            if (Array.isArray(params)) {
+                params.forEach((param, index) => {
+                    const placeholder = `{{${index + 1}}}`;
+                    const val = typeof param === 'object' && param !== null ? (param.text || JSON.stringify(param)) : String(param);
+                    result = result.replaceAll(placeholder, val);
+                });
+            } else if (typeof params === 'object') {
+                Object.entries(params).forEach(([key, param]) => {
+                    const placeholder = `{{${key}}}`;
+                    const val = typeof param === 'object' && param !== null ? (param.text || JSON.stringify(param)) : String(param);
+                    result = result.replaceAll(placeholder, val);
+                });
+            }
+        }
+        return result;
+    };
+
+    const headerText = headerComp && headerComp.format === 'TEXT' ? replaceParams(headerComp.text) : '';
+    const bodyText = bodyComp ? replaceParams(bodyComp.text) : '';
+    const footerText = footerComp ? replaceParams(footerComp.text) : '';
+
+    return {
+        headerText,
+        bodyText,
+        footerText,
+        buttons: buttonComp ? buttonComp.buttons : []
+    };
+};
+
+const renderRichMessageBody = (msg) => {
+    // 1. Location
+    if (msg.location || msg.type === 'location') {
+        const loc = msg.location || {};
+        return (
+            <div className="space-y-1.5 p-2.5 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1">
+                <div className="flex items-start gap-2">
+                    <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500 border border-rose-500/20 shrink-0">
+                        <MapPin className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <p className="font-bold text-xs text-slate-900 dark:text-white">
+                            {loc.name || 'Shared Location'}
+                        </p>
+                        {loc.address && (
+                            <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug mt-0.5">{loc.address}</p>
+                        )}
+                    </div>
+                </div>
+                {loc.url && (
+                    <a
+                        href={loc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-semibold transition-colors shadow-sm mt-1"
+                    >
+                        <ExternalLink className="w-3 h-3" />
+                        Open in Google Maps
+                    </a>
+                )}
+            </div>
+        );
+    }
+
+    // 2. Audio / Voice Note
+    if (msg.type === 'audio' || msg.type === 'voice' || msg.audio_url) {
+        const isVoice = msg.type === 'voice';
+        const token = localStorage.getItem('token') || '';
+        const audioSource = msg.audio_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
+        return (
+            <div className="space-y-1.5 p-2.5 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1">
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-full bg-purple-500/10 text-purple-500 border border-purple-500/20 shrink-0">
+                        <Mic className="w-4 h-4 text-purple-400 animate-pulse" />
+                    </div>
+                    <div>
+                        <p className="font-semibold text-xs text-slate-900 dark:text-white">
+                            {isVoice ? '🎙️ Voice Note' : '🎵 Audio Message'}
+                        </p>
+                    </div>
+                </div>
+                {audioSource ? (
+                    <div className="pt-1">
+                        <audio controls className="w-full max-w-[240px] h-8 rounded-lg outline-none" src={audioSource}>
+                            Your browser does not support the audio player.
+                        </audio>
+                    </div>
+                ) : (
+                    <p className="text-[10px] text-slate-400 font-mono">Attachment ID: {msg.media_id || 'Voice Track'}</p>
+                )}
+            </div>
+        );
+    }
+
+    // 3. Image
+    if (msg.type === 'image') {
+        const token = localStorage.getItem('token') || '';
+        const imageSrc = msg.image_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
+        return (
+            <div className="space-y-1.5 my-1">
+                {imageSrc ? (
+                    <div className="overflow-hidden rounded-xl border border-slate-200/50 dark:border-white/10 max-w-xs">
+                        <a href={imageSrc} target="_blank" rel="noopener noreferrer" title="Click to view full image">
+                            <img src={imageSrc} alt={msg.caption || 'Photo'} className="w-full h-auto max-h-60 object-cover hover:scale-[1.02] transition-transform duration-200" loading="lazy" />
+                        </a>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2 rounded-lg border border-slate-200/50 dark:border-white/10">
+                        <Image className="w-4 h-4 text-blue-500" />
+                        <span>Photo</span>
+                    </div>
+                )}
+                {msg.caption && <p className="text-xs select-text">{msg.caption}</p>}
+                {msg.received_message_text && msg.received_message_text !== '📷 Photo' && !msg.received_message_text.startsWith('📷 Photo:') && (
+                    <p className="text-xs select-text">{msg.received_message_text}</p>
+                )}
+            </div>
+        );
+    }
+
+    // 4. Video
+    if (msg.type === 'video') {
+        const token = localStorage.getItem('token') || '';
+        const videoSrc = msg.video_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
+        return (
+            <div className="space-y-1.5 my-1">
+                {videoSrc ? (
+                    <div className="overflow-hidden rounded-xl border border-slate-200/50 dark:border-white/10 max-w-xs">
+                        <video controls className="w-full max-h-60 rounded-xl" src={videoSrc}>
+                            Your browser does not support the video player.
+                        </video>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2 rounded-lg border border-slate-200/50 dark:border-white/10">
+                        <Video className="w-4 h-4 text-purple-500" />
+                        <span>Video</span>
+                    </div>
+                )}
+                {msg.caption && <p className="text-xs select-text">{msg.caption}</p>}
+            </div>
+        );
+    }
+
+    // 5. Document
+    if (msg.type === 'document') {
+        const token = localStorage.getItem('token') || '';
+        const docSrc = msg.document_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
+        return (
+            <div className="space-y-1.5 my-1">
+                <div className="flex items-center justify-between gap-3 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2.5 rounded-xl border border-slate-200/50 dark:border-white/10">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="w-4 h-4 text-amber-500 shrink-0" />
+                        <span className="truncate">{msg.filename || 'Document'}</span>
+                    </div>
+                    {docSrc && (
+                        <a href={docSrc} target="_blank" rel="noopener noreferrer" download={msg.filename || 'document'} className="p-1 bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white rounded-md transition-colors shrink-0" title="Download Document">
+                            <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                    )}
+                </div>
+                {msg.caption && <p className="text-xs select-text">{msg.caption}</p>}
+            </div>
+        );
+    }
+
+    // 6. Sticker
+    if (msg.type === 'sticker') {
+        const token = localStorage.getItem('token') || '';
+        const stickerSrc = msg.sticker_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
+        return (
+            <div className="my-1">
+                {stickerSrc ? (
+                    <div className="inline-block p-1 rounded-2xl bg-transparent">
+                        <img src={stickerSrc} alt="Sticker" className="w-24 h-24 object-contain hover:scale-105 transition-transform" loading="lazy" />
+                    </div>
+                ) : (
+                    <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2 rounded-xl border border-slate-200/50 dark:border-white/10">
+                        <Smile className="w-4 h-4 text-amber-500" />
+                        <span>🎨 Sticker</span>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // 7. Contact Card
+    if (msg.type === 'contacts' || msg.contacts) {
+        const contactObj = Array.isArray(msg.contacts) ? msg.contacts[0] : (msg.contacts || {});
+        const name = contactObj.name || 'Shared Contact';
+        const phone = contactObj.phone || '';
+
+        return (
+            <div className="space-y-1.5 p-2.5 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1 max-w-xs">
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center border border-emerald-500/20 shrink-0">
+                        <UserCheck className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <p className="font-bold text-xs truncate">{name}</p>
+                        {phone && <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">{phone}</p>}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // 8. Interactive / Button Response
+    if (msg.type === 'interactive' || msg.type === 'button' || msg.interactive) {
+        const interactive = msg.interactive || {};
+        const title = interactive.title || msg.received_message_text || msg.body || 'Button Option Selected';
+
+        return (
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 rounded-xl border border-emerald-500/20 my-1 text-xs font-semibold">
+                <MousePointerClick className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span>{title}</span>
+            </div>
+        );
+    }
+
+    // 9. Reaction
+    if (msg.type === 'reaction' || msg.emoji) {
+        return (
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-900/5 dark:bg-black/30 text-slate-800 dark:text-slate-200 rounded-full border border-slate-200/50 dark:border-white/10 text-xs font-medium my-0.5">
+                <span>Reacted {msg.emoji || msg.received_message_text}</span>
+            </div>
+        );
+    }
+
+    // 10. Catalog Order
+    if (msg.type === 'order' || msg.order) {
+        const order = msg.order || {};
+        const items = order.items || [];
+
+        return (
+            <div className="space-y-1.5 p-2.5 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1">
+                <div className="flex items-center gap-2">
+                    <ShoppingBag className="w-4 h-4 text-emerald-500" />
+                    <p className="font-bold text-xs">Order Received ({items.length} item{items.length === 1 ? '' : 's'})</p>
+                </div>
+                {items.map((item, idx) => (
+                    <div key={idx} className="text-[11px] flex items-center justify-between text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-black/20 p-1.5 rounded-lg">
+                        <span>Item ID: {item.product_retailer_id}</span>
+                        <span className="font-mono font-bold">x{item.quantity}</span>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    // 11. Unsupported Message Badge
+    if (msg.type === 'unsupported' || (msg.received_message_text && (msg.received_message_text.includes('[unsupported message]') || msg.received_message_text.includes('Unsupported Message')))) {
+        return (
+            <div className="flex items-start gap-2 p-2 bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded-xl border border-amber-500/20 text-xs my-1">
+                <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                    <p className="font-semibold text-xs">WhatsApp Format Notice</p>
+                    <p className="text-[10px] opacity-90 leading-tight mt-0.5">
+                        {msg.received_message_text && !msg.received_message_text.includes('[unsupported message]') ? msg.received_message_text : 'Received an incoming media/message format not supported by Meta API version.'}
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    // Default text fallback
+    return <p className="whitespace-pre-line select-text">{msg.received_message_text || msg.body}</p>;
+};
 
 const WAExternalTracker = () => {
     const [messages, setMessages] = useState([]);
@@ -38,6 +335,15 @@ const WAExternalTracker = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [totalRecords, setTotalRecords] = useState(0);
     const limit = 15;
+
+    // Status counts state
+    const [statusCounts, setStatusCounts] = useState({
+        sent: 0,
+        delivered: 0,
+        read: 0,
+        failed: 0,
+        replied: 0
+    });
 
     // Chat Modal States
     const [selectedPhone, setSelectedPhone] = useState(null);
@@ -83,6 +389,23 @@ const WAExternalTracker = () => {
         }
     };
 
+    // Dynamic users state
+    const [allowedUsers, setAllowedUsers] = useState([]);
+
+    const fetchUsers = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get('/api/whatsapp/dashboard/external-users', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.data.success) {
+                setAllowedUsers(response.data.users || []);
+            }
+        } catch (err) {
+            console.error('Error fetching dynamic users:', err);
+        }
+    };
+
     const fetchMessages = async () => {
         try {
             setLoading(true);
@@ -110,6 +433,16 @@ const WAExternalTracker = () => {
                 setMessages(response.data.messages || []);
                 setTotalPages(response.data.totalPages || 1);
                 setTotalRecords(response.data.total || 0);
+
+                // Parse status counts
+                const counts = { sent: 0, delivered: 0, read: 0, failed: 0, replied: 0 };
+                if (response.data.statusCounts) {
+                    response.data.statusCounts.forEach(item => {
+                        const statusKey = String(item.status).toLowerCase();
+                        counts[statusKey] = item.count;
+                    });
+                }
+                setStatusCounts(counts);
             }
         } catch (err) {
             console.error('Error fetching external messages:', err);
@@ -122,11 +455,12 @@ const WAExternalTracker = () => {
     useEffect(() => {
         fetchApps();
         fetchTemplates();
+        fetchUsers();
     }, []);
 
     useEffect(() => {
         fetchMessages();
-    }, [page, sourceApp, status, templateName]);
+    }, [page, sourceApp, status, templateName, sourceUserId]);
 
     const handleSearchSubmit = (e) => {
         e.preventDefault();
@@ -241,11 +575,44 @@ const WAExternalTracker = () => {
                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">In-House Apps Integrations Logs</p>
                     </div>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex flex-wrap items-center gap-3">
+                    {/* Status Stats Badges */}
+                    <div className="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 px-3 py-1.5 rounded-2xl shadow-sm">
+                        {/* Total Count Badge */}
+                        <div className="flex items-center space-x-1.5 border-r border-slate-200 dark:border-white/10 pr-2.5">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total:</span>
+                            <span className="text-xs font-extrabold text-slate-900 dark:text-white font-mono">{totalRecords}</span>
+                        </div>
+                        {/* Status Stats Badges */}
+                        {Object.entries(statusCounts).map(([statusKey, count]) => {
+                            const pct = totalRecords > 0 ? ((count / totalRecords) * 100).toFixed(0) : '0';
+                            
+                            // Dot styles and label colors
+                            const statusStyles = {
+                                sent: { dot: 'bg-blue-500', text: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/5' },
+                                delivered: { dot: 'bg-indigo-500', text: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-500/5' },
+                                read: { dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/5' },
+                                failed: { dot: 'bg-rose-500', text: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-500/5' },
+                                replied: { dot: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-500/5' }
+                            };
+
+                            const style = statusStyles[statusKey] || { dot: 'bg-slate-500', text: 'text-slate-600 dark:text-slate-400', bg: 'bg-slate-500/5' };
+
+                            return (
+                                <div key={statusKey} className={`flex items-center space-x-1.5 px-2 py-0.5 rounded-lg border border-slate-200/40 dark:border-white/5 ${style.bg}`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`}></span>
+                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 capitalize">{statusKey}</span>
+                                    <span className={`text-[10px] font-extrabold font-mono ${style.text}`}>{count}</span>
+                                    <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono font-medium">({pct}%)</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+
                     <button
                         onClick={fetchMessages}
                         disabled={loading}
-                        className="p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 hover:text-green-500 transition-all"
+                        className="p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 hover:text-green-500 transition-all cursor-pointer"
                     >
                         <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
                     </button>
@@ -263,33 +630,33 @@ const WAExternalTracker = () => {
                     {/* Source App Filter */}
                     <div className="flex flex-col space-y-1">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Source App</label>
-                        <select
+                        <CustomSelect
                             value={sourceApp}
-                            onChange={(e) => setSourceApp(e.target.value)}
-                            className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-700 dark:text-slate-200"
-                        >
-                            <option value="" className="bg-white dark:bg-slate-900">All Applications</option>
-                            {allowedApps.map(app => (
-                                <option key={app.id} value={app.id} className="bg-white dark:bg-slate-900">{app.label}</option>
-                            ))}
-                        </select>
+                            onChange={setSourceApp}
+                            options={[
+                                { value: "", label: "All Applications" },
+                                ...allowedApps.map(app => ({ value: app.id, label: app.label }))
+                            ]}
+                            className="rounded-xl px-3 py-2 text-xs"
+                        />
                     </div>
 
                     {/* Status Filter */}
                     <div className="flex flex-col space-y-1">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Delivery Status</label>
-                        <select
+                        <CustomSelect
                             value={status}
-                            onChange={(e) => setStatus(e.target.value)}
-                            className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-700 dark:text-slate-200"
-                        >
-                            <option value="" className="bg-white dark:bg-slate-900">All Statuses</option>
-                            <option value="sent" className="bg-white dark:bg-slate-900">Sent</option>
-                            <option value="delivered" className="bg-white dark:bg-slate-900">Delivered</option>
-                            <option value="read" className="bg-white dark:bg-slate-900">Read</option>
-                            <option value="failed" className="bg-white dark:bg-slate-900">Failed</option>
-                            <option value="replied" className="bg-white dark:bg-slate-900">Replied</option>
-                        </select>
+                            onChange={setStatus}
+                            options={[
+                                { value: "", label: "All Statuses" },
+                                { value: "sent", label: "Sent" },
+                                { value: "delivered", label: "Delivered" },
+                                { value: "read", label: "Read" },
+                                { value: "failed", label: "Failed" },
+                                { value: "replied", label: "Replied" }
+                            ]}
+                            className="rounded-xl px-3 py-2 text-xs"
+                        />
                     </div>
 
                     {/* Phone Number Filter */}
@@ -309,17 +676,19 @@ const WAExternalTracker = () => {
 
                     {/* User ID Filter */}
                     <div className="flex flex-col space-y-1">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Source User ID</label>
-                        <div className="relative">
-                            <User className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="E.g. 45"
-                                value={sourceUserId}
-                                onChange={(e) => setSourceUserId(e.target.value)}
-                                className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-3 py-2 w-full text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-700 dark:text-slate-200"
-                            />
-                        </div>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sender User</label>
+                        <CustomSelect
+                            value={sourceUserId}
+                            onChange={setSourceUserId}
+                            options={[
+                                { value: "", label: "All Users" },
+                                ...allowedUsers.map(usr => ({
+                                    value: usr.id,
+                                    label: `${usr.name} (${usr.id})`
+                                }))
+                            ]}
+                            className="rounded-xl px-3 py-2 text-xs"
+                        />
                     </div>
                 </div>
 
@@ -327,16 +696,15 @@ const WAExternalTracker = () => {
                     {/* Template Name Filter */}
                     <div className="flex flex-col space-y-1">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Template Name</label>
-                        <select
+                        <CustomSelect
                             value={templateName}
-                            onChange={(e) => setTemplateName(e.target.value)}
-                            className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-700 dark:text-slate-200"
-                        >
-                            <option value="" className="bg-white dark:bg-slate-900">All Templates</option>
-                            {allowedTemplates.map(tmpl => (
-                                <option key={tmpl} value={tmpl} className="bg-white dark:bg-slate-900">{tmpl}</option>
-                            ))}
-                        </select>
+                            onChange={setTemplateName}
+                            options={[
+                                { value: "", label: "All Templates" },
+                                ...allowedTemplates.map(tmpl => ({ value: tmpl, label: tmpl }))
+                            ]}
+                            className="rounded-xl px-3 py-2 text-xs"
+                        />
                     </div>
 
                     {/* Date From */}
@@ -569,22 +937,62 @@ const WAExternalTracker = () => {
 
                                                 {/* Message content */}
                                                 {isOutgoing ? (
-                                                    <div className="space-y-1">
-                                                        <p className="font-bold text-[10px] bg-white/10 px-2 py-0.5 rounded inline-block">
-                                                            Template: {chat.template_name}
-                                                        </p>
-                                                        {chat.template_params_json && (
-                                                            <div className="bg-black/10 rounded-lg p-2 font-mono text-[10px] leading-tight space-y-0.5 text-blue-100">
-                                                                {Object.entries(chat.template_params_json).map(([k, v]) => (
-                                                                    <div key={k}>
-                                                                        <span className="font-bold">{k}:</span> {v}
+                                                    (() => {
+                                                        const rendered = renderTemplateMessage(chat.template_components, chat.template_params_json);
+                                                        if (!rendered) {
+                                                            return (
+                                                                <div className="space-y-1">
+                                                                    <p className="font-bold text-[10px] bg-white/10 px-2 py-0.5 rounded inline-block">
+                                                                        Template: {chat.template_name}
+                                                                    </p>
+                                                                    {chat.template_params_json && (
+                                                                        <div className="bg-black/10 rounded-lg p-2 font-mono text-[10px] leading-tight space-y-0.5 text-blue-100">
+                                                                            {Object.entries(chat.template_params_json).map(([k, v]) => (
+                                                                                <div key={k}>
+                                                                                    <span className="font-bold">{k}:</span> {v}
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        return (
+                                                            <div className="space-y-2">
+                                                                {rendered.headerText && (
+                                                                    <div className="font-extrabold text-[13px] border-b border-white/10 pb-1 mb-1">
+                                                                        {rendered.headerText}
                                                                     </div>
-                                                                ))}
+                                                                )}
+                                                                
+                                                                <div className="text-[12px] whitespace-pre-wrap leading-relaxed break-words font-medium">
+                                                                    {rendered.bodyText}
+                                                                </div>
+
+                                                                {rendered.footerText && (
+                                                                    <div className="text-[10px] opacity-60 italic mt-1 font-semibold">
+                                                                        {rendered.footerText}
+                                                                    </div>
+                                                                )}
+
+                                                                {rendered.buttons && rendered.buttons.length > 0 && (
+                                                                    <div className="mt-3 pt-2 border-t border-white/15 flex flex-wrap gap-1.5 justify-start">
+                                                                        {rendered.buttons.map((btn, idx) => (
+                                                                            <span 
+                                                                                key={idx} 
+                                                                                className="bg-white/20 hover:bg-white/30 text-white font-bold text-[10px] px-2.5 py-1 rounded-lg border border-white/10 flex items-center gap-1 transition-all"
+                                                                            >
+                                                                                {btn.text}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                        )}
-                                                    </div>
+                                                        );
+                                                    })()
                                                 ) : (
-                                                    <p className="whitespace-pre-line">{chat.received_message_text}</p>
+                                                    renderRichMessageBody(chat)
                                                 )}
 
                                                 {/* Error logger if failed */}

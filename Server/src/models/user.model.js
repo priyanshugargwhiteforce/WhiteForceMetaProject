@@ -38,6 +38,10 @@ const User = {
         try { await pool.query("ALTER TABLE users ADD CONSTRAINT fk_user_manager FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE SET NULL"); } catch (e) {}
         try { await pool.query("ALTER TABLE users ADD COLUMN reset_token VARCHAR(255) NULL"); } catch (e) {}
         try { await pool.query("ALTER TABLE users ADD COLUMN reset_token_expiry DATETIME NULL"); } catch (e) {}
+        try { await pool.query("ALTER TABLE users ADD COLUMN department VARCHAR(255) NULL"); } catch (e) {}
+        try { await pool.query("ALTER TABLE users ADD COLUMN designation VARCHAR(255) NULL"); } catch (e) {}
+        try { await pool.query("ALTER TABLE users ADD COLUMN phone VARCHAR(50) NULL"); } catch (e) {}
+        try { await pool.query("ALTER TABLE users ADD COLUMN profile_image LONGTEXT NULL"); } catch (e) {}
     },
 
     async findByEmail(email) {
@@ -61,7 +65,7 @@ const User = {
 
     async findById(id) {
         const query = `
-            SELECT u.id, u.username, u.email, u.role, u.status, u.meta_access, u.google_access, u.whatsapp_access, u.linkedin_access, u.meta_publish, u.manager_id, mgr.username AS manager_name, u.created_at 
+            SELECT u.id, u.username, u.email, u.role, u.status, u.meta_access, u.google_access, u.whatsapp_access, u.linkedin_access, u.meta_publish, u.manager_id, u.department, u.designation, u.phone, u.profile_image, mgr.username AS manager_name, u.created_at 
             FROM users u 
             LEFT JOIN users mgr ON u.manager_id = mgr.id 
             WHERE u.id = ?
@@ -72,7 +76,7 @@ const User = {
 
     async findAll(managerId = null) {
         let query = `
-            SELECT u.id, u.username, u.email, u.role, u.status, u.meta_access, u.google_access, u.whatsapp_access, u.linkedin_access, u.meta_publish, u.manager_id, mgr.username AS manager_name, u.created_at 
+            SELECT u.id, u.username, u.email, u.role, u.status, u.meta_access, u.google_access, u.whatsapp_access, u.linkedin_access, u.meta_publish, u.manager_id, u.department, u.designation, u.phone, u.profile_image, mgr.username AS manager_name, u.created_at 
             FROM users u 
             LEFT JOIN users mgr ON u.manager_id = mgr.id
         `;

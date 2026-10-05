@@ -20,6 +20,7 @@ import {
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../../context/AuthContext';
+import CustomSelect from '../CustomSelect';
 
 const SendMessage = () => {
   const { user } = useAuth();
@@ -311,21 +312,15 @@ const SendMessage = () => {
                   Select WhatsApp Sender Account
                 </label>
                 <div className="relative">
-                  <select
+                  <CustomSelect
                     value={selectedConfigId}
-                    onChange={(e) => setSelectedConfigId(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 appearance-none transition-all cursor-pointer text-slate-800 dark:text-slate-100"
-                  >
-                    <option value="" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Default Server Config</option>
-                    {whatsappConfigs.map(cfg => (
-                      <option key={cfg.id} value={cfg.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
-                        {cfg.name} ({cfg.phone_number_id})
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 dark:text-slate-400">
-                    <ChevronDown className="w-5 h-5" />
-                  </div>
+                    onChange={setSelectedConfigId}
+                    options={[
+                      { value: "", label: "Default Server Config" },
+                      ...whatsappConfigs.map(cfg => ({ value: cfg.id, label: `${cfg.name} (${cfg.phone_number_id})` }))
+                    ]}
+                    className="w-full rounded-2xl px-5 py-4 text-sm"
+                  />
                 </div>
               </div>
 
@@ -335,21 +330,16 @@ const SendMessage = () => {
                   Select Approved Template
                 </label>
                 <div className="relative">
-                  <select
+                  <CustomSelect
                     value={selectedTemplate}
-                    onChange={(e) => setSelectedTemplate(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-12 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 appearance-none transition-all cursor-pointer text-slate-800 dark:text-slate-100"
-                  >
-                    <option value="" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Choose a template...</option>
-                    {templates.map(t => (
-                      <option key={t.id} value={t.name} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
-                        {t.name} ({t.language})
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 dark:text-slate-400">
-                    <ChevronDown className="w-5 h-5" />
-                  </div>
+                    onChange={setSelectedTemplate}
+                    options={[
+                      { value: "", label: "Choose a template..." },
+                      ...templates.map(t => ({ value: t.name, label: `${t.name} (${t.language})` }))
+                    ]}
+                    className="w-full rounded-2xl px-5 py-4 text-sm"
+                  />
+
                 </div>
               </div>
 
@@ -487,20 +477,12 @@ const SendMessage = () => {
                                 Recipient Phone Number
                               </label>
                               <div className="relative">
-                                <select
+                                <CustomSelect
                                   value={phoneColIdx}
-                                  onChange={(e) => setPhoneColIdx(parseInt(e.target.value))}
-                                  className="w-full bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 pr-10 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-slate-800 dark:text-slate-100 cursor-pointer appearance-none"
-                                >
-                                  {detectedHeaders.map((header, idx) => (
-                                    <option key={idx} value={idx} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
-                                      Column {idx + 1}: {header}
-                                    </option>
-                                  ))}
-                                </select>
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                                  <ChevronDown className="w-4 h-4" />
-                                </div>
+                                  onChange={(val) => setPhoneColIdx(parseInt(val))}
+                                  options={detectedHeaders.map((header, idx) => ({ value: idx, label: `Column ${idx + 1}: ${header}` }))}
+                                  className="w-full rounded-2xl px-4 py-3 text-xs"
+                                />
                               </div>
                             </div>
 
@@ -513,28 +495,23 @@ const SendMessage = () => {
                                     Template Variable {`{{${variableName}}}`}
                                   </label>
                                   <div className="relative">
-                                    <select
+                                    <CustomSelect
                                       value={mappedColIdx}
-                                      onChange={(e) => {
-                                        const newVal = parseInt(e.target.value);
+                                      onChange={(val) => {
+                                        const newVal = parseInt(val);
                                         setVariableMappings(prev => {
                                           const updated = [...prev];
                                           updated[varIdx] = newVal;
                                           return updated;
                                         });
                                       }}
-                                      className="w-full bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 pr-10 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-slate-800 dark:text-slate-100 cursor-pointer appearance-none"
-                                    >
-                                      <option value={-1} className="bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500">-- Select Column (or Empty) --</option>
-                                      {detectedHeaders.map((header, idx) => (
-                                        <option key={idx} value={idx} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
-                                          Column {idx + 1}: {header}
-                                        </option>
-                                      ))}
-                                    </select>
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                                      <ChevronDown className="w-4 h-4" />
-                                    </div>
+                                      options={[
+                                        { value: -1, label: "-- Select Column (or Empty) --" },
+                                        ...detectedHeaders.map((header, idx) => ({ value: idx, label: `Column ${idx + 1}: ${header}` }))
+                                      ]}
+                                      className="w-full rounded-2xl px-4 py-3 text-xs"
+                                    />
+
                                   </div>
                                 </div>
                               );

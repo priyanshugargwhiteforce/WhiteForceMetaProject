@@ -5,6 +5,23 @@ import {
   Calendar, DollarSign, RefreshCw, Key,
   IndianRupee, Search
 } from 'lucide-react';
+import CustomSelect from './CustomSelect';
+
+const YEAR_OPTIONS = [
+  { value: "", label: "Year" },
+  ...Array.from({ length: 6 }, (_, i) => {
+    const yr = new Date().getFullYear() - i;
+    return { value: String(yr), label: String(yr) };
+  })
+];
+
+const MONTH_OPTIONS = [
+  { value: "", label: "Month" },
+  ...Array.from({ length: 12 }, (_, i) => {
+    const m = i + 1;
+    return { value: String(m), label: String(m) };
+  })
+];
 
 const YoutubeAds = () => {
   const navigate = useNavigate();
@@ -171,39 +188,28 @@ const YoutubeAds = () => {
 
         <div className="flex flex-wrap items-center gap-3">
           {accounts.length > 0 && (
-            <select
-              value={selectedAccount || ""}
-              onChange={(e) => setSelectedAccount(e.target.value)}
-              className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-slate-100 cursor-pointer"
-            >
-              {accounts.map(acc => (
-                <option key={acc} value={acc}>Account: {acc}</option>
-              ))}
-            </select>
+            <CustomSelect
+              value={selectedAccount}
+              onChange={setSelectedAccount}
+              options={accounts}
+              prefix="Account: "
+              className="rounded-2xl px-4 py-2.5 text-sm min-w-[200px]"
+            />
           )}
           {/* Year selector */}
-          <select
+          <CustomSelect
             value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-            className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[120px] text-slate-800 dark:text-slate-100 cursor-pointer"
-          >
-            <option value="">Year</option>
-            {[...Array(6)].map((_, i) => {
-              const yr = new Date().getFullYear() - i;
-              return <option key={yr} value={yr}>{yr}</option>;
-            })}
-          </select>
+            onChange={setSelectedYear}
+            options={YEAR_OPTIONS}
+            className="rounded-2xl px-4 py-2.5 text-sm min-w-[120px]"
+          />
           {/* Month selector */}
-          <select
+          <CustomSelect
             value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[120px] text-slate-800 dark:text-slate-100 cursor-pointer"
-          >
-            <option value="">Month</option>
-            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
+            onChange={setSelectedMonth}
+            options={MONTH_OPTIONS}
+            className="rounded-2xl px-4 py-2.5 text-sm min-w-[120px]"
+          />
 
           {/* Search box */}
           <div className="relative">

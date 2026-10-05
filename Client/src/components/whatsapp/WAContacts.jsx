@@ -10,6 +10,7 @@ import {
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { useTheme } from '../../context/ThemeContext';
+import CustomSelect from '../CustomSelect';
 
 const API = '/api/whatsapp';
 const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
@@ -889,11 +890,18 @@ const WAContacts = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Existing List</label>
-                    <select value={importTargetListId} onChange={e => { setImportTargetListId(e.target.value); if (e.target.value) setImportTargetListName(''); }}
-                      className="w-full bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-800 dark:text-slate-100 focus:outline-none">
-                      <option value="">-- Create New List --</option>
-                      {lists.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                    </select>
+                    <CustomSelect
+                      value={importTargetListId}
+                      onChange={(val) => {
+                        setImportTargetListId(val);
+                        if (val) setImportTargetListName('');
+                      }}
+                      options={[
+                        { value: "", label: "-- Create New List --" },
+                        ...lists.map(l => ({ value: String(l.id), label: l.name }))
+                      ]}
+                      className="w-full rounded-2xl px-4 py-3 text-xs"
+                    />
                   </div>
                   {!importTargetListId && (
                     <div className="space-y-2">
@@ -919,11 +927,15 @@ const WAContacts = () => {
                     ].map(([label, val, setter, allowIgnore]) => (
                       <div key={label} className="space-y-1.5">
                         <label className="text-[9.5px] font-bold text-slate-500 uppercase tracking-widest block">{label}</label>
-                        <select value={val} onChange={e => setter(parseInt(e.target.value))}
-                          className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 focus:outline-none">
-                          {allowIgnore && <option value={-1}>-- Ignore --</option>}
-                          {detectedHeaders.map((h, i) => <option key={i} value={i}>Col {i + 1}: {h}</option>)}
-                        </select>
+                        <CustomSelect
+                          value={val}
+                          onChange={(val) => setter(parseInt(val))}
+                          options={[
+                            ...(allowIgnore ? [{ value: -1, label: "-- Ignore --" }] : []),
+                            ...detectedHeaders.map((h, i) => ({ value: i, label: `Col ${i + 1}: ${h}` }))
+                          ]}
+                          className="w-full rounded-xl px-3 py-2 text-xs"
+                        />
                       </div>
                     ))}
                   </div>

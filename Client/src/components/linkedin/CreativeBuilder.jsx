@@ -6,6 +6,7 @@ import {
     Globe, HelpCircle, ChevronRight, Check, Briefcase, ChevronDown 
 } from 'lucide-react';
 import MediaLibrary from '../media/MediaLibrary';
+import CustomSelect from '../CustomSelect';
 
 const CreativeBuilder = () => {
     const navigate = useNavigate();
@@ -340,39 +341,30 @@ const CreativeBuilder = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-bold text-slate-400 uppercase block">Ad Account</label>
-                            <select
+                            <CustomSelect
                                 value={selectedAccountId}
-                                onChange={(e) => setSelectedAccountId(e.target.value)}
-                                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer"
-                            >
-                                {adAccounts.map(acc => (
-                                    <option key={acc.id} value={acc.id}>{acc.name}</option>
-                                ))}
-                            </select>
+                                onChange={setSelectedAccountId}
+                                options={adAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
+                                className="w-full rounded-xl px-4 py-2.5 text-xs"
+                            />
                         </div>
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-bold text-slate-400 uppercase block">Campaign Group</label>
-                            <select
+                            <CustomSelect
                                 value={selectedGroupId}
-                                onChange={(e) => setSelectedGroupId(e.target.value)}
-                                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer"
-                            >
-                                {campaignGroups.map(grp => (
-                                    <option key={grp.id} value={grp.id}>{grp.name}</option>
-                                ))}
-                            </select>
+                                onChange={setSelectedGroupId}
+                                options={campaignGroups.map(grp => ({ value: grp.id, label: grp.name }))}
+                                className="w-full rounded-xl px-4 py-2.5 text-xs"
+                            />
                         </div>
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-bold text-slate-400 uppercase block">Target Campaign</label>
-                            <select
+                            <CustomSelect
                                 value={selectedCampaignId}
-                                onChange={(e) => setSelectedCampaignId(e.target.value)}
-                                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer"
-                            >
-                                {campaigns.map(camp => (
-                                    <option key={camp.id} value={camp.id}>{camp.name}</option>
-                                ))}
-                            </select>
+                                onChange={setSelectedCampaignId}
+                                options={campaigns.map(camp => ({ value: camp.id, label: camp.name }))}
+                                className="w-full rounded-xl px-4 py-2.5 text-xs"
+                            />
                         </div>
                     </div>
 
@@ -380,16 +372,17 @@ const CreativeBuilder = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-bold text-slate-400 uppercase block">Creative Type</label>
-                            <select
+                            <CustomSelect
                                 value={creativeType}
-                                onChange={(e) => setCreativeType(e.target.value)}
-                                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer"
-                            >
-                                <option value="SINGLE_IMAGE">Single Image Ad</option>
-                                <option value="VIDEO">Video Ad</option>
-                                <option value="DOCUMENT">Document Ad (PDF)</option>
-                                <option value="CAROUSEL">Carousel Ad (Slides)</option>
-                            </select>
+                                onChange={setCreativeType}
+                                options={[
+                                    { value: "SINGLE_IMAGE", label: "Single Image Ad" },
+                                    { value: "VIDEO", label: "Video Ad" },
+                                    { value: "DOCUMENT", label: "Document Ad (PDF)" },
+                                    { value: "CAROUSEL", label: "Carousel Ad (Slides)" }
+                                ]}
+                                className="w-full rounded-xl px-4 py-2.5 text-xs"
+                            />
                         </div>
 
                         <div className="space-y-1.5">
@@ -444,18 +437,19 @@ const CreativeBuilder = () => {
                     {/* CTA select list */}
                     <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-slate-400 uppercase block">Call to Action (CTA) Button</label>
-                        <select
+                        <CustomSelect
                             value={callToAction}
-                            onChange={(e) => setCallToAction(e.target.value)}
-                            className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer"
-                        >
-                            <option value="LEARN_MORE">LEARN MORE</option>
-                            <option value="REGISTER">REGISTER</option>
-                            <option value="APPLY">APPLY</option>
-                            <option value="DOWNLOAD">DOWNLOAD</option>
-                            <option value="SUBSCRIBE">SUBSCRIBE</option>
-                            <option value="SIGN_UP">SIGN UP</option>
-                        </select>
+                            onChange={setCallToAction}
+                            options={[
+                                { value: "LEARN_MORE", label: "LEARN MORE" },
+                                { value: "REGISTER", label: "REGISTER" },
+                                { value: "APPLY", label: "APPLY" },
+                                { value: "DOWNLOAD", label: "DOWNLOAD" },
+                                { value: "SUBSCRIBE", label: "SUBSCRIBE" },
+                                { value: "SIGN_UP", label: "SIGN UP" }
+                            ]}
+                            className="w-full rounded-xl px-4 py-2.5 text-xs"
+                        />
                     </div>
 
                     {/* Submit Actions */}

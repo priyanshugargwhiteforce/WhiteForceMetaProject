@@ -6,6 +6,7 @@ import {
   Search, SlidersHorizontal, Briefcase, Info, IndianRupee, Eye,
   Activity, Target, ChevronRight, Database, RefreshCw, Filter, ArrowUpDown
 } from 'lucide-react';
+import CustomSelect from '../CustomSelect';
 
 const LinkedInCampaigns = () => {
   const [adAccounts, setAdAccounts] = useState([]);
@@ -215,15 +216,12 @@ const LinkedInCampaigns = () => {
           </button>
 
           {/* Account Selector */}
-          <select
+          <CustomSelect
             value={selectedAccountId}
-            onChange={(e) => setSelectedAccountId(e.target.value)}
-            className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-white cursor-pointer"
-          >
-            {adAccounts.map(acc => (
-              <option key={acc.id} value={acc.id}>{acc.name}</option>
-            ))}
-          </select>
+            onChange={setSelectedAccountId}
+            options={adAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
+            className="min-w-[200px] rounded-2xl px-4 py-2.5 text-sm"
+          />
         </div>
       </div>
 
@@ -386,40 +384,39 @@ const LinkedInCampaigns = () => {
                   {/* Status filter */}
                   <div className="flex items-center space-x-1">
                     <Filter className="w-3.5 h-3.5 text-slate-400" />
-                    <select
+                    <CustomSelect
                       value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-2xl px-3 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer focus:outline-none"
-                    >
-                      <option value="ALL">All Statuses</option>
-                      <option value="RUNNING">Running Only</option>
-                      <option value="PAUSED">Paused Only</option>
-                    </select>
+                      onChange={setStatusFilter}
+                      options={[
+                        { value: "ALL", label: "All Statuses" },
+                        { value: "RUNNING", label: "Running Only" },
+                        { value: "PAUSED", label: "Paused Only" }
+                      ]}
+                      className="rounded-2xl px-3 py-2 text-[11px]"
+                    />
                   </div>
 
                   {/* Format filter */}
-                  <select
+                  <CustomSelect
                     value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value)}
-                    className="bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-2xl px-3 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer focus:outline-none"
-                  >
-                    <option value="ALL">All Formats</option>
-                    {campaignTypes.filter(t => t !== 'ALL').map(t => (
-                      <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
-                    ))}
-                  </select>
+                    onChange={setTypeFilter}
+                    options={[
+                      { value: "ALL", label: "All Formats" },
+                      ...campaignTypes.filter(t => t !== 'ALL').map(t => ({ value: t, label: t.replace(/_/g, ' ') }))
+                    ]}
+                    className="rounded-2xl px-3 py-2 text-[11px]"
+                  />
 
                   {/* Campaign Group filter */}
-                  <select
+                  <CustomSelect
                     value={groupFilter}
-                    onChange={(e) => setGroupFilter(e.target.value)}
-                    className="bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-2xl px-3 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer focus:outline-none"
-                  >
-                    <option value="ALL">All Campaign Groups</option>
-                    {campaignGroups.map(grp => (
-                      <option key={grp.id} value={grp.id}>{grp.name}</option>
-                    ))}
-                  </select>
+                    onChange={setGroupFilter}
+                    options={[
+                      { value: "ALL", label: "All Campaign Groups" },
+                      ...campaignGroups.map(grp => ({ value: grp.id, label: grp.name }))
+                    ]}
+                    className="rounded-2xl px-3 py-2 text-[11px]"
+                  />
                 </div>
               </div>
 

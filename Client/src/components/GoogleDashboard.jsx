@@ -7,6 +7,7 @@ import {
   DollarSign, Eye, MousePointerClick, Target, TrendingUp, AlertCircle, ChevronRight, LayoutDashboard, Key,
   IndianRupee, Search, Layers, Info
 } from 'lucide-react';
+import CustomSelect from './CustomSelect';
 const TIME_RANGES = {
   TODAY: 'TODAY',
   THIS_WEEK: 'THIS_WEEK_MON_TODAY',
@@ -126,7 +127,7 @@ const GoogleDashboard = () => {
     setError(null);
     setMissingCreds(false);
     try {
-      const url = new URL('/api/google/dashboard');
+      const url = new URL('/api/google/dashboard', window.location.origin);
       url.searchParams.append('range', range);
       if (customerId) url.searchParams.append('customerId', customerId);
       if (range === TIME_RANGES.CUSTOM) {
@@ -203,33 +204,29 @@ const GoogleDashboard = () => {
         <div className="flex flex-wrap items-center gap-3">
           {timeRange === TIME_RANGES.CUSTOM && (
             <div className="flex items-center space-x-2 animate-in fade-in slide-in-from-right-4">
-              <select
+              <CustomSelect
                 value={selectedMonth}
-                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold focus:outline-none transition-all text-slate-800 dark:text-slate-100"
-              >
-                {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-              </select>
-              <select
+                onChange={(val) => setSelectedMonth(parseInt(val))}
+                options={MONTHS}
+                className="rounded-xl px-3 py-1.5 text-xs min-w-[110px]"
+              />
+              <CustomSelect
                 value={selectedYear}
-                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold focus:outline-none transition-all text-slate-800 dark:text-slate-100"
-              >
-                {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
+                onChange={(val) => setSelectedYear(parseInt(val))}
+                options={YEARS}
+                className="rounded-xl px-3 py-1.5 text-xs min-w-[80px]"
+              />
             </div>
           )}
 
           {accounts.length > 0 && (
-            <select
-              value={selectedAccount || ""}
-              onChange={(e) => setSelectedAccount(e.target.value)}
-              className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-slate-100"
-            >
-              {accounts.map(acc => (
-                <option key={acc} value={acc}>Account: {acc}</option>
-              ))}
-            </select>
+            <CustomSelect
+              value={selectedAccount}
+              onChange={setSelectedAccount}
+              options={accounts}
+              prefix="Account: "
+              className="rounded-2xl px-4 py-2.5 text-sm min-w-[200px]"
+            />
           )}
 
           <div className="flex bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-1 shadow-sm">

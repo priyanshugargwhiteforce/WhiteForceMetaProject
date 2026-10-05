@@ -25,6 +25,9 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import MediaLibrary from '../media/MediaLibrary';
+import CustomSelect from '../CustomSelect';
+import { SUPPORTED_LANGUAGES } from './languages';
+
 
 const WATemplateBuilder = () => {
   const navigate = useNavigate();
@@ -125,7 +128,7 @@ const WATemplateBuilder = () => {
       const t = location.state.cloneTemplate;
       setName(`clone_${t.name}`);
       setCategory(t.category || 'MARKETING');
-      setLanguage(t.language === 'en_US' ? 'en' : (t.language || 'en'));
+      setLanguage(t.language || 'en');
 
       if (t.components && Array.isArray(t.components)) {
         const header = t.components.find(c => c.type === 'HEADER');
@@ -347,26 +350,26 @@ const WATemplateBuilder = () => {
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 block">Category</label>
-              <select
+              <CustomSelect
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-800 dark:text-white cursor-pointer"
-              >
-                <option value="MARKETING" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">Marketing</option>
-                <option value="UTILITY" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">Utility</option>
-              </select>
+                onChange={setCategory}
+                options={[
+                  { value: "MARKETING", label: "Marketing" },
+                  { value: "UTILITY", label: "Utility" }
+                ]}
+                className="w-full rounded-xl px-4 py-3 text-sm"
+              />
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 block">Language</label>
-              <select
+               <CustomSelect
                 value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-800 dark:text-white cursor-pointer"
-              >
-                <option value="en" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">English</option>
-                <option value="hi" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">Hindi</option>
-                <option value="es" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">Spanish</option>
-              </select>
+                onChange={setLanguage}
+                options={SUPPORTED_LANGUAGES}
+                showSearch={true}
+                searchPlaceholder="Search language..."
+                className="w-full rounded-xl px-4 py-3 text-sm"
+              />
             </div>
           </div>
 

@@ -195,3 +195,43 @@ exports.sendTemplateMessage = async (req, res) => {
         });
     }
 };
+
+exports.streamWhatsAppMedia = async (req, res) => {
+    try {
+        const { mediaId } = req.params;
+        const configId = req.headers['x-whatsapp-config-id'] || req.query.configId;
+
+        const { token } = await whatsappService.resolveWhatsAppConfig(configId);
+        if (!token) {
+            return res.status(401).json({ success: false, message: 'Access token not available for WhatsApp media streaming.' });
+        }
+
+        // 1. Get download URL from Meta Graph API
+        const metaRes = await axios.get(`https://graph.facebook.com/v21.0/${mediaId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const downloadUrl = metaRes.data?.url;
+        const mimeType = metaRes.data?.mime_type || 'audio/ogg';
+
+        if (!downloadUrl) {
+            return res.status(404).json({ success: false, message: 'Media download URL not found from Meta.' });
+        }
+
+        // 2. Stream binary audio to client with proper headers
+        const streamRes = await axios.get(downloadUrl, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'User-Agent': 'curl/7.64.1'
+            },
+            responseType: 'stream'
+        });
+
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        streamRes.data.pipe(res);
+    } catch (error) {
+        console.error('[WhatsApp Media Stream] Error streaming media:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to stream WhatsApp audio media.' });
+    }
+};

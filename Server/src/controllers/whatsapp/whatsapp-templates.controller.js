@@ -1,4 +1,6 @@
 const whatsappTemplatesService = require('../../services/whatsapp-templates.service');
+const wfadmWebhookProcessor = require('../../services/whatsapp-webhook/wfadm-webhook-processor.service');
+
 
 /**
  * Handle template creation
@@ -119,82 +121,13 @@ exports.verifyWebhook = (req, res) => {
 exports.receiveWebhook = async (req, res) => {
     try {
         const body = req.body;
-        console.log('Received WhatsApp Webhook body:', JSON.stringify(body, null, 2));
+        console.log('Received legacy WhatsApp Webhook body:', {
+            object: body?.object,
+            entryCount: Array.isArray(body?.entry) ? body.entry.length : 0
+        });
 
         if (body.object === 'whatsapp_business_account') {
-            const entry = body.entry?.[0];
-            const change = entry?.changes?.[0];
-            const value = change?.value;
-
-            // 1. Check for template status updates
-            if (value?.event && value?.message_template_name) {
-                const name = value.message_template_name;
-                const status = value.event; // e.g. APPROVED, REJECTED, PENDING
-                console.log(`Webhook Trigger: Template "${name}" status updated to: ${status}`);
-                await whatsappTemplatesService.syncSingleTemplateStatus(name, status);
-            }
-
-            // 2. Check for message status updates (sent, delivered, read, failed)
-            if (value?.statuses && Array.isArray(value.statuses)) {
-                for (const statusObj of value.statuses) {
-                    const messageId = statusObj.id;
-                    const status = statusObj.status; // sent, delivered, read, failed
-                    let errorMessage = null;
-
-                    if (statusObj.errors && statusObj.errors.length > 0) {
-                        errorMessage = statusObj.errors[0].message;
-                    }
-
-                    console.log(`Webhook Trigger: Message ID ${messageId} status update to: ${status}`);
-                    await whatsappTemplatesService.updateMessageStatus(messageId, status, errorMessage);
-                }
-            }
-
-            // 3. Check for incoming customer messages/replies
-            if (value?.messages && Array.isArray(value.messages)) {
-                for (const msg of value.messages) {
-                    const fromPhone = msg.from; // Sender phone number
-                    const messageId = msg.id; // Unique WhatsApp message ID
-                    const timestamp = msg.timestamp; // Epoch timestamp
-                    const type = msg.type; // text, interactive, button, etc.
-
-                    let body = '';
-                    if (type === 'text' && msg.text?.body) {
-                        body = msg.text.body;
-                    } else if (type === 'interactive') {
-                        body = msg.interactive?.button_reply?.title || msg.interactive?.list_reply?.title || '[Interactive Reply]';
-                    } else if (type === 'button') {
-                        body = msg.button?.text || '[Button Click]';
-                    } else {
-                        body = `[${type} message]`;
-                    }
-
-                    // Sender profile name if present
-                    let senderName = null;
-                    if (value.contacts && Array.isArray(value.contacts)) {
-                        const contactObj = value.contacts.find(c => c.wa_id === fromPhone);
-                        if (contactObj?.profile?.name) {
-                            senderName = contactObj.profile.name;
-                        }
-                    }
-
-                    console.log(`Webhook Trigger: Incoming message from ${fromPhone} (Name: ${senderName}): "${body}"`);
-
-                    const replyToMessageId = msg.context?.id || null;
-
-                    await whatsappTemplatesService.handleIncomingMessage({
-                        fromPhone,
-                        messageId,
-                        timestamp,
-                        type,
-                        body,
-                        senderName,
-                        phoneId: value.metadata?.phone_number_id,
-                        replyToMessageId
-                    });
-                }
-            }
-
+            await wfadmWebhookProcessor.processWebhookBody(body);
             return res.status(200).send('EVENT_RECEIVED');
         }
 

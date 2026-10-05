@@ -396,6 +396,7 @@ const WAPricingAnalytics = ({ selectedConfigId }) => {
                       <Bar dataKey="MARKETING" name="Marketing" fill="#6366f1" stackId="a" radius={[2, 2, 0, 0]} />
                       <Bar dataKey="UTILITY" name="Utility" fill="#10b981" stackId="a" radius={[2, 2, 0, 0]} />
                       <Bar dataKey="AUTHENTICATION" name="Auth" fill="#06b6d4" stackId="a" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="SERVICE" name="Service" fill="#f59e0b" stackId="a" radius={[2, 2, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
@@ -417,9 +418,10 @@ const WAPricingAnalytics = ({ selectedConfigId }) => {
                 <div className="space-y-5 flex-1 justify-center flex flex-col">
                   {categories.map(cat => {
                     const colors = {
-                      MARKETING: 'bg-emerald-500',
-                      UTILITY: 'bg-emerald-500',
-                      AUTHENTICATION: 'bg-cyan-500'
+                      MARKETING: 'bg-indigo-500 dark:bg-indigo-400',
+                      UTILITY: 'bg-emerald-500 dark:bg-emerald-400',
+                      AUTHENTICATION: 'bg-cyan-550 dark:bg-cyan-400',
+                      SERVICE: 'bg-amber-500 dark:bg-amber-400'
                     };
                     return (
                       <div key={cat.name} className="space-y-1.5">

@@ -13,6 +13,7 @@ import {
   Sliders
 } from 'lucide-react';
 import axios from 'axios';
+import CustomSelect from '../CustomSelect';
 
 const WASchedules = () => {
   const [schedules, setSchedules] = useState([]);
@@ -138,15 +139,16 @@ const WASchedules = () => {
 
         <div className="flex items-center space-x-2 w-full sm:w-auto">
           <Sliders className="w-4 h-4 text-slate-400" />
-          <select
+          <CustomSelect
             value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-          >
-            <option value="all">All Types</option>
-            <option value="scheduled">One-Time Scheduled</option>
-            <option value="recurring">Recurring (Cron)</option>
-          </select>
+            onChange={setFilterType}
+            options={[
+              { value: "all", label: "All Types" },
+              { value: "scheduled", label: "One-Time Scheduled" },
+              { value: "recurring", label: "Recurring (Cron)" }
+            ]}
+            className="rounded-xl px-3 py-2 text-sm"
+          />
         </div>
       </div>
 

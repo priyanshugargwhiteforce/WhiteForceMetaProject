@@ -5,6 +5,7 @@ import {
   Filter, ArrowUpDown, ChevronRight, Eye,
   CheckCircle, AlertCircle, FileText, IndianRupee
 } from 'lucide-react';
+import CustomSelect from './CustomSelect';
 
 const AllLeads = () => {
   const [leads, setLeads] = useState([]);
@@ -424,39 +425,31 @@ const AllLeads = () => {
             <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
               1. Select Ad Account
             </label>
-            <select
+            <CustomSelect
               value={selectedAccount}
-              onChange={(e) => setSelectedAccount(e.target.value)}
-              className="w-full bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-white/5 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-slate-700 dark:text-slate-200"
-            >
-              <option value="">Choose Ad Account...</option>
-              {accounts.map(acc => (
-                <option key={acc.id} value={acc.id}>
-                  {acc.name} ({acc.id})
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedAccount}
+              options={[
+                { value: "", label: "Choose Ad Account..." },
+                ...accounts.map(acc => ({ value: acc.id, label: `${acc.name} (${acc.id})` }))
+              ]}
+              className="w-full rounded-xl px-3 py-2 text-xs"
+            />
           </div>
 
           <div>
             <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
               2. Select Ad Campaign / ID
             </label>
-            <select
+            <CustomSelect
               value={selectedAdId}
-              onChange={(e) => setSelectedAdId(e.target.value)}
+              onChange={setSelectedAdId}
               disabled={ads.length === 0}
-              className="w-full bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-white/5 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-slate-700 dark:text-slate-200 disabled:opacity-50"
-            >
-              <option value="">
-                {ads.length === 0 ? 'No Ads found for account' : 'Choose Ad ID...'}
-              </option>
-              {ads.map(ad => (
-                <option key={ad.id} value={ad.id}>
-                  {ad.name} (ID: {ad.id})
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "", label: ads.length === 0 ? 'No Ads found for account' : 'Choose Ad ID...' },
+                ...ads.map(ad => ({ value: ad.id, label: `${ad.name} (ID: ${ad.id})` }))
+              ]}
+              className="w-full rounded-xl px-3 py-2 text-xs"
+            />
           </div>
 
           <div>
@@ -492,34 +485,34 @@ const AllLeads = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center space-x-1.5 bg-slate-50 dark:bg-white/5 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-white/5">
+              <div className="flex items-center space-x-1.5 bg-slate-50 dark:bg-white/5 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-white/5">
                 <Filter className="w-3.5 h-3.5 text-slate-400" />
                 <span className="text-[9px] text-slate-400 font-bold uppercase">Platform:</span>
-                <select
+                <CustomSelect
                   value={platformFilter}
-                  onChange={(e) => setPlatformFilter(e.target.value)}
-                  className="bg-transparent border-none text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-300"
-                >
-                  <option value="all">All Platforms</option>
-                  <option value="fb">Facebook</option>
-                  <option value="ig">Instagram</option>
-                </select>
+                  onChange={setPlatformFilter}
+                  options={[
+                    { value: "all", label: "All Platforms" },
+                    { value: "fb", label: "Facebook" },
+                    { value: "ig", label: "Instagram" }
+                  ]}
+                  className="border-none bg-transparent py-1 text-xs px-1 min-w-[110px]"
+                />
               </div>
 
               {uniqueAds.length > 0 && (
-                <div className="flex items-center space-x-1.5 bg-slate-50 dark:bg-white/5 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-white/5">
+                <div className="flex items-center space-x-1.5 bg-slate-50 dark:bg-white/5 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-white/5">
                   <FileText className="w-3.5 h-3.5 text-slate-400" />
                   <span className="text-[9px] text-slate-400 font-bold uppercase">Ad Filter:</span>
-                  <select
+                  <CustomSelect
                     value={adFilter}
-                    onChange={(e) => setAdFilter(e.target.value)}
-                    className="bg-transparent border-none text-xs font-bold focus:outline-none cursor-pointer max-w-[150px] text-slate-700 dark:text-slate-300"
-                  >
-                    <option value="all">All Campaigns</option>
-                    {uniqueAds.map(ad => (
-                      <option key={ad.id} value={ad.id}>{ad.name}</option>
-                    ))}
-                  </select>
+                    onChange={setAdFilter}
+                    options={[
+                      { value: "all", label: "All Campaigns" },
+                      ...uniqueAds.map(ad => ({ value: ad.id, label: ad.name }))
+                    ]}
+                    className="border-none bg-transparent py-1 text-xs px-1 max-w-[150px]"
+                  />
                 </div>
               )}
             </div>
@@ -675,17 +668,18 @@ const AllLeads = () => {
 
               <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-lg border border-slate-200 dark:border-white/5">
                 <span className="text-[9px] text-slate-400 font-bold uppercase">Show:</span>
-                <select
+                <CustomSelect
                   value={recordsPerPage}
-                  onChange={(e) => setRecordsPerPage(Number(e.target.value))}
-                  className="bg-transparent border-none text-[11px] font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-300"
-                >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
+                  onChange={(val) => setRecordsPerPage(Number(val))}
+                  options={[
+                    { value: 5, label: "5" },
+                    { value: 10, label: "10" },
+                    { value: 20, label: "20" },
+                    { value: 50, label: "50" },
+                    { value: 100, label: "100" }
+                  ]}
+                  className="border-none bg-transparent py-0.5 text-[11px] px-1"
+                />
               </div>
             </div>
 

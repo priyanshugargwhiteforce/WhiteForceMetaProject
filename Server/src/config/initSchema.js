@@ -178,6 +178,79 @@ const initSchema = async () => {
             await pool.query("ALTER TABLE meta_ads ADD COLUMN owner_updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP");
         } catch (e) { /* Column might exist */ }
 
+        // 6f. Connected Google OAuth Accounts
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS google_accounts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NULL,
+                google_account_id VARCHAR(100) NOT NULL UNIQUE,
+                email VARCHAR(255) NOT NULL,
+                name VARCHAR(255) NULL,
+                picture VARCHAR(500) NULL,
+                refresh_token TEXT NOT NULL,
+                access_token TEXT NULL,
+                token_expires_at TIMESTAMP NULL,
+                scopes TEXT NULL,
+                status ENUM('active', 'revoked', 'expired') DEFAULT 'active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                CONSTRAINT fk_google_account_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        `);
+        console.log(' - google_accounts table created/verified');
+
+        // 6g. YouTube Channels Table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS youtube_channels (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                google_account_id INT NOT NULL,
+                channel_id VARCHAR(100) NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                description TEXT NULL,
+                custom_url VARCHAR(100) NULL,
+                thumbnail VARCHAR(500) NULL,
+                banner_url VARCHAR(500) NULL,
+                subscriber_count BIGINT DEFAULT 0,
+                video_count INT DEFAULT 0,
+                view_count BIGINT DEFAULT 0,
+                uploads_playlist_id VARCHAR(100) NULL,
+                published_at TIMESTAMP NULL,
+                status ENUM('active', 'inactive') DEFAULT 'active',
+                last_synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_acc_channel (google_account_id, channel_id),
+                CONSTRAINT fk_yt_channel_google_acc FOREIGN KEY (google_account_id) REFERENCES google_accounts(id) ON DELETE CASCADE
+            )
+        `);
+        console.log(' - youtube_channels table created/verified');
+
+        // 6h. YouTube Videos Table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS youtube_videos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                youtube_channel_id INT NOT NULL,
+                video_id VARCHAR(100) NOT NULL,
+                title VARCHAR(500) NOT NULL,
+                description TEXT NULL,
+                thumbnail VARCHAR(500) NULL,
+                published_at TIMESTAMP NULL,
+                duration VARCHAR(50) NULL,
+                privacy_status VARCHAR(50) DEFAULT 'public',
+                upload_status VARCHAR(50) DEFAULT 'processed',
+                live_broadcast_content VARCHAR(50) DEFAULT 'none',
+                view_count BIGINT DEFAULT 0,
+                like_count BIGINT DEFAULT 0,
+                comment_count BIGINT DEFAULT 0,
+                last_synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_channel_video (youtube_channel_id, video_id),
+                CONSTRAINT fk_youtube_video_channel FOREIGN KEY (youtube_channel_id) REFERENCES youtube_channels(id) ON DELETE CASCADE
+            )
+        `);
+        console.log(' - youtube_videos table created/verified');
+
         // 7. Google Ads Snapshots
         await pool.query(`
             CREATE TABLE IF NOT EXISTS google_ads_snapshots (
@@ -194,6 +267,44 @@ const initSchema = async () => {
             )
         `);
         console.log(' - google_ads_snapshots table created/verified');
+
+        // 7c. Google Ads daily trend table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS google_insights_trend (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                customer_id VARCHAR(100) NOT NULL,
+                date_start DATE NOT NULL,
+                spend DECIMAL(15, 2) DEFAULT 0.00,
+                impressions INT DEFAULT 0,
+                clicks INT DEFAULT 0,
+                conversions DECIMAL(15, 2) DEFAULT 0.00,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_google_customer_date (customer_id, date_start)
+            )
+        `);
+        console.log(' - google_insights_trend table created/verified');
+
+        // 7b. Google Ads Leads
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS google_leads (
+                id VARCHAR(100) PRIMARY KEY,
+                customer_id VARCHAR(100) NOT NULL,
+                campaign_id VARCHAR(100),
+                campaign_name VARCHAR(255),
+                ad_group_id VARCHAR(100),
+                ad_group_name VARCHAR(255),
+                ad_id VARCHAR(100),
+                ad_name VARCHAR(255),
+                asset_id VARCHAR(100),
+                full_name VARCHAR(255),
+                email VARCHAR(255),
+                phone VARCHAR(50),
+                submitted_at TIMESTAMP NULL,
+                field_data JSON,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+        console.log(' - google_leads table created/verified');
 
         // 8. WhatsApp Phone Details
         await pool.query(`
@@ -892,6 +1003,10 @@ const initSchema = async () => {
         try {
             await pool.query("UPDATE whatsapp_contacts SET status = 'unsubscribed' WHERE opt_in_status = 0 AND status = 'active'");
         } catch (e) { /* Migration might fail safely */ }
+        // Clean legacy auto-generated contact names containing source_user_name e.g. "919000000000 (Live Tester)"
+        try {
+            await pool.query("UPDATE whatsapp_contacts SET name = NULL WHERE name REGEXP '^[0-9]+[[:space:]]*\\\\('");
+        } catch (e) { /* Migration might fail safely */ }
         console.log(' - whatsapp_contacts engagement columns added/verified');
 
         // Create whatsapp_contact_activity table
@@ -913,6 +1028,9 @@ const initSchema = async () => {
 
         try {
             await pool.query("ALTER TABLE whatsapp_contact_activity MODIFY campaign_id INT NULL");
+        } catch (e) { /* Migration might fail safely */ }
+        try {
+            await pool.query("ALTER TABLE whatsapp_contact_activity MODIFY event_type VARCHAR(50) NOT NULL");
         } catch (e) { /* Migration might fail safely */ }
 
 
@@ -952,6 +1070,46 @@ const initSchema = async () => {
             )
         `);
         console.log(' - whatsapp_waba_pricing_analytics table created/verified');
+
+        // WABA Manual billing and payment ledger/history
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS whatsapp_waba_payment_history (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                config_id INT DEFAULT 0,
+                payment_date DATE NOT NULL,
+                amount DECIMAL(15, 2) DEFAULT 0.00,
+                transaction_id VARCHAR(100) DEFAULT NULL,
+                notes TEXT DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        // WhatsApp Call Logs Table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS whatsapp_call_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                call_id VARCHAR(255) NOT NULL UNIQUE,
+                phone_number_id VARCHAR(100) DEFAULT NULL,
+                display_phone_number VARCHAR(50) DEFAULT NULL,
+                caller_phone VARCHAR(50) NOT NULL,
+                caller_name VARCHAR(255) DEFAULT NULL,
+                caller_user_id VARCHAR(255) DEFAULT NULL,
+                receiver_phone VARCHAR(50) DEFAULT NULL,
+                direction VARCHAR(50) DEFAULT 'USER_INITIATED',
+                event VARCHAR(50) DEFAULT 'connect',
+                sdp_type VARCHAR(50) DEFAULT NULL,
+                session_data JSON DEFAULT NULL,
+                raw_payload JSON DEFAULT NULL,
+                duration INT DEFAULT 0,
+                call_timestamp TIMESTAMP NULL DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_caller_phone (caller_phone),
+                INDEX idx_phone_number_id (phone_number_id),
+                INDEX idx_event (event),
+                INDEX idx_call_timestamp (call_timestamp)
+            )
+        `);
+        console.log(' - whatsapp_call_logs table created/verified');
 
         // --- Task Management Table ---
         await pool.query(`
@@ -1005,6 +1163,50 @@ const initSchema = async () => {
         try {
             await pool.query("ALTER TABLE tasks ADD INDEX idx_tasks_parent_task_id (parent_task_id)");
         } catch (e) { /* Index might exist */ }
+
+        // --- Daily Tasks Table ---
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS daily_tasks (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                date DATE NOT NULL,
+                theme VARCHAR(255) NULL,
+                social_media_platform VARCHAR(255) NULL,
+                page_name VARCHAR(255) NULL,
+                department VARCHAR(255) NULL,
+                manager_name VARCHAR(255) NULL,
+                given_by VARCHAR(255) NULL,
+                employee VARCHAR(255) NULL,
+                position VARCHAR(255) NULL,
+                poster_name VARCHAR(255) NULL,
+                location VARCHAR(255) NULL,
+                facebook TEXT NULL,
+                instagram TEXT NULL,
+                linkedin TEXT NULL,
+                youtube TEXT NULL,
+                twitter TEXT NULL,
+                status ENUM('active', 'deleted') DEFAULT 'active',
+                created_by INT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+            )
+        `);
+        console.log(' - daily_tasks table created/verified');
+
+        // Column Migrations for newly added Excel template fields
+        try { await pool.query("ALTER TABLE daily_tasks ADD COLUMN page_name VARCHAR(255) NULL AFTER social_media_platform"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD COLUMN manager_name VARCHAR(255) NULL AFTER department"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD COLUMN poster_name VARCHAR(255) NULL AFTER position"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD COLUMN instagram TEXT NULL AFTER facebook"); } catch (e) {}
+
+        try { await pool.query("ALTER TABLE daily_tasks ADD INDEX idx_daily_tasks_date (date)"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD INDEX idx_daily_tasks_employee (employee)"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD INDEX idx_daily_tasks_dept (department)"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD INDEX idx_daily_tasks_theme (theme)"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD INDEX idx_daily_tasks_platform (social_media_platform)"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD INDEX idx_daily_tasks_status (status)"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD INDEX idx_daily_tasks_page (page_name)"); } catch (e) {}
+        try { await pool.query("ALTER TABLE daily_tasks ADD INDEX idx_daily_tasks_mgr (manager_name)"); } catch (e) {}
 
         // --- User Hierarchy Migrations ---
         try {
@@ -1155,7 +1357,7 @@ const initSchema = async () => {
                     cdn_url VARCHAR(255) DEFAULT NULL,
                     thumbnail_url VARCHAR(255) DEFAULT NULL,
                     preview_url VARCHAR(255) DEFAULT NULL,
-                    hash VARCHAR(64) NOT NULL UNIQUE,
+                    hash VARCHAR(255) NOT NULL UNIQUE,
                     linkedin_asset_urn VARCHAR(255) DEFAULT NULL,
                     meta_asset_id VARCHAR(255) DEFAULT NULL,
                     google_asset_id VARCHAR(255) DEFAULT NULL,
@@ -1181,6 +1383,7 @@ const initSchema = async () => {
 
             try { await pool.query("ALTER TABLE media_library ADD COLUMN facebook_variant VARCHAR(255) DEFAULT NULL"); } catch (e) {}
             try { await pool.query("ALTER TABLE media_library ADD COLUMN instagram_variant VARCHAR(255) DEFAULT NULL"); } catch (e) {}
+            try { await pool.query("ALTER TABLE media_library MODIFY COLUMN hash VARCHAR(255) NOT NULL"); } catch (e) {}
 
             // Create linkedin_creatives table
             await pool.query(`
@@ -1284,6 +1487,93 @@ const initSchema = async () => {
                 )
             `);
             console.log(' - meta_post_targets table created/verified');
+
+            // --- Meta Page Followers Tracker ---
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS meta_page_monthly_metrics (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    page_id VARCHAR(100) NOT NULL,
+                    config_id INT NOT NULL,
+                    page_name VARCHAR(255) NOT NULL,
+                    platform ENUM('facebook', 'instagram') NOT NULL,
+                    instagram_username VARCHAR(255) DEFAULT NULL,
+                    followers_count INT DEFAULT 0,
+                    likes_count INT DEFAULT 0,
+                    posts_count INT DEFAULT 0,
+                    record_year INT NOT NULL,
+                    record_month INT NOT NULL,
+                    record_date DATE NULL,
+                    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    UNIQUE KEY uq_page_platform_config_date (page_id, platform, config_id, record_date)
+                )
+            `);
+
+            // Migration & Duplicate Cleanup for existing databases
+            try {
+                const [cols] = await pool.query("SHOW COLUMNS FROM meta_page_monthly_metrics LIKE 'record_date'");
+                if (cols.length === 0) {
+                    await pool.query("ALTER TABLE meta_page_monthly_metrics ADD COLUMN record_date DATE NULL");
+                }
+
+                await pool.query("UPDATE meta_page_monthly_metrics SET record_date = DATE(recorded_at) WHERE record_date IS NULL");
+
+                // Clean duplicate rows keeping latest ID for each (page_id, platform, config_id, record_date)
+                await pool.query(`
+                    DELETE t1 FROM meta_page_monthly_metrics t1
+                    INNER JOIN meta_page_monthly_metrics t2 
+                    ON t1.page_id = t2.page_id 
+                   AND t1.platform = t2.platform 
+                   AND t1.config_id = t2.config_id 
+                   AND t1.record_date = t2.record_date 
+                   AND t1.id < t2.id
+                `);
+
+                const [indexes] = await pool.query("SHOW INDEX FROM meta_page_monthly_metrics");
+                const indexNames = indexes.map(i => i.Key_name);
+
+                if (indexNames.includes('uq_page_platform_month')) {
+                    await pool.query("ALTER TABLE meta_page_monthly_metrics DROP INDEX uq_page_platform_month");
+                }
+                if (indexNames.includes('uq_page_platform_date')) {
+                    await pool.query("ALTER TABLE meta_page_monthly_metrics DROP INDEX uq_page_platform_date");
+                }
+                if (!indexNames.includes('uq_page_platform_config_date')) {
+                    await pool.query("ALTER TABLE meta_page_monthly_metrics ADD UNIQUE KEY uq_page_platform_config_date (page_id, platform, config_id, record_date)");
+                }
+            } catch (migTableErr) {
+                console.warn('Note on meta_page_monthly_metrics schema migration:', migTableErr.message);
+            }
+
+            console.log(' - meta_page_monthly_metrics table created/verified');
+
+            // --- Minutes of Meeting (MoM) Table ---
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS meeting_moms (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    title VARCHAR(255) NOT NULL,
+                    department ENUM('SEO', 'Marketing', 'IT', 'HR', 'Payroll', 'Other') NOT NULL DEFAULT 'Other',
+                    meeting_date DATE NOT NULL,
+                    meeting_day VARCHAR(25) NOT NULL,
+                    meeting_with VARCHAR(255) NOT NULL DEFAULT 'CEO Shailesh Rajpal',
+                    custom_meeting_with VARCHAR(255) DEFAULT NULL,
+                    attendees TEXT DEFAULT NULL,
+                    agenda VARCHAR(500) DEFAULT NULL,
+                    discussion_points JSON NOT NULL,
+                    created_by INT NOT NULL,
+                    created_by_name VARCHAR(255) DEFAULT NULL,
+                    creator_manager_id INT NULL DEFAULT NULL,
+                    status ENUM('active', 'archived') DEFAULT 'active',
+                    is_deleted TINYINT(1) DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+                )
+            `);
+            console.log(' - meeting_moms table created/verified');
+
+            // Initialize PO (Purchase Order) Database Table
+            const POModel = require('../models/po/po.model');
+            await POModel.createTable();
         } catch (migErr) {
             console.error('[Migration Error] database schema initialization failed:', migErr.message);
             throw migErr;

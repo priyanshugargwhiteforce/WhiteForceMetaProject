@@ -668,6 +668,196 @@ const getGoogleCampaigns = async (customerId) => {
     }
 };
 
+const syncGoogleLeads = async (customerId) => {
+    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+    if (!refreshToken) {
+        throw new Error("Missing Google Refresh Token.");
+    }
+
+    try {
+        console.log(`Syncing Google Ads Leads for Customer: ${customerId}...`);
+        const client = getGoogleAdsClient();
+        const customer = client.Customer({
+            customer_id: customerId,
+            refresh_token: refreshToken,
+        });
+
+        // 1. Fetch campaigns map
+        const campaignsMap = {};
+        try {
+            const campaignRes = await customer.query(`
+                SELECT campaign.resource_name, campaign.id, campaign.name 
+                FROM campaign
+            `);
+            campaignRes.forEach(row => {
+                campaignsMap[row.campaign.resource_name] = {
+                    id: row.campaign.id,
+                    name: row.campaign.name
+                };
+            });
+        } catch (err) {
+            console.warn("Failed to fetch campaigns for mapping:", err.message);
+        }
+
+        // 2. Fetch ad groups map
+        const adGroupsMap = {};
+        try {
+            const adGroupRes = await customer.query(`
+                SELECT ad_group.resource_name, ad_group.id, ad_group.name 
+                FROM ad_group
+            `);
+            adGroupRes.forEach(row => {
+                adGroupsMap[row.ad_group.resource_name] = {
+                    id: row.ad_group.id,
+                    name: row.ad_group.name
+                };
+            });
+        } catch (err) {
+            console.warn("Failed to fetch ad groups for mapping:", err.message);
+        }
+
+        // 3. Fetch ads map
+        const adsMap = {};
+        try {
+            const adRes = await customer.query(`
+                SELECT ad_group_ad.resource_name, ad_group_ad.ad.id, ad_group_ad.ad.name 
+                FROM ad_group_ad
+            `);
+            adRes.forEach(row => {
+                adsMap[row.ad_group_ad.resource_name] = {
+                    id: row.ad_group_ad.ad.id,
+                    name: row.ad_group_ad.ad.name || 'Unnamed Ad'
+                };
+            });
+        } catch (err) {
+            console.warn("Failed to fetch ads for mapping:", err.message);
+        }
+
+        // 4. Fetch Lead Form Submission Data
+        const leadsQuery = `
+            SELECT
+              lead_form_submission_data.id,
+              lead_form_submission_data.asset,
+              lead_form_submission_data.campaign,
+              lead_form_submission_data.ad_group,
+              lead_form_submission_data.ad_group_ad,
+              lead_form_submission_data.submission_date_time,
+              lead_form_submission_data.lead_form_submission_fields,
+              lead_form_submission_data.custom_lead_form_submission_fields
+            FROM lead_form_submission_data
+        `;
+
+        const leadsResponse = await customer.query(leadsQuery);
+        console.log(`Retrieved ${leadsResponse.length} leads from Google Ads API.`);
+
+        const values = [];
+        leadsResponse.forEach(row => {
+            const lead = row.lead_form_submission_data;
+            const leadId = lead.id;
+            const assetResName = lead.asset;
+            const assetId = assetResName ? assetResName.split('/').pop() : null;
+
+            const campaignResName = lead.campaign;
+            const campaignInfo = campaignsMap[campaignResName] || {};
+            const campaignId = campaignInfo.id || (campaignResName ? campaignResName.split('/').pop() : null);
+            const campaignName = campaignInfo.name || null;
+
+            const adGroupResName = lead.ad_group;
+            const adGroupInfo = adGroupsMap[adGroupResName] || {};
+            const adGroupId = adGroupInfo.id || (adGroupResName ? adGroupResName.split('/').pop() : null);
+            const adGroupName = adGroupInfo.name || null;
+
+            const adGroupAdResName = lead.ad_group_ad;
+            const adInfo = adsMap[adGroupAdResName] || {};
+            const adId = adInfo.id || (adGroupAdResName ? adGroupAdResName.split('/').pop()?.split('~')?.pop() : null);
+            const adName = adInfo.name || null;
+
+            let submittedAt = null;
+            if (lead.submission_date_time) {
+                submittedAt = lead.submission_date_time;
+            }
+
+            let email = '';
+            let phone = '';
+            let fullName = '';
+            if (lead.lead_form_submission_fields) {
+                lead.lead_form_submission_fields.forEach(field => {
+                    const type = field.field_type;
+                    const val = field.field_value;
+                    if (type === 'EMAIL') email = val;
+                    else if (type === 'PHONE_NUMBER') phone = val;
+                    else if (type === 'FULL_NAME') fullName = val;
+                    else if (type === 'FIRST_NAME') fullName = val + (fullName ? ' ' + fullName : '');
+                    else if (type === 'LAST_NAME') fullName = (fullName ? fullName + ' ' : '') + val;
+                });
+            }
+            fullName = fullName.trim();
+
+            const fieldData = {
+                standard_fields: lead.lead_form_submission_fields || [],
+                custom_fields: lead.custom_lead_form_submission_fields || []
+            };
+
+            values.push([
+                leadId,
+                customerId,
+                campaignId,
+                campaignName,
+                adGroupId,
+                adGroupName,
+                adId,
+                adName,
+                assetId,
+                fullName,
+                email,
+                phone,
+                submittedAt,
+                JSON.stringify(fieldData)
+            ]);
+        });
+
+        if (values.length > 0) {
+            const upsertQuery = `
+                INSERT INTO google_leads (
+                    id, customer_id, campaign_id, campaign_name, ad_group_id, ad_group_name, 
+                    ad_id, ad_name, asset_id, full_name, email, phone, submitted_at, field_data
+                ) VALUES ?
+                ON DUPLICATE KEY UPDATE
+                    campaign_name = VALUES(campaign_name),
+                    ad_group_name = VALUES(ad_group_name),
+                    ad_name = VALUES(ad_name),
+                    full_name = VALUES(full_name),
+                    email = VALUES(email),
+                    phone = VALUES(phone),
+                    submitted_at = VALUES(submitted_at),
+                    field_data = VALUES(field_data)
+            `;
+            await pool.query(upsertQuery, [values]);
+        }
+
+        return values.length;
+    } catch (error) {
+        const errorDetails = error.errors && error.errors[0] && error.errors[0].message 
+            ? error.errors[0].message 
+            : (error.message || JSON.stringify(error));
+        console.error('Error syncing Google Ads Leads:', errorDetails, error);
+        throw new Error(errorDetails);
+    }
+};
+
+const getGoogleLeadsFromDb = async (customerId) => {
+    try {
+        const [rows] = await pool.query(
+            'SELECT * FROM google_leads WHERE customer_id = ? ORDER BY submitted_at DESC',
+            [customerId]
+        );
+        return rows;
+    } catch (error) {
+        console.error('Error fetching Google Leads from Database:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     getGoogleAdsClient,
     getGoogleDashboardData,
@@ -675,5 +865,7 @@ module.exports = {
     syncYouTubeAdHistory,
     syncSingleYouTubeAdDetails,
     getGoogleAds,
-    getGoogleCampaigns
+    getGoogleCampaigns,
+    syncGoogleLeads,
+    getGoogleLeadsFromDb
 };

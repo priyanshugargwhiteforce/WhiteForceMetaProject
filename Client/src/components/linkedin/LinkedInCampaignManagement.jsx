@@ -4,6 +4,7 @@ import {
   Briefcase, Plus, RefreshCw, ChevronDown, ChevronUp, Play, Pause,
   Calendar, CheckCircle, ShieldAlert, AlertCircle, Database, ExternalLink, Info, ChevronRight
 } from 'lucide-react';
+import CustomSelect from '../CustomSelect';
 
 const LinkedInCampaignManagement = () => {
   const navigate = useNavigate();
@@ -227,15 +228,12 @@ const LinkedInCampaignManagement = () => {
           </button>
 
           {/* Account Selector */}
-          <select
+          <CustomSelect
             value={selectedAccountId}
-            onChange={(e) => setSelectedAccountId(e.target.value)}
-            className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-white cursor-pointer"
-          >
-            {adAccounts.map(acc => (
-              <option key={acc.id} value={acc.id}>{acc.name}</option>
-            ))}
-          </select>
+            onChange={setSelectedAccountId}
+            options={adAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
+            className="min-w-[200px] rounded-2xl px-4 py-2.5 text-sm"
+          />
 
           {/* New Campaign Group Button */}
           <button
@@ -523,14 +521,15 @@ const LinkedInCampaignManagement = () => {
               {/* Status Selector */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Initial Status</label>
-                <select
+                <CustomSelect
                   value={newGroupStatus}
-                  onChange={(e) => setNewGroupStatus(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-white cursor-pointer"
-                >
-                  <option value="ACTIVE">ACTIVE (Deliverable)</option>
-                  <option value="DRAFT">DRAFT (Design Mode)</option>
-                </select>
+                  onChange={setNewGroupStatus}
+                  options={[
+                    { value: "ACTIVE", label: "ACTIVE (Deliverable)" },
+                    { value: "DRAFT", label: "DRAFT (Design Mode)" }
+                  ]}
+                  className="w-full rounded-xl px-4 py-2.5 text-xs"
+                />
               </div>
 
               {/* Schedule Dates */}

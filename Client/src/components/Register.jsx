@@ -1,18 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Sun, Moon, User, Mail, Lock } from 'lucide-react';
+import { Sun, Moon, User, Mail, Lock, Users, Clock, AlertTriangle } from 'lucide-react';
 import logoImg from '../assets/white-forcelogo.png';
 
 const Register = () => {
     const { theme, toggleTheme } = useTheme();
+    const [searchParams] = useSearchParams();
+    const inviteTokenParam = searchParams.get('token') || searchParams.get('invite');
+
     const [formData, setFormData] = useState({ username: '', email: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Invite token validation state
+    const [inviteDetails, setInviteDetails] = useState(null);
+    const [inviteLoading, setInviteLoading] = useState(false);
+    const [inviteExpired, setInviteExpired] = useState(false);
+
     const { login } = useAuth();
     const navigate = useNavigate();
+
+    // Validate invite token on mount if present in URL
+    useEffect(() => {
+        if (!inviteTokenParam) return;
+        const validateToken = async () => {
+            setInviteLoading(true);
+            try {
+                const res = await axios.get(`/api/auth/validate-invite-token?token=${inviteTokenParam}`);
+                if (res.data.success) {
+                    setInviteDetails(res.data);
+                    setInviteExpired(false);
+                }
+            } catch (err) {
+                console.error('Invite token validation error:', err);
+                setInviteExpired(true);
+                setError(err.response?.data?.message || 'Invitation link has expired (10-minute validity limit) or is invalid.');
+            } finally {
+                setInviteLoading(false);
+            }
+        };
+        validateToken();
+    }, [inviteTokenParam]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -20,10 +51,18 @@ const Register = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (inviteExpired) {
+            setError('Cannot register with an expired invitation link. Please request a new link from your Manager.');
+            return;
+        }
         setError('');
         setLoading(true);
         try {
-            const res = await axios.post('/api/auth/register', formData);
+            const payload = { ...formData };
+            if (inviteTokenParam) {
+                payload.invite_token = inviteTokenParam;
+            }
+            const res = await axios.post('/api/auth/register', payload);
             login(res.data.token, res.data.user);
             navigate('/');
         } catch (err) {
@@ -108,6 +147,37 @@ const Register = () => {
 
                 <div className="auth-container auth-card-glass fade-in max-w-md w-full p-8 border border-white/5 shadow-2xl">
                     <h2>Register</h2>
+
+                    {/* INVITATION BANNER */}
+                    {inviteDetails && (
+                      <div className="mb-5 p-3.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 dark:bg-indigo-500/10 dark:border-indigo-500/30 dark:text-indigo-300 flex items-start space-x-3 shadow-sm">
+                        <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-extrabold text-xs text-slate-900 dark:text-white uppercase tracking-wider block">
+                            {inviteDetails.target_role === 'manager' ? 'Manager Registration Invitation' : 'Team Member Registration Invitation'}
+                          </span>
+                          <p className="text-xs text-slate-700 dark:text-indigo-200 mt-0.5 leading-snug">
+                            {inviteDetails.target_role === 'manager' 
+                              ? <>You are registering as a <strong className="text-indigo-600 dark:text-indigo-300 font-extrabold">Manager (Manager Account)</strong> under Admin: <strong className="text-amber-600 dark:text-amber-300 font-bold">{inviteDetails.manager_name}</strong></>
+                              : <>You are registering as a <strong className="text-indigo-600 dark:text-indigo-300 font-extrabold">Team Member</strong> under Manager: <strong className="text-amber-600 dark:text-amber-300 font-bold">{inviteDetails.manager_name}</strong></>
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {inviteExpired && (
+                      <div className="mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 dark:bg-rose-500/10 dark:border-rose-500/30 dark:text-rose-300 flex items-start space-x-3 shadow-sm">
+                        <Clock className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-extrabold text-xs text-rose-700 dark:text-rose-400 uppercase tracking-wider block">Invitation Link Expired</span>
+                          <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5 leading-snug">
+                            This registration link has reached its 10-minute validity limit. Please request a new invitation link.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     {error && <div className="error-message">{error}</div>}
                     <form onSubmit={handleSubmit}>
                         <div className="form-group relative">

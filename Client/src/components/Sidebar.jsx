@@ -6,6 +6,7 @@ import axios from 'axios';
 import {
   LayoutDashboard,
   Users,
+  User,
   ChartBar,
   Settings,
   LogOut,
@@ -24,9 +25,14 @@ import {
   Calendar,
   ClipboardList,
   MessageSquare,
+  PhoneCall,
   FolderOpen,
+  Tv,
   Video,
-  Play
+  Play,
+  Film,
+  ShieldCheck,
+  X
 } from 'lucide-react';
 import logo from "../assets/white-forcelogo.png";
 
@@ -92,15 +98,19 @@ const WhatsAppIcon = ({ className }) => (
   </svg>
 );
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose }) => {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const baseNavigate = useNavigate();
+  const navigate = (path) => {
+    baseNavigate(path);
+    if (onClose) onClose();
+  };
   const location = useLocation();
 
-  const metaPaths = ['/ad-accounts', '/ad-analyzer', '/single-ad-analyzer', '/insights', '/all-leads', '/ad-owners', '/meta-posting'];
-  const googlePaths = ['/google-dashboard', '/google-campaigns', '/google-performance', '/google-insights', '/youtube-ads', '/youtube-shorts'];
-  const waPaths = ['/whatsapp-manager', '/wa-channels', '/wa-templates', '/wa-templates/new', '/send-message', '/wa-analytics', '/wa-contacts', '/wa-campaigns', '/wa-schedules', '/wa-chats', '/wa-external'];
+  const metaPaths = ['/ad-accounts', '/ad-analyzer', '/single-ad-analyzer', '/insights', '/all-leads', '/ad-owners', '/meta-posting', '/page-tracker'];
+  const googlePaths = ['/google-accounts', '/google-dashboard', '/google-campaigns', '/google-performance', '/google-insights', '/google-leads', '/youtube-channel-dashboard', '/youtube-ads', '/youtube-shorts'];
+  const waPaths = ['/whatsapp-manager', '/wa-channels', '/wa-templates', '/wa-templates/new', '/send-message', '/wa-analytics', '/wa-contacts', '/wa-campaigns', '/wa-schedules', '/wa-chats', '/wa-calls', '/wa-external'];
   const settingsPaths = ['/users', '/settings/meta', '/settings/whatsapp'];
   const linkedInPaths = [
     '/linkedin-manager', '/linkedin-campaigns', '/linkedin-analytics', '/linkedin-leads',
@@ -108,14 +118,29 @@ const Sidebar = () => {
     '/linkedin-creatives/new', '/linkedin-creatives', '/linkedin-ads', '/linkedin-ads/new'
   ];
 
-  const [openMeta, setOpenMeta] = useState(metaPaths.includes(location.pathname) || location.pathname === '/');
-  const [openGoogle, setOpenGoogle] = useState(googlePaths.includes(location.pathname) || location.pathname.startsWith('/youtube-ad') || location.pathname === '/youtube-shorts');
+  const [openDropdown, setOpenDropdown] = useState(null);
   const [openYoutube, setOpenYoutube] = useState(location.pathname.startsWith('/youtube-'));
-  const [openWhatsApp, setOpenWhatsApp] = useState(waPaths.includes(location.pathname));
-  const [openLinkedIn, setOpenLinkedIn] = useState(linkedInPaths.includes(location.pathname) || location.pathname.startsWith('/linkedin-'));
-  const [openSettings, setOpenSettings] = useState(settingsPaths.includes(location.pathname));
 
   const [pendingCount, setPendingCount] = useState(0);
+  const [isApiConnected, setIsApiConnected] = useState(true);
+
+  useEffect(() => {
+    const checkApiStatus = async () => {
+      try {
+        const res = await axios.get('/health', { timeout: 3000 });
+        if (res.status === 200) {
+          setIsApiConnected(true);
+        } else {
+          setIsApiConnected(false);
+        }
+      } catch (err) {
+        setIsApiConnected(false);
+      }
+    };
+    checkApiStatus();
+    const interval = setInterval(checkApiStatus, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchPendingCount = async () => {
     if (!user) return;
@@ -134,16 +159,17 @@ const Sidebar = () => {
 
   useEffect(() => {
     const path = location.pathname;
-    if (metaPaths.includes(path)) setOpenMeta(true);
-    if (googlePaths.includes(path) || path.startsWith('/youtube-')) {
-      setOpenGoogle(true);
+    if (metaPaths.includes(path)) setOpenDropdown('meta');
+    else if (googlePaths.includes(path) || path.startsWith('/youtube-')) {
+      setOpenDropdown('google');
       if (path.startsWith('/youtube-')) {
         setOpenYoutube(true);
       }
     }
-    if (waPaths.includes(path)) setOpenWhatsApp(true);
-    if (linkedInPaths.includes(path) || path.startsWith('/linkedin-')) setOpenLinkedIn(true);
-    if (settingsPaths.includes(path)) setOpenSettings(true);
+    else if (waPaths.includes(path)) setOpenDropdown('whatsapp');
+    else if (linkedInPaths.includes(path) || path.startsWith('/linkedin-')) setOpenDropdown('linkedin');
+    else if (settingsPaths.includes(path)) setOpenDropdown('settings');
+    else setOpenDropdown(null);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -153,18 +179,41 @@ const Sidebar = () => {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <aside className="w-72 border-r border-slate-200 dark:border-white/5 bg-[var(--bg-sidebar)] backdrop-blur-3xl hidden md:flex flex-col sticky top-0 h-screen transition-colors duration-300">
-      <div className="p-8">
-        <div className="flex items-center space-x-3 mb-2">
-          <div className="flex items-center justify-center">
-            <img src={logo} alt="Logo" className="w-15 h-10 object-cover" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight leading-none transition-colors">White Force</h1>
-            <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] mt-1 transition-colors">Ad Management</p>
+    <>
+      {/* Mobile Sidebar Backdrop Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm md:hidden transition-opacity duration-300"
+          onClick={onClose}
+        />
+      )}
+
+      <aside className={`
+        w-72 border-r border-slate-200 dark:border-white/5 bg-[var(--bg-sidebar)] backdrop-blur-3xl 
+        flex flex-col fixed inset-y-0 left-0 z-[70] md:sticky md:top-0 h-screen transition-transform transition-colors duration-300
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+      `}>
+        {/* Close Button on Mobile Sidebar */}
+        <div className="flex md:hidden justify-end p-4 absolute right-2 top-2 z-50">
+          <button 
+            onClick={onClose}
+            className="p-2 bg-slate-100/50 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 rounded-xl text-slate-500 transition-all cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-8">
+          <div className="flex items-center space-x-3 mb-2">
+            <div className="flex items-center justify-center">
+              <img src={logo} alt="Logo" className="w-15 h-10 object-cover" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight leading-none transition-colors">White Force</h1>
+              <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] mt-1 transition-colors">Ad Management</p>
+            </div>
           </div>
         </div>
-      </div>
 
       <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto pt-4">
         <NavItem
@@ -190,8 +239,8 @@ const Sidebar = () => {
           <NavDropdown
             icon={MetaIcon}
             label="Meta Ads"
-            open={openMeta}
-            onToggle={() => setOpenMeta(!openMeta)}
+            open={openDropdown === 'meta'}
+            onToggle={() => setOpenDropdown(openDropdown === 'meta' ? null : 'meta')}
           >
             {(user?.role === 'admin' || !!user?.meta_access) && (
               <>
@@ -231,10 +280,26 @@ const Sidebar = () => {
                   isSubItem={true}
                 />
                 <NavItem
+                  icon={FileText}
+                  label="Assign Leads"
+                  active={isActive('/assign-leads')}
+                  onClick={() => navigate('/assign-leads')}
+                  isSubItem={true}
+                  disabled={true}
+                  title="Coming Soon"
+                />
+                <NavItem
                   icon={Users}
                   label="Ad Owner"
                   active={isActive('/ad-owners')}
                   onClick={() => navigate('/ad-owners')}
+                  isSubItem={true}
+                />
+                <NavItem
+                  icon={TrendingUp}
+                  label="Page Tracker"
+                  active={isActive('/page-tracker')}
+                  onClick={() => navigate('/page-tracker')}
                   isSubItem={true}
                 />
               </>
@@ -255,9 +320,16 @@ const Sidebar = () => {
           <NavDropdown
             icon={GoogleIcon}
             label="Google Ads"
-            open={openGoogle}
-            onToggle={() => setOpenGoogle(!openGoogle)}
+            open={openDropdown === 'google'}
+            onToggle={() => setOpenDropdown(openDropdown === 'google' ? null : 'google')}
           >
+            <NavItem
+              icon={ShieldCheck}
+              label="Connected Accounts"
+              active={isActive('/google-accounts')}
+              onClick={() => navigate('/google-accounts')}
+              isSubItem={true}
+            />
             <NavItem
               icon={Users}
               label="Accounts Overview"
@@ -286,6 +358,13 @@ const Sidebar = () => {
               onClick={() => navigate('/google-insights')}
               isSubItem={true}
             />
+            <NavItem
+              icon={Users}
+              label="Google Leads"
+              active={isActive('/google-leads')}
+              onClick={() => navigate('/google-leads')}
+              isSubItem={true}
+            />
             <SubNavDropdown
               icon={Video}
               label="YouTube"
@@ -293,6 +372,20 @@ const Sidebar = () => {
               onToggle={() => setOpenYoutube(!openYoutube)}
               active={location.pathname.startsWith('/youtube-')}
             >
+              <NavItem
+                icon={Tv}
+                label="Channel Dashboard"
+                active={isActive('/youtube-channel-dashboard')}
+                onClick={() => navigate('/youtube-channel-dashboard')}
+                isSubItem={true}
+              />
+              <NavItem
+                icon={Film}
+                label="Video Management"
+                active={isActive('/youtube-video-dashboard')}
+                onClick={() => navigate('/youtube-video-dashboard')}
+                isSubItem={true}
+              />
               <NavItem
                 icon={Video}
                 label="YT Videos"
@@ -315,8 +408,8 @@ const Sidebar = () => {
           <NavDropdown
             icon={WhatsAppIcon}
             label="WhatsApp Manager"
-            open={openWhatsApp}
-            onToggle={() => setOpenWhatsApp(!openWhatsApp)}
+            open={openDropdown === 'whatsapp'}
+            onToggle={() => setOpenDropdown(openDropdown === 'whatsapp' ? null : 'whatsapp')}
             colorScheme="whatsapp"
           >
             <NavItem
@@ -384,6 +477,14 @@ const Sidebar = () => {
               colorScheme="whatsapp"
             />
             <NavItem
+              icon={PhoneCall}
+              label="Call Logs"
+              active={isActive('/wa-calls')}
+              onClick={() => navigate('/wa-calls')}
+              isSubItem={true}
+              colorScheme="whatsapp"
+            />
+            <NavItem
               icon={PieChart}
               label="Analytics"
               active={isActive('/wa-analytics')}
@@ -407,8 +508,8 @@ const Sidebar = () => {
           <NavDropdown
             icon={LinkedInIcon}
             label="LinkedIn Ads"
-            open={openLinkedIn}
-            onToggle={() => setOpenLinkedIn(!openLinkedIn)}
+            open={openDropdown === 'linkedin'}
+            onToggle={() => setOpenDropdown(openDropdown === 'linkedin' ? null : 'linkedin')}
           >
             <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-3 pt-2 pb-1">
               Reporting
@@ -505,11 +606,17 @@ const Sidebar = () => {
             <div className="pt-6 pb-2 px-4">
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">System</p>
             </div>
+            <NavItem
+              icon={PieChart}
+              label="Reports"
+              active={isActive('/reports')}
+              onClick={() => navigate('/reports')}
+            />
             <NavDropdown
               icon={Settings}
               label="Settings"
-              open={openSettings}
-              onToggle={() => setOpenSettings(!openSettings)}
+              open={openDropdown === 'settings'}
+              onToggle={() => setOpenDropdown(openDropdown === 'settings' ? null : 'settings')}
             >
               <NavItem
                 icon={Users}
@@ -542,23 +649,25 @@ const Sidebar = () => {
         )}
       </nav>
 
-      <div className="p-6 border-t border-slate-200 dark:border-white/5">
-        <div className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-2xl p-4 border border-indigo-500/10 mb-4">
-          <p className="text-xs font-semibold text-indigo-300 mb-1">API Status</p>
-          <div className="flex items-center">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2 shadow-lg shadow-emerald-500/50"></div>
-            <span className="text-[10px] text-slate-400">Connected to v24.0</span>
+      <div className="p-4 border-t border-slate-200 dark:border-white/5">
+        {/* Compact API Status Badge */}
+        <div className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span className="relative flex h-2 w-2">
+              {isApiConnected && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              )}
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${isApiConnected ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+            </span>
+            <span className={`text-[11px] font-bold ${isApiConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+              {isApiConnected ? 'API Connected' : 'API Offline'}
+            </span>
           </div>
+          <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500">v24.0</span>
         </div>
-        <button
-          onClick={logout}
-          className="flex items-center w-full px-4 py-3 text-slate-500 dark:text-slate-400 hover:text-red-500 hover:bg-red-500/5 rounded-xl transition-all duration-300 group"
-        >
-          <LogOut className="w-5 h-5 mr-3 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-medium text-sm">Logout</span>
-        </button>
       </div>
     </aside>
+    </>
   );
 };
 
@@ -604,10 +713,14 @@ const SubNavDropdown = ({ icon: Icon, label, open, onToggle, active = false, chi
   </div>
 );
 
-const NavItem = ({ icon: Icon, label, active = false, onClick, isSubItem = false, badge = null, colorScheme = 'blue' }) => (
+const NavItem = ({ icon: Icon, label, active = false, onClick, isSubItem = false, badge = null, colorScheme = 'blue', disabled = false, title = null }) => (
   <button
-    onClick={onClick}
-    className={`flex items-center w-full transition-all duration-300 group relative ${isSubItem ? 'px-3 py-2.5 rounded-xl' : 'px-4 py-3 rounded-2xl'
+    disabled={disabled}
+    onClick={disabled ? (e) => e.preventDefault() : onClick}
+    title={disabled ? (title || 'Coming Soon') : undefined}
+    className={`flex items-center w-full transition-all duration-300 relative ${
+      disabled ? 'cursor-not-allowed opacity-50 select-none' : 'group cursor-pointer'
+    } ${isSubItem ? 'px-3 py-2.5 rounded-xl' : 'px-4 py-3 rounded-2xl'
       } ${active
         ? (colorScheme === 'whatsapp'
           ? 'bg-gradient-to-r from-emerald-600/20 to-teal-600/10 text-emerald-600 dark:text-white border border-emerald-500/20'
@@ -621,12 +734,13 @@ const NavItem = ({ icon: Icon, label, active = false, onClick, isSubItem = false
     {active && isSubItem && <div className={`absolute -left-4 top-1/2 -translate-y-1/2 w-1 h-4 rounded-r-full shadow-[0_0_12px_rgba(16,185,129,0.5)] ${colorScheme === 'whatsapp' ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>}
     <Icon className={`transition-colors ${isSubItem ? 'w-4 h-4 mr-3' : 'w-5 h-5 mr-3'} ${active ? (colorScheme === 'whatsapp' ? 'text-emerald-500 dark:text-emerald-400' : 'text-blue-500 dark:text-blue-400') : (colorScheme === 'whatsapp' ? 'group-hover:text-emerald-500 dark:group-hover:text-emerald-400' : 'group-hover:text-blue-500 dark:group-hover:text-blue-400')}`} />
     <span className={`font-semibold ${isSubItem ? 'text-xs' : 'text-sm'}`}>{label}</span>
-    {badge !== null && badge > 0 && (
+
+    {badge !== null && badge > 0 && !disabled && (
       <span className="ml-auto bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.4)] animate-pulse">
         {badge}
       </span>
     )}
-    {active && !isSubItem && badge === null && <ChevronRight className={`w-4 h-4 ml-auto ${colorScheme === 'whatsapp' ? 'text-emerald-500 dark:text-emerald-400' : 'text-blue-500 dark:text-blue-400'}`} />}
+    {active && !isSubItem && badge === null && !disabled && <ChevronRight className={`w-4 h-4 ml-auto ${colorScheme === 'whatsapp' ? 'text-emerald-500 dark:text-emerald-400' : 'text-blue-500 dark:text-blue-400'}`} />}
   </button>
 );
 

@@ -31,9 +31,9 @@ exports.getTasks = async (req, res) => {
         } else if (role === 'admin') {
             // Admin sees all tasks
         } else if (role === 'manager') {
-            // Manager sees tasks assigned to them, created by them, or assigned to their team members
-            conditions.push('(t.assigned_to = ? OR t.assigned_by = ? OR t.assigned_to IN (SELECT id FROM users WHERE manager_id = ?))');
-            params.push(userId, userId, userId);
+            // Manager sees tasks assigned to them, created by them, or assigned to/created by their team members
+            conditions.push('(t.assigned_to = ? OR t.assigned_by = ? OR t.assigned_to IN (SELECT id FROM users WHERE manager_id = ?) OR t.assigned_by IN (SELECT id FROM users WHERE manager_id = ?))');
+            params.push(userId, userId, userId, userId);
         } else {
             // Standard employees see ONLY tasks assigned to them
             conditions.push('t.assigned_to = ?');
@@ -89,6 +89,7 @@ exports.getTasks = async (req, res) => {
                     assigned_to: row.assigned_to,
                     assignee_name: row.assignee_name,
                     assignee_email: row.assignee_email,
+                    assignee_manager_id: row.assignee_manager_id,
                     status: row.status,
                     remarks: row.remarks
                 });
@@ -104,6 +105,7 @@ exports.getTasks = async (req, res) => {
                     assigned_to: row.assigned_to,
                     assignee_name: row.assignee_name,
                     assignee_email: row.assignee_email,
+                    assignee_manager_id: row.assignee_manager_id,
                     status: row.status,
                     remarks: row.remarks
                 }]
@@ -147,13 +149,40 @@ exports.createTask = async (req, res) => {
             return res.status(400).json({ success: false, message: 'At least one valid assignee is required.' });
         }
 
-        // Only admin or manager can create tasks for others. Anyone can create a task for themselves.
-        const containsOthers = assignees.some(id => id !== assigned_by);
-        if (role !== 'admin' && role !== 'manager' && containsOthers) {
-            return res.status(403).json({ 
-                success: false, 
-                message: 'Forbidden: Only administrators, managers, or team leads can assign tasks to other team members.' 
-            });
+        // Assignee permission checks
+        if (role !== 'admin' && role !== 'manager') {
+            // Rule 1: Standard users MUST include themselves as an assignee
+            const includesSelf = assignees.some(id => Number(id) === Number(assigned_by));
+            if (!includesSelf) {
+                return res.status(403).json({ 
+                    success: false, 
+                    message: 'Forbidden: Team members must include themselves as an assignee when creating a task.' 
+                });
+            }
+
+            // Rule 2: Verify that any additional assignees are active team members under the same manager (no managers/admins)
+            const otherAssignees = assignees.filter(id => Number(id) !== Number(assigned_by));
+            if (otherAssignees.length > 0) {
+                const userManagerId = req.user.manager_id;
+                if (!userManagerId) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Forbidden: You are not assigned to a manager team, so you cannot collaborate with other team members.'
+                    });
+                }
+
+                const [teamRows] = await pool.query(
+                    'SELECT id FROM users WHERE id IN (?) AND manager_id = ? AND role = "user" AND status = "active"',
+                    [otherAssignees, userManagerId]
+                );
+
+                if (teamRows.length !== new Set(otherAssignees).size) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Forbidden: You can only collaborate with fellow team members under your manager. You cannot assign tasks to your Manager or other teams.'
+                    });
+                }
+            }
         }
 
         // Check if all assignees exist in DB
@@ -220,21 +249,28 @@ exports.updateTask = async (req, res) => {
 
         const task = taskRows[0];
 
-        const isCreator = task.assigned_by === userId;
-        const isAssignee = task.assigned_to === userId;
+        const isCreator = Number(task.assigned_by) === Number(userId);
+        const isAssignee = Number(task.assigned_to) === Number(userId);
         const isAdmin = role === 'admin';
 
-        // Check if assignee is a team member of the current manager
-        let isManagerOfAssignee = false;
-        if (role === 'manager' && task.assigned_to) {
-            const [assigneeRows] = await pool.query('SELECT manager_id FROM users WHERE id = ?', [task.assigned_to]);
-            if (assigneeRows.length > 0 && assigneeRows[0].manager_id === userId) {
-                isManagerOfAssignee = true;
+        // Check if manager is managing the assigned user or the creator user
+        let isManagerOfTask = false;
+        if (role === 'manager') {
+            if (isCreator || isAssignee) {
+                isManagerOfTask = true;
+            } else {
+                const [teamRows] = await pool.query(
+                    'SELECT id FROM users WHERE (id = ? OR id = ?) AND manager_id = ?',
+                    [task.assigned_to, task.assigned_by, userId]
+                );
+                if (teamRows.length > 0) {
+                    isManagerOfTask = true;
+                }
             }
         }
 
         // Check authorization
-        if (!isAdmin && !isCreator && !isAssignee && !isManagerOfAssignee) {
+        if (!isAdmin && !isCreator && !isAssignee && !isManagerOfTask) {
             return res.status(403).json({ success: false, message: 'You are not authorized to update this task.' });
         }
 
@@ -261,15 +297,15 @@ exports.updateTask = async (req, res) => {
             });
         }
 
-        // If assignee (and not admin/creator/manager of assignee), they can only update status or add a remark
-        if (!isAdmin && !isCreator && !isManagerOfAssignee && isAssignee) {
+        // If assignee (and not admin/creator/manager of task), they can only update status or add a remark
+        if (!isAdmin && !isCreator && !isManagerOfTask && isAssignee) {
             if (status === undefined && remark === undefined) {
                 return res.status(400).json({ success: false, message: 'Assignees can only update the task status or add a remark.' });
             }
             
             const fields = [];
             const params = [];
-            if (status !== undefined) {
+            if (status !== undefined && status !== null && status !== '') {
                 fields.push('status = ?');
                 params.push(status);
             }
@@ -278,60 +314,94 @@ exports.updateTask = async (req, res) => {
                 params.push(JSON.stringify(remarksArray));
             }
             
-            params.push(id);
-            await pool.query(`UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`, params);
-        } else {
-            // Full update for admin, manager, or creator
-            if (task.parent_task_id && (isAdmin || isCreator || isManagerOfAssignee)) {
-                // Update shared metadata fields for the whole group
-                const groupFields = [];
-                const groupParams = [];
-                if (title !== undefined) { groupFields.push('title = ?'); groupParams.push(title); }
-                if (description !== undefined) { groupFields.push('description = ?'); groupParams.push(description); }
-                if (ad_platform !== undefined) { groupFields.push('ad_platform = ?'); groupParams.push(ad_platform); }
-                if (ad_id !== undefined) { groupFields.push('ad_id = ?'); groupParams.push(ad_id); }
-                if (ad_name !== undefined) { groupFields.push('ad_name = ?'); groupParams.push(ad_name); }
-                if (priority !== undefined) { groupFields.push('priority = ?'); groupParams.push(priority); }
-                if (due_date !== undefined) { groupFields.push('due_date = ?'); groupParams.push(due_date); }
-
-                if (groupFields.length > 0) {
-                    groupParams.push(task.parent_task_id);
-                    await pool.query(`UPDATE tasks SET ${groupFields.join(', ')} WHERE parent_task_id = ?`, groupParams);
-                }
-
-                // Update specific task fields (assigned_to, status, remarks) for the specific row ID
-                const specificFields = [];
-                const specificParams = [];
-                if (assigned_to !== undefined) { specificFields.push('assigned_to = ?'); specificParams.push(assigned_to); }
-                if (status !== undefined) { specificFields.push('status = ?'); specificParams.push(status); }
-                if (remark !== undefined) { specificFields.push('remarks = ?'); specificParams.push(JSON.stringify(remarksArray)); }
-
-                if (specificFields.length > 0) {
-                    specificParams.push(id);
-                    await pool.query(`UPDATE tasks SET ${specificFields.join(', ')} WHERE id = ?`, specificParams);
-                }
-            } else {
-                // Single/un-grouped task update
-                const fields = [];
-                const params = [];
-
-                if (title !== undefined) { fields.push('title = ?'); params.push(title); }
-                if (description !== undefined) { fields.push('description = ?'); params.push(description); }
-                if (assigned_to !== undefined) { fields.push('assigned_to = ?'); params.push(assigned_to); }
-                if (ad_platform !== undefined) { fields.push('ad_platform = ?'); params.push(ad_platform); }
-                if (ad_id !== undefined) { fields.push('ad_id = ?'); params.push(ad_id); }
-                if (ad_name !== undefined) { fields.push('ad_name = ?'); params.push(ad_name); }
-                if (priority !== undefined) { fields.push('priority = ?'); params.push(priority); }
-                if (status !== undefined) { fields.push('status = ?'); params.push(status); }
-                if (due_date !== undefined) { fields.push('due_date = ?'); params.push(due_date); }
-                if (remark !== undefined) { fields.push('remarks = ?'); params.push(JSON.stringify(remarksArray)); }
-
-                if (fields.length === 0) {
-                    return res.status(400).json({ success: false, message: 'No fields provided for update.' });
-                }
-
+            if (fields.length > 0) {
                 params.push(id);
                 await pool.query(`UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`, params);
+            }
+        } else {
+            // Full update for admin, manager, or creator
+            const parentKey = task.parent_task_id || task.id;
+
+            // Parse new assignees array if provided
+            let newAssigneeIds = null;
+            if (assigned_to !== undefined && assigned_to !== null && assigned_to !== '') {
+                if (Array.isArray(assigned_to)) {
+                    newAssigneeIds = assigned_to.map(i => parseInt(i)).filter(i => !isNaN(i));
+                } else if (typeof assigned_to === 'string' && assigned_to.includes(',')) {
+                    newAssigneeIds = assigned_to.split(',').map(i => parseInt(i.trim())).filter(i => !isNaN(i));
+                } else {
+                    const parsed = parseInt(assigned_to);
+                    if (!isNaN(parsed)) {
+                        newAssigneeIds = [parsed];
+                    }
+                }
+            }
+
+            // Update shared metadata fields for the whole group
+            const groupFields = [];
+            const groupParams = [];
+            if (title !== undefined) { groupFields.push('title = ?'); groupParams.push(title); }
+            if (description !== undefined) { groupFields.push('description = ?'); groupParams.push(description || null); }
+            if (ad_platform !== undefined) { groupFields.push('ad_platform = ?'); groupParams.push(ad_platform || 'general'); }
+            if (ad_id !== undefined) { groupFields.push('ad_id = ?'); groupParams.push(ad_id || null); }
+            if (ad_name !== undefined) { groupFields.push('ad_name = ?'); groupParams.push(ad_name || null); }
+            if (priority !== undefined) { groupFields.push('priority = ?'); groupParams.push(priority); }
+            if (due_date !== undefined) { groupFields.push('due_date = ?'); groupParams.push(due_date || null); }
+
+            if (groupFields.length > 0) {
+                groupParams.push(parentKey, parentKey);
+                await pool.query(`UPDATE tasks SET ${groupFields.join(', ')} WHERE parent_task_id = ? OR id = ?`, groupParams);
+            }
+
+            if (status !== undefined && status !== null && status !== '') {
+                await pool.query('UPDATE tasks SET status = ? WHERE id = ?', [status, id]);
+            }
+            if (remark !== undefined) {
+                await pool.query('UPDATE tasks SET remarks = ? WHERE id = ?', [JSON.stringify(remarksArray), id]);
+            }
+
+            // Sync group assignees if assigned_to was updated
+            if (newAssigneeIds && newAssigneeIds.length > 0) {
+                const [existingRows] = await pool.query('SELECT id, assigned_to FROM tasks WHERE parent_task_id = ? OR id = ?', [parentKey, parentKey]);
+                const existingAssignees = existingRows.map(r => r.assigned_to);
+
+                // Remove assignees that are no longer in newAssigneeIds
+                const rowsToRemove = existingRows.filter(r => !newAssigneeIds.includes(r.assigned_to));
+                if (rowsToRemove.length > 0) {
+                    const removeIds = rowsToRemove.map(r => r.id);
+                    await pool.query('DELETE FROM tasks WHERE id IN (?)', [removeIds]);
+                }
+
+                // Add new assignees that were not in existingAssignees
+                const assigneesToAdd = newAssigneeIds.filter(aId => !existingAssignees.includes(aId));
+                for (const aId of assigneesToAdd) {
+                    await pool.query(
+                        `INSERT INTO tasks (title, description, assigned_to, assigned_by, ad_platform, ad_id, ad_name, priority, due_date, parent_task_id, status)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+                        [
+                            title !== undefined ? title : task.title,
+                            description !== undefined ? (description || null) : task.description,
+                            aId,
+                            task.assigned_by,
+                            ad_platform !== undefined ? (ad_platform || 'general') : task.ad_platform,
+                            ad_id !== undefined ? (ad_id || null) : task.ad_id,
+                            ad_name !== undefined ? (ad_name || null) : task.ad_name,
+                            priority !== undefined ? priority : task.priority,
+                            due_date !== undefined ? (due_date || null) : task.due_date,
+                            parentKey
+                        ]
+                    );
+                }
+
+                // Query remaining active rows in this group after deletion/insertion
+                const [finalRows] = await pool.query('SELECT id, assigned_to FROM tasks WHERE parent_task_id = ? OR id = ?', [parentKey, parentKey]);
+                if (finalRows.length === 1) {
+                    // Revert to a single task: clear parent_task_id so it behaves as a normal single task!
+                    await pool.query('UPDATE tasks SET parent_task_id = NULL WHERE id = ?', [finalRows[0].id]);
+                } else if (finalRows.length > 1) {
+                    const newGroupParentKey = finalRows[0].id;
+                    await pool.query('UPDATE tasks SET parent_task_id = ? WHERE id IN (?)', [newGroupParentKey, finalRows.map(r => r.id)]);
+                }
             }
         }
 
@@ -358,17 +428,28 @@ exports.deleteTask = async (req, res) => {
 
         const task = taskRows[0];
 
-        // Check if assignee is a team member of the current manager
-        let isManagerOfAssignee = false;
-        if (role === 'manager' && task.assigned_to) {
-            const [assigneeRows] = await pool.query('SELECT manager_id FROM users WHERE id = ?', [task.assigned_to]);
-            if (assigneeRows.length > 0 && assigneeRows[0].manager_id === userId) {
-                isManagerOfAssignee = true;
+        const isCreator = Number(task.assigned_by) === Number(userId);
+        const isAssignee = Number(task.assigned_to) === Number(userId);
+        const isAdmin = role === 'admin';
+
+        // Check if assignee or creator is a team member of current manager
+        let isManagerOfTask = false;
+        if (role === 'manager') {
+            if (isCreator || isAssignee) {
+                isManagerOfTask = true;
+            } else {
+                const [teamRows] = await pool.query(
+                    'SELECT id FROM users WHERE (id = ? OR id = ?) AND manager_id = ?',
+                    [task.assigned_to, task.assigned_by, userId]
+                );
+                if (teamRows.length > 0) {
+                    isManagerOfTask = true;
+                }
             }
         }
 
-        // Only Admin, the creator, or the manager of the assignee can delete the task
-        if (role !== 'admin' && task.assigned_by !== userId && !isManagerOfAssignee) {
+        // Only Admin, the creator, or manager of task can delete the task
+        if (!isAdmin && !isCreator && !isManagerOfTask) {
             return res.status(403).json({ success: false, message: 'You are not authorized to delete this task.' });
         }
 
@@ -400,9 +481,14 @@ exports.getAssignableUsers = async (req, res) => {
             query += ' AND (manager_id = ? OR id = ?)';
             params.push(userId, userId);
         } else {
-            // Standard users can only assign to themselves
-            query += ' AND id = ?';
-            params.push(userId);
+            // Standard users can collaborate with teammates under the same manager (excluding manager/admin)
+            if (req.user.manager_id) {
+                query += ' AND ((manager_id = ? AND role = "user") OR id = ?)';
+                params.push(req.user.manager_id, userId);
+            } else {
+                query += ' AND id = ?';
+                params.push(userId);
+            }
         }
 
         query += ' ORDER BY username ASC';

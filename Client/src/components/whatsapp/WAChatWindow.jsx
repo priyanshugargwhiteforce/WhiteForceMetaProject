@@ -12,10 +12,23 @@ import {
   RefreshCw,
   User,
   ShieldCheck,
-  Share2
+  MapPin,
+  Mic,
+  Image,
+  Video,
+  FileText,
+  CheckCircle2,
+  Info,
+  ExternalLink,
+  Volume2,
+  Smile,
+  ShoppingBag,
+  UserCheck,
+  MousePointerClick
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import CustomSelect from '../CustomSelect';
 
 const WAChatWindow = () => {
   const { user } = useAuth();
@@ -23,6 +36,7 @@ const WAChatWindow = () => {
   const [filteredThreads, setFilteredThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [window24h, setWindow24h] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const [loadingThreads, setLoadingThreads] = useState(true);
@@ -38,24 +52,50 @@ const WAChatWindow = () => {
   const messagesEndRef = useRef(null);
   const selectedThreadRef = useRef(selectedThread);
 
+  // Pagination and search debouncing states
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  const debouncedSearchQueryRef = useRef(debouncedSearchQuery);
+
   useEffect(() => {
     selectedThreadRef.current = selectedThread;
   }, [selectedThread]);
 
   useEffect(() => {
-    fetchConfigs();
-    fetchThreads();
+    debouncedSearchQueryRef.current = debouncedSearchQuery;
+  }, [debouncedSearchQuery]);
 
-    // Event listener for config changes (updates threads)
+  // Debounce search query input (500ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Fetch configs and set window event listener
+  useEffect(() => {
+    fetchConfigs();
+
     const handleConfigChanged = (e) => {
       if (e.detail.type === 'whatsapp') {
         fetchConfigs();
-        fetchThreads();
+        setPage(1);
+        fetchThreads(1, false, debouncedSearchQueryRef.current);
       }
     };
     window.addEventListener('config-changed', handleConfigChanged);
     return () => window.removeEventListener('config-changed', handleConfigChanged);
   }, []);
+
+  // Fetch page 1 when debounced search or active config changes
+  useEffect(() => {
+    setPage(1);
+    fetchThreads(1, false, debouncedSearchQuery);
+  }, [debouncedSearchQuery, selectedConfigId]);
 
   // Establish Server-Sent Events (SSE) connection for real-time chat updates
   useEffect(() => {
@@ -71,99 +111,49 @@ const WAChatWindow = () => {
 
         console.log('[SSE] Received real-time update:', payload);
 
-        if (payload.type === 'message') {
-          const { contactId, message } = payload.data;
-          const currentSelected = selectedThreadRef.current;
-
-          // 1. If currently viewing this contact, append the message
-          if (currentSelected && currentSelected.id === contactId) {
-            setMessages(prev => {
-              const alreadyExists = prev.some(m =>
-                (message.message_id && m.message_id === message.message_id) ||
-                m.id === message.id
-              );
-              if (alreadyExists) return prev;
-              return [...prev, message];
-            });
-          }
-
-          // 2. Refresh threads list to update sidebar message preview & sort order
-          fetchThreads();
+        const currentSelected = selectedThreadRef.current;
+        if (currentSelected && payload.contact_id === currentSelected.id) {
+          fetchMessages(currentSelected.id);
         }
 
-        if (payload.type === 'status') {
-          const { contactId, messageId, status, error } = payload.data;
-          const currentSelected = selectedThreadRef.current;
-
-          // 1. If currently viewing this contact, update status checkmarks
-          if (currentSelected && currentSelected.id === contactId) {
-            setMessages(prev =>
-              prev.map(m => {
-                if (m.message_id === messageId) {
-                  return { ...m, status, error: error || m.error };
-                }
-                return m;
-              })
-            );
+        setThreads(prev => {
+          const index = prev.findIndex(t => t.id === payload.contact_id);
+          if (index !== -1) {
+            const updated = [...prev];
+            updated[index] = {
+              ...updated[index],
+              last_message_at: payload.timestamp || new Date().toISOString(),
+              event_type: payload.event_type || updated[index].event_type,
+              metadata: payload.metadata || updated[index].metadata
+            };
+            return updated.sort((a, b) => new Date(b.last_message_at) - new Date(a.last_message_at));
+          } else {
+            return prev;
           }
-
-          // 2. Update status ticks in the threads list sidebar inline
-          setThreads(prev =>
-            prev.map(t => {
-              if (t.id === contactId) {
-                return { ...t, event_type: status };
-              }
-              return t;
-            })
-          );
-        }
+        });
       } catch (err) {
-        console.error('[SSE] Error processing SSE payload:', err);
+        console.error('[SSE] Error processing event:', err);
       }
     };
 
     eventSource.onerror = (err) => {
-      console.error('[SSE] EventSource connection encountered error. Reconnecting...', err);
-      eventSource.close();
+      console.warn('[SSE] EventSource connection error. Retrying...', err);
     };
 
     return () => {
-      console.log('[SSE] Closing EventSource connection.');
       eventSource.close();
     };
   }, []);
 
   useEffect(() => {
-    // Filter threads on search query change
-    if (searchQuery.trim() === '') {
-      setFilteredThreads(threads);
-    } else {
-      const q = searchQuery.toLowerCase().trim();
-      setFilteredThreads(
-        threads.filter(
-          t =>
-            (t.name && t.name.toLowerCase().includes(q)) ||
-            (t.phone && t.phone.includes(q))
-        )
-      );
-    }
-  }, [searchQuery, threads]);
-
-  useEffect(() => {
     if (selectedThread) {
       fetchMessages(selectedThread.id);
-    } else {
-      setMessages([]);
     }
   }, [selectedThread]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, [messages]);
 
   const fetchConfigs = async () => {
     try {
@@ -175,20 +165,25 @@ const WAChatWindow = () => {
         setWhatsappConfigs(response.data.configs || []);
       }
     } catch (err) {
-      console.error('Error fetching whatsapp configs:', err);
+      console.error('Error fetching WhatsApp configs:', err);
     }
   };
 
   const handleConfigChange = (e) => {
-    const val = e.target.value;
-    setSelectedConfigId(val);
-    localStorage.setItem('selectedWhatsAppConfigId', val);
+    const newConfigId = e.target.value;
+    setSelectedConfigId(newConfigId);
+    localStorage.setItem('selectedWhatsAppConfigId', newConfigId);
+    window.dispatchEvent(new CustomEvent('config-changed', { detail: { type: 'whatsapp', id: newConfigId } }));
   };
 
-  const fetchThreads = async () => {
+  const fetchThreads = async (pageNum = 1, isAppend = false, searchVal = '') => {
     try {
-      setLoadingThreads(true);
-      setError(null);
+      if (isAppend) {
+        setLoadingMore(true);
+      } else {
+        setLoadingThreads(true);
+      }
+
       const token = localStorage.getItem('token');
       const configId = localStorage.getItem('selectedWhatsAppConfigId') || '';
 
@@ -197,16 +192,43 @@ const WAChatWindow = () => {
         headers['X-WhatsApp-Config-Id'] = configId;
       }
 
-      const response = await axios.get('/api/whatsapp/chats', { headers });
+      const response = await axios.get(`/api/whatsapp/chats`, {
+        headers,
+        params: { page: pageNum, limit: 20, search: searchVal }
+      });
+
       if (response.data.success) {
-        setThreads(response.data.threads || []);
-        setFilteredThreads(response.data.threads || []);
+        const fetchedThreads = response.data.threads || [];
+        setHasMore(response.data.hasMore);
+
+        if (isAppend) {
+          setThreads(prev => [...prev, ...fetchedThreads]);
+          setFilteredThreads(prev => [...prev, ...fetchedThreads]);
+        } else {
+          setThreads(fetchedThreads);
+          setFilteredThreads(fetchedThreads);
+          if (fetchedThreads.length > 0 && !selectedThread) {
+            setSelectedThread(fetchedThreads[0]);
+          }
+        }
       }
     } catch (err) {
       console.error('Error fetching chat threads:', err);
-      setError(err.response?.data?.message || err.message);
+      setError(err.response?.data?.message || 'Failed to fetch conversations.');
     } finally {
       setLoadingThreads(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const handleScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.target;
+    if (scrollHeight - scrollTop - clientHeight < 50) {
+      if (!loadingMore && !loadingThreads && hasMore) {
+        const nextPage = page + 1;
+        setPage(nextPage);
+        fetchThreads(nextPage, true, debouncedSearchQuery);
+      }
     }
   };
 
@@ -224,6 +246,7 @@ const WAChatWindow = () => {
       const response = await axios.get(`/api/whatsapp/chats/${contactId}/messages`, { headers });
       if (response.data.success) {
         setMessages(response.data.messages || []);
+        setWindow24h(response.data.window24h || null);
       }
     } catch (err) {
       console.error('Error fetching chat messages:', err);
@@ -256,11 +279,9 @@ const WAChatWindow = () => {
       );
 
       if (response.data.success) {
-        // Optimistically add message to view or fetch updated history
         setInputMessage('');
         fetchMessages(selectedThread.id);
 
-        // Update thread's last message locally
         setThreads(prev =>
           prev.map(t =>
             t.id === selectedThread.id
@@ -282,15 +303,34 @@ const WAChatWindow = () => {
     }
   };
 
+  const getDisplayName = (phone, name) => {
+    if (!name) return phone || '';
+    let clean = String(name).trim();
+    if (!clean || clean === phone) return phone || '';
+    
+    // Strip legacy duplicate wrappers e.g. "919000000000 (Live Tester)" or "919875364966 (919875364966 (...))"
+    while (/^\d+\s*\((.+)\)$/.test(clean)) {
+      const match = clean.match(/^\d+\s*\((.+)\)$/);
+      if (match) {
+        clean = match[1].trim();
+      } else {
+        break;
+      }
+    }
+    return clean || phone || '';
+  };
+
   const formatTime = (isoString) => {
     if (!isoString) return '';
     const date = new Date(isoString);
+    if (isNaN(date.getTime())) return '';
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   const formatDateLabel = (isoString) => {
     if (!isoString) return '';
     const date = new Date(isoString);
+    if (isNaN(date.getTime())) return '';
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
@@ -313,125 +353,420 @@ const WAChatWindow = () => {
       case 'sent':
         return <Check className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />;
       case 'failed':
-        return <AlertCircle className="w-3.5 h-3.5 text-red-500" />;
+        return <AlertCircle className="w-3.5 h-3.5 text-rose-500" />;
       default:
         return null;
     }
   };
 
-  return (
-    <div className="p-4 md:p-5 space-y-3 max-w-7xl mx-auto h-[90vh] flex flex-col">
-      {/* Title block */}
-      <div className="flex flex-wrap items-center justify-between gap-4 shrink-0">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500 border border-emerald-500/20">
-            <MessageSquare className="w-5 h-5" />
+  const renderRichMessageBody = (msg) => {
+    // 1. Location Message
+    if (msg.location || msg.type === 'location') {
+      const loc = msg.location || {};
+      return (
+        <div className="space-y-1.5 p-2.5 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1">
+          <div className="flex items-start gap-2">
+            <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500 border border-rose-500/20 shrink-0">
+              <MapPin className="w-4 h-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-bold text-xs text-slate-900 dark:text-white">
+                {loc.name || 'Shared Location'}
+              </p>
+              {loc.address && (
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug mt-0.5">{loc.address}</p>
+              )}
+              {loc.latitude && loc.longitude && (
+                <p className="text-[10px] font-mono text-slate-400 mt-0.5">
+                  Lat: {loc.latitude}, Long: {loc.longitude}
+                </p>
+              )}
+            </div>
           </div>
-          <div className="flex flex-col items-start leading-none">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Messages & Conversations</h2>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">WhatsApp Web Window</p>
+          {loc.url && (
+            <a
+              href={loc.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-semibold transition-colors shadow-sm mt-1"
+            >
+              <ExternalLink className="w-3 h-3" />
+              Open in Google Maps
+            </a>
+          )}
+        </div>
+      );
+    }
+
+    // 2. Audio / Voice Note Message (Only for audio/voice types or explicit audio_url)
+    if (msg.type === 'audio' || msg.type === 'voice' || msg.audio_url) {
+      const isVoice = msg.type === 'voice';
+      const token = localStorage.getItem('token') || '';
+      const audioSource = msg.audio_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
+      return (
+        <div className="space-y-1.5 p-2.5 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-full bg-purple-500/10 text-purple-500 border border-purple-500/20 shrink-0">
+              <Mic className="w-4 h-4 text-purple-400 animate-pulse" />
+            </div>
+            <div>
+              <p className="font-semibold text-xs text-slate-900 dark:text-white">
+                {isVoice ? '🎙️ Voice Note' : '🎵 Audio Message'}
+              </p>
+            </div>
+          </div>
+
+          {/* Render Audio Player - works via local saved file OR live streaming proxy */}
+          {audioSource ? (
+            <div className="pt-1">
+              <audio
+                controls
+                className="w-full max-w-[240px] h-8 rounded-lg outline-none"
+                src={audioSource}
+              >
+                Your browser does not support the audio player.
+              </audio>
+            </div>
+          ) : (
+            <p className="text-[10px] text-slate-400 font-mono">Attachment ID: {msg.media_id || 'Voice Track'}</p>
+          )}
+        </div>
+      );
+    }
+
+    // 3. Image Message
+    if (msg.type === 'image') {
+      const token = localStorage.getItem('token') || '';
+      const imageSrc = msg.image_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
+      return (
+        <div className="space-y-1.5 my-1">
+          {imageSrc ? (
+            <div className="overflow-hidden rounded-xl border border-slate-200/50 dark:border-white/10 max-w-xs sm:max-w-sm">
+              <a href={imageSrc} target="_blank" rel="noopener noreferrer" title="Click to view full image">
+                <img
+                  src={imageSrc}
+                  alt={msg.caption || 'WhatsApp Photo'}
+                  className="w-full h-auto max-h-72 object-cover hover:scale-[1.02] transition-transform duration-200"
+                  loading="lazy"
+                />
+              </a>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2 rounded-lg border border-slate-200/50 dark:border-white/10">
+              <Image className="w-4 h-4 text-blue-500" />
+              <span>Photo</span>
+            </div>
+          )}
+          {msg.caption && <p className="text-xs sm:text-sm whitespace-pre-wrap select-text">{msg.caption}</p>}
+          {msg.body && msg.body !== '📷 Photo' && !msg.body.startsWith('📷 Photo:') && (
+            <p className="text-xs sm:text-sm whitespace-pre-wrap select-text">{msg.body}</p>
+          )}
+        </div>
+      );
+    }
+
+    // 4. Video Message
+    if (msg.type === 'video') {
+      const token = localStorage.getItem('token') || '';
+      const videoSrc = msg.video_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
+      return (
+        <div className="space-y-1.5 my-1">
+          {videoSrc ? (
+            <div className="overflow-hidden rounded-xl border border-slate-200/50 dark:border-white/10 max-w-xs sm:max-w-sm">
+              <video
+                controls
+                className="w-full max-h-72 rounded-xl"
+                src={videoSrc}
+              >
+                Your browser does not support the video player.
+              </video>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2 rounded-lg border border-slate-200/50 dark:border-white/10">
+              <Video className="w-4 h-4 text-purple-500" />
+              <span>Video</span>
+            </div>
+          )}
+          {msg.caption && <p className="text-xs sm:text-sm whitespace-pre-wrap select-text">{msg.caption}</p>}
+        </div>
+      );
+    }
+
+    // 5. Document Message
+    if (msg.type === 'document') {
+      const token = localStorage.getItem('token') || '';
+      const docSrc = msg.document_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
+      return (
+        <div className="space-y-1.5 my-1">
+          <div className="flex items-center justify-between gap-3 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2.5 rounded-xl border border-slate-200/50 dark:border-white/10">
+            <div className="flex items-center gap-2 min-w-0">
+              <FileText className="w-4 h-4 text-amber-500 shrink-0" />
+              <span className="truncate">{msg.filename || 'Document'}</span>
+            </div>
+            {docSrc && (
+              <a
+                href={docSrc}
+                target="_blank"
+                rel="noopener noreferrer"
+                download={msg.filename || 'document'}
+                className="p-1 bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white rounded-md transition-colors shrink-0"
+                title="Download / View Document"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
+          </div>
+          {msg.caption && <p className="text-xs sm:text-sm whitespace-pre-wrap select-text">{msg.caption}</p>}
+        </div>
+      );
+    }
+
+    // 6. Sticker Message
+    if (msg.type === 'sticker') {
+      const token = localStorage.getItem('token') || '';
+      const stickerSrc = msg.sticker_url || (msg.media_id ? `/api/whatsapp/media/${msg.media_id}/stream?token=${token}` : null);
+
+      return (
+        <div className="my-1">
+          {stickerSrc ? (
+            <div className="inline-block p-1 rounded-2xl bg-transparent">
+              <img
+                src={stickerSrc}
+                alt="WhatsApp Sticker"
+                className="w-28 h-28 object-contain hover:scale-105 transition-transform duration-200"
+                loading="lazy"
+              />
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/5 dark:bg-black/30 p-2 rounded-xl border border-slate-200/50 dark:border-white/10">
+              <Smile className="w-4 h-4 text-amber-500" />
+              <span>🎨 Sticker</span>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // 7. Contact Card Shared Message
+    if (msg.type === 'contacts' || msg.contacts) {
+      const contactObj = Array.isArray(msg.contacts) ? msg.contacts[0] : (msg.contacts || {});
+      const name = contactObj.name || 'Shared Contact';
+      const phone = contactObj.phone || '';
+
+      return (
+        <div className="space-y-1.5 p-3 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1 max-w-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center border border-emerald-500/20 shrink-0">
+              <UserCheck className="w-4 h-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-bold text-xs text-slate-900 dark:text-white truncate">{name}</p>
+              {phone && <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">{phone}</p>}
+            </div>
+          </div>
+          {phone && (
+            <a
+              href={`https://wa.me/${phone.replace(/[^0-9]/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-semibold rounded-lg transition-colors shadow-sm"
+            >
+              <Phone className="w-3 h-3" />
+              Message Contact
+            </a>
+          )}
+        </div>
+      );
+    }
+
+    // 8. Interactive / Button Response Message
+    if (msg.type === 'interactive' || msg.type === 'button' || msg.interactive) {
+      const interactive = msg.interactive || {};
+      const title = interactive.title || msg.body || 'Button Option Selected';
+
+      return (
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 rounded-xl border border-emerald-500/20 my-1 text-xs font-semibold">
+          <MousePointerClick className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+          <span>{title}</span>
+        </div>
+      );
+    }
+
+    // 9. Emoji Reaction Message
+    if (msg.type === 'reaction' || msg.emoji) {
+      return (
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-900/5 dark:bg-black/30 text-slate-800 dark:text-slate-200 rounded-full border border-slate-200/50 dark:border-white/10 text-xs font-medium my-0.5">
+          <span>Reacted {msg.emoji || msg.body}</span>
+        </div>
+      );
+    }
+
+    // 10. Catalog Order Message
+    if (msg.type === 'order' || msg.order) {
+      const order = msg.order || {};
+      const items = order.items || [];
+
+      return (
+        <div className="space-y-2 p-3 bg-slate-900/5 dark:bg-black/30 rounded-xl border border-slate-200/50 dark:border-white/10 my-1">
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="w-4 h-4 text-emerald-500" />
+            <p className="font-bold text-xs text-slate-900 dark:text-white">Order Received ({items.length} item{items.length === 1 ? '' : 's'})</p>
+          </div>
+          {items.map((item, idx) => (
+            <div key={idx} className="text-[11px] flex items-center justify-between text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-black/20 p-1.5 rounded-lg">
+              <span>Item ID: {item.product_retailer_id}</span>
+              <span className="font-mono font-bold">x{item.quantity}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // 11. Unsupported Message Type Badge
+    if (msg.type === 'unsupported' || (msg.body && (msg.body.includes('[unsupported message]') || msg.body.includes('Unsupported Message')))) {
+      return (
+        <div className="flex items-start gap-2 p-2.5 bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded-xl border border-amber-500/20 text-xs my-1">
+          <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold text-xs">WhatsApp Format Notice</p>
+            <p className="text-[11px] opacity-90 leading-tight mt-0.5">
+              {msg.body && !msg.body.includes('[unsupported message]') ? msg.body : 'Received an incoming media/message format not supported by Meta API version.'}
+            </p>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
+      );
+    }
+
+    // Default Text with Emojis
+    return <p className="text-xs sm:text-sm whitespace-pre-wrap leading-relaxed select-text">{msg.body}</p>;
+  };
+
+  return (
+    <div className="p-2 sm:p-3 md:p-4 space-y-2 max-w-7xl mx-auto h-[88vh] flex flex-col">
+      {/* Title block */}
+      <div className="flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="flex items-center space-x-2.5">
+          <div className="p-1.5 bg-emerald-500/10 rounded-xl text-emerald-500 border border-emerald-500/20">
+            <MessageSquare className="w-4 h-4" />
+          </div>
+          <div className="flex flex-col items-start leading-none">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white mb-0.5">Messages & Conversations</h2>
+            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">WhatsApp Web Window</p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
           {/* Config selector */}
-          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2">
-            <Database className="w-4 h-4 text-green-500" />
-            <select
+          <div className="flex items-center space-x-1.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-0.5">
+            <Database className="w-3.5 h-3.5 text-green-500" />
+            <CustomSelect
               value={selectedConfigId}
-              onChange={handleConfigChange}
-              className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-200"
-            >
-              <option value="" className="bg-white dark:bg-slate-900">Default Server Config</option>
-              {whatsappConfigs.map(cfg => (
-                <option key={cfg.id} value={cfg.id} className="bg-white dark:bg-slate-900">{cfg.name}</option>
-              ))}
-            </select>
+              onChange={(val) => handleConfigChange({ target: { value: val } })}
+              options={[
+                { value: "", label: "Default Server Config" },
+                ...whatsappConfigs.map(cfg => ({ value: cfg.id, label: cfg.name }))
+              ]}
+              className="border-none bg-transparent py-0.5 text-xs px-1 min-w-[140px]"
+            />
           </div>
           <button
-            onClick={fetchThreads}
-            className="p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 hover:text-green-500 transition-all"
+            onClick={() => fetchThreads(1, false, debouncedSearchQuery)}
+            className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 hover:text-green-500 transition-all"
             disabled={loadingThreads}
           >
-            <RefreshCw className={`w-4 h-4 ${loadingThreads ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingThreads ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
 
       {/* Main chat window container */}
-      <div className="flex-1 bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-[2rem] overflow-hidden shadow-premium flex min-h-0">
+      <div className="flex-1 bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-premium flex min-h-0">
 
         {/* Left Side: Threads List */}
-        <div className="w-80 md:w-96 border-r border-slate-200 dark:border-white/10 flex flex-col shrink-0 bg-slate-50/50 dark:bg-black/10">
+        <div className="w-72 md:w-80 border-r border-slate-200 dark:border-white/10 flex flex-col shrink-0 bg-slate-50/50 dark:bg-black/10">
           {/* Search bar */}
-          <div className="p-4 border-b border-slate-200 dark:border-white/10 shrink-0">
+          <div className="p-3 border-b border-slate-200 dark:border-white/10 shrink-0">
             <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search chats..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
+                className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
               />
             </div>
           </div>
 
           {/* Threads list scrollable stream */}
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-white/5">
+          <div
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-white/5"
+          >
             {loadingThreads ? (
-              <div className="p-8 text-center text-slate-400 animate-pulse text-sm">
+              <div className="p-6 text-center text-slate-400 animate-pulse text-xs">
                 Loading conversations...
               </div>
             ) : filteredThreads.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-sm">
+              <div className="p-6 text-center text-slate-400 text-xs">
                 No conversations found.
               </div>
             ) : (
-              filteredThreads.map(t => {
-                const isSelected = selectedThread && selectedThread.id === t.id;
-                const lastMsgBody = t.metadata?.body || (t.event_type === 'unsubscribed' ? 'User unsubscribed' : '');
+              <>
+                {filteredThreads.map(t => {
+                  const isSelected = selectedThread && selectedThread.id === t.id;
+                  const lastMsgBody = t.metadata?.body || (t.event_type === 'unsubscribed' ? 'User unsubscribed' : '');
 
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => setSelectedThread(t)}
-                    className={`w-full text-left p-4 transition-colors flex items-start space-x-3 ${isSelected
-                      ? 'bg-emerald-500/10 dark:bg-emerald-500/5 border-l-4 border-emerald-500'
-                      : 'hover:bg-slate-100/50 dark:hover:bg-white/[0.01]'
-                      }`}
-                  >
-                    <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 shrink-0">
-                      <User className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-bold text-sm truncate text-slate-900 dark:text-white">
-                          {t.name || t.phone}
-                        </h4>
-                        <span className="text-[10px] text-slate-400 shrink-0">
-                          {formatTime(t.last_message_at)}
-                        </span>
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setSelectedThread(t)}
+                      className={`w-full text-left p-3 transition-colors flex items-start space-x-2.5 ${isSelected
+                        ? 'bg-emerald-500/10 dark:bg-emerald-500/5 border-l-4 border-emerald-500'
+                        : 'hover:bg-slate-100/50 dark:hover:bg-white/[0.01]'
+                        }`}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 shrink-0 text-xs font-bold">
+                        <User className="w-4 h-4" />
                       </div>
-                      <p className="text-xs text-slate-400 truncate mt-0.5">{t.phone}</p>
-
-                      {/* Last message preview */}
-                      <div className="flex items-center space-x-1.5 mt-1">
-                        {t.event_type !== 'replied' && t.event_type !== 'unsubscribed' && (
-                          <span className="shrink-0">{getStatusIcon(t.event_type)}</span>
-                        )}
-                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1">
-                          {lastMsgBody ? lastMsgBody : `Template: ${t.metadata?.template_name || 'Template'}`}
-                        </p>
-                        {t.engagement_score > 0 && (
-                          <span className="shrink-0 text-[9px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded-md font-bold">
-                            {Math.round(t.engagement_score)}%
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-bold text-xs truncate text-slate-900 dark:text-white">
+                            {getDisplayName(t.phone, t.name)}
+                          </h4>
+                          <span className="text-[9px] text-slate-400 shrink-0 ml-1">
+                            {formatTime(t.last_message_at)}
                           </span>
-                        )}
+                        </div>
+                        <p className="text-[11px] text-slate-400 font-mono truncate">{t.phone}</p>
+
+                        {/* Last message preview */}
+                        <div className="flex items-center space-x-1 mt-0.5">
+                          {t.event_type !== 'replied' && t.event_type !== 'unsubscribed' && (
+                            <span className="shrink-0">{getStatusIcon(t.event_type)}</span>
+                          )}
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate flex-1">
+                            {lastMsgBody ? lastMsgBody : `Template: ${t.metadata?.template_name || 'Template'}`}
+                          </p>
+                          {t.engagement_score > 0 && (
+                            <span className="shrink-0 text-[8px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1 py-0.5 rounded font-bold">
+                              {Math.round(t.engagement_score)}%
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                );
-              })
+                    </button>
+                  );
+                })}
+                {loadingMore && (
+                  <div className="p-3 text-center text-[10px] text-slate-400 animate-pulse border-t border-slate-100 dark:border-white/5">
+                    Loading more...
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -441,39 +776,60 @@ const WAChatWindow = () => {
           {selectedThread ? (
             <>
               {/* Chat Thread Header */}
-              <div className="p-4 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/60 backdrop-blur-md shrink-0 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400">
-                    <User className="w-5 h-5" />
+              <div className="p-3 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/60 backdrop-blur-md shrink-0 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400">
+                    <User className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                      {selectedThread.name || selectedThread.phone}
+                    <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                      {getDisplayName(selectedThread.phone, selectedThread.name)}
                     </h4>
-                    <div className="flex items-center space-x-2 text-xs text-slate-400 font-mono mt-0.5">
-                      <Phone className="w-3 h-3" />
-                      <span>{selectedThread.phone}</span>
+                    <div className="flex items-center space-x-1.5 text-[11px] text-slate-400 font-mono">
+                      <Phone className="w-3 h-3 text-emerald-500" />
+                      <span>+{selectedThread.phone}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-xl">
+                <div className="flex items-center gap-2">
+                  {/* 24-Hour Customer Service Window Status Badge */}
+                  {window24h && (
+                    window24h.isOpen ? (
+                      <div
+                        className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                        title="Meta 24-Hour Customer Service Free-Form Reply Window is Active"
+                      >
+                        <Clock className="w-3 h-3 text-emerald-500 animate-pulse" />
+                        <span>24h Reply Window: <strong>{window24h.remainingFormatted}</strong></span>
+                      </div>
+                    ) : (
+                      <div
+                        className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                        title="24-Hour Customer Service Reply Window has Expired. Template message required."
+                      >
+                        <AlertCircle className="w-3 h-3 text-amber-500" />
+                        <span>24h Reply Window: <strong>Expired</strong></span>
+                      </div>
+                    )
+                  )}
+
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-lg">
                     Score: {Math.round(selectedThread.engagement_score || 0)}%
                   </span>
                   <button
                     onClick={() => fetchMessages(selectedThread.id)}
-                    className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-slate-400 hover:text-emerald-500 transition-colors"
+                    className="p-1.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-slate-400 hover:text-emerald-500 transition-colors"
                   >
-                    <RefreshCw className={`w-4 h-4 ${loadingMessages ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingMessages ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
               </div>
 
               {/* Messages Body stream area */}
-              <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 whatsapp-chat-bg relative">
+              <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 whatsapp-chat-bg relative">
                 {loadingMessages && messages.length === 0 ? (
-                  <div className="flex justify-center items-center h-full text-slate-400 text-sm">
+                  <div className="flex justify-center items-center h-full text-slate-400 text-xs">
                     Loading messages...
                   </div>
                 ) : (
@@ -485,10 +841,10 @@ const WAChatWindow = () => {
                         new Date(msg.timestamp).toDateString() !== new Date(prevMsg.timestamp).toDateString();
 
                       return (
-                        <div key={msg.id || idx} className="space-y-4">
+                        <div key={msg.id || idx} className="space-y-2">
                           {showDateLabel && (
                             <div className="flex justify-center shrink-0">
-                              <span className="text-[10px] font-bold tracking-wider uppercase bg-slate-200/50 dark:bg-white/5 text-slate-500 dark:text-slate-400 px-3 py-1 rounded-full border border-slate-300/20 dark:border-white/5 shadow-sm">
+                              <span className="text-[9px] font-bold tracking-wider uppercase bg-slate-200/60 dark:bg-white/5 text-slate-500 dark:text-slate-400 px-2.5 py-0.5 rounded-full border border-slate-300/20 dark:border-white/5 shadow-sm">
                                 {formatDateLabel(msg.timestamp)}
                               </span>
                             </div>
@@ -496,25 +852,25 @@ const WAChatWindow = () => {
 
                           <div className={`flex ${msg.isOutgoing ? 'justify-end' : 'justify-start'}`}>
                             <div
-                              className={`max-w-md lg:max-w-xl rounded-2xl p-4 shadow-sm relative group transition-all duration-300 ${msg.isOutgoing
+                              className={`max-w-xs sm:max-w-md lg:max-w-lg rounded-2xl p-3 shadow-sm relative group transition-all duration-300 ${msg.isOutgoing
                                 ? 'bg-whatsapp-light dark:bg-whatsapp-dark-green text-slate-800 dark:text-slate-100 rounded-tr-none border border-emerald-500/10 dark:border-emerald-500/20'
                                 : 'bg-white dark:bg-[#202c33] border border-slate-100 dark:border-white/5 text-slate-800 dark:text-slate-100 rounded-tl-none'
                                 }`}
                             >
                               {/* Message bubble header (for templates) */}
                               {msg.template_name && (
-                                <div className="text-[10px] font-mono tracking-wider opacity-60 uppercase mb-1 flex items-center">
-                                  <ShieldCheck className="w-3.5 h-3.5 mr-1" />
+                                <div className="text-[9px] font-mono tracking-wider opacity-60 uppercase mb-1 flex items-center">
+                                  <ShieldCheck className="w-3 h-3 mr-1" />
                                   Template: {msg.template_name}
                                 </div>
                               )}
 
-                              {/* Message text body */}
-                              <p className="text-sm whitespace-pre-wrap leading-relaxed select-text">{msg.body}</p>
+                              {/* Render Rich Message Content */}
+                              {renderRichMessageBody(msg)}
 
                               {/* Bubble bottom footer with timestamp and status ticks */}
-                              <div className="flex items-center justify-end space-x-1 mt-1.5 opacity-80">
-                                <span className="text-[10px] font-mono">
+                              <div className="flex items-center justify-end space-x-1 mt-1 opacity-80">
+                                <span className="text-[9px] font-mono">
                                   {formatTime(msg.timestamp)}
                                 </span>
                                 {msg.isOutgoing && getStatusIcon(msg.status)}
@@ -522,8 +878,8 @@ const WAChatWindow = () => {
 
                               {/* Error tag for failed messages */}
                               {msg.error && (
-                                <div className="mt-2 text-xs text-red-200 bg-red-900/40 px-2 py-1 rounded-lg border border-red-500/20 flex items-center">
-                                  <AlertCircle className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+                                <div className="mt-1.5 text-[11px] text-rose-200 bg-rose-900/40 px-2 py-0.5 rounded-md border border-rose-500/20 flex items-center">
+                                  <AlertCircle className="w-3 h-3 mr-1 shrink-0" />
                                   <span>{msg.error}</span>
                                 </div>
                               )}
@@ -537,21 +893,36 @@ const WAChatWindow = () => {
                 )}
               </div>
 
+              {/* 24-Hour Customer Service Window Notice Policy Bar */}
+              <div className="px-3 py-1.5 bg-slate-100/90 dark:bg-slate-900/80 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-300">
+                <div className="flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                  <span>
+                    <strong>Meta 24-Hour Policy Notice:</strong> Customer Service Messaging Window is open for 24 hours per contact after their last message.
+                  </span>
+                </div>
+                {window24h && (
+                  <span className={`font-mono text-[10px] px-2 py-0.5 rounded ${window24h.isOpen ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold'}`}>
+                    {window24h.isOpen ? window24h.remainingFormatted : 'Window Expired'}
+                  </span>
+                )}
+              </div>
+
               {/* Message Input replying footer bar */}
-              <div className="p-4 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/60 backdrop-blur-md shrink-0">
-                <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
+              <div className="p-3 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/60 backdrop-blur-md shrink-0">
+                <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
                   <input
                     type="text"
-                    placeholder="Type a free-text reply..."
+                    placeholder={window24h && !window24h.isOpen ? "24-Hour Window Expired (Free text allowed during active 24h window)..." : "Type a free-text reply..."}
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     disabled={sendingMessage}
-                    className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
+                    className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 text-xs sm:text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
                   />
                   <button
                     type="submit"
                     disabled={sendingMessage || !inputMessage.trim()}
-                    className="p-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-md disabled:opacity-40 disabled:hover:bg-emerald-600 transition-colors"
+                    className="p-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-md disabled:opacity-40 disabled:hover:bg-emerald-600 transition-colors"
                   >
                     <Send className="w-4 h-4" />
                   </button>
@@ -559,13 +930,13 @@ const WAChatWindow = () => {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col justify-center items-center text-center p-8 whatsapp-chat-bg">
-              <div className="w-20 h-20 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-3xl flex items-center justify-center mb-6 shadow-lg border border-emerald-500/20 backdrop-blur-md">
-                <MessageSquare className="w-10 h-10 text-emerald-500" />
+            <div className="flex-1 flex flex-col justify-center items-center text-center p-6 whatsapp-chat-bg">
+              <div className="w-16 h-16 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-2xl flex items-center justify-center mb-4 shadow-lg border border-emerald-500/20 backdrop-blur-md">
+                <MessageSquare className="w-8 h-8 text-emerald-500" />
               </div>
-              <h3 className="text-xl font-bold mb-1 text-slate-800 dark:text-white">Your Chat Window</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm backdrop-blur-sm bg-white/30 dark:bg-black/20 p-4 rounded-2xl border border-white/20 dark:border-white/5 mt-2 shadow-sm">
-                Select a conversation from the sidebar list to view the full chat history logs and send replies.
+              <h3 className="text-lg font-bold mb-1 text-slate-800 dark:text-white">Your Chat Window</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-xs max-w-xs backdrop-blur-sm bg-white/30 dark:bg-black/20 p-3 rounded-xl border border-white/20 dark:border-white/5 mt-1 shadow-sm">
+                Select a conversation from the sidebar list to view full chat logs and send replies.
               </p>
             </div>
           )}

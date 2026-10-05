@@ -1,5 +1,9 @@
 const { pool } = require('../config/db');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const sharp = require('sharp');
+const { metaRequest } = require('../utils/metaGraphClient');
 const { formatMetaError } = require('../utils/meta-error');
 const { decrypt } = require('../utils/crypto');
 
@@ -662,9 +666,24 @@ const getFacebookPages = async (configId = null) => {
         
         const pages = response.data.data || [];
 
-        // Fetch detailed Instagram information for connected accounts in parallel
+        // Fetch detailed Instagram information and FB page post counts in parallel
         await Promise.all(
             pages.map(async (page) => {
+                // Fetch FB page published posts count
+                if (page.access_token) {
+                    try {
+                        const postsRes = await axios.get(
+                            `https://graph.facebook.com/v24.0/${page.id}?fields=published_posts.summary(true)&access_token=${page.access_token}`
+                        );
+                        page.posts_count = postsRes.data?.published_posts?.summary?.total_count || 0;
+                    } catch (pErr) {
+                        console.warn(`Could not fetch published_posts for page ${page.id}:`, pErr.message);
+                        page.posts_count = 0;
+                    }
+                } else {
+                    page.posts_count = 0;
+                }
+
                 if (page.instagram_business_account && page.instagram_business_account.id) {
                     try {
                         const url = `https://graph.facebook.com/v24.0/${page.id}?fields=instagram_business_account{id,username,followers_count,follows_count,media_count,biography,website,profile_picture_url}&access_token=${token}`;
@@ -679,6 +698,69 @@ const getFacebookPages = async (configId = null) => {
             })
         );
 
+        // Auto-save/update metrics in database for tracking
+        try {
+            const currentDate = new Date().toISOString().split('T')[0];
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth() + 1; // 1-12
+            
+            for (const page of pages) {
+                // Upsert Facebook Page metrics
+                await pool.query(
+                    `INSERT INTO meta_page_monthly_metrics 
+                        (page_id, config_id, page_name, platform, followers_count, likes_count, posts_count, record_year, record_month, record_date)
+                     VALUES (?, ?, ?, 'facebook', ?, ?, ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                        page_name = VALUES(page_name),
+                        followers_count = VALUES(followers_count),
+                        likes_count = VALUES(likes_count),
+                        posts_count = VALUES(posts_count),
+                        recorded_at = CURRENT_TIMESTAMP`,
+                    [
+                        page.id,
+                        configIdVal,
+                        page.name || `Page ${page.id}`,
+                        page.followers_count || 0,
+                        page.fan_count || 0,
+                        page.posts_count || 0,
+                        currentYear,
+                        currentMonth,
+                        currentDate
+                    ]
+                );
+
+                // Upsert connected Instagram Business metrics if available
+                if (page.instagram_business_account && page.instagram_business_account.id) {
+                    const ig = page.instagram_business_account;
+                    await pool.query(
+                        `INSERT INTO meta_page_monthly_metrics 
+                            (page_id, config_id, page_name, platform, instagram_username, followers_count, posts_count, record_year, record_month, record_date)
+                         VALUES (?, ?, ?, 'instagram', ?, ?, ?, ?, ?, ?)
+                         ON DUPLICATE KEY UPDATE
+                            page_name = VALUES(page_name),
+                            instagram_username = VALUES(instagram_username),
+                            followers_count = VALUES(followers_count),
+                            posts_count = VALUES(posts_count),
+                            recorded_at = CURRENT_TIMESTAMP`,
+                        [
+                            ig.id,
+                            configIdVal,
+                            ig.username || page.name,
+                            ig.username || null,
+                            ig.followers_count || 0,
+                            ig.media_count || 0,
+                            currentYear,
+                            currentMonth,
+                            currentDate
+                        ]
+                    );
+                }
+            }
+            console.log('✓ Stored/updated live page follower statistics in DB');
+        } catch (dbErr) {
+            console.error('Failed to store page monthly metrics during fetch:', dbErr.message);
+        }
+
         return { data: pages };
     } catch (error) {
         console.error('Error fetching Facebook Pages:', error.response?.data || error.message);
@@ -686,10 +768,7 @@ const getFacebookPages = async (configId = null) => {
     }
 };
 
-const fs = require('fs');
-const path = require('path');
-const sharp = require('sharp');
-const { metaRequest } = require('../utils/metaGraphClient');
+
 
 const getUserPermissions = async (token) => {
     try {

@@ -133,32 +133,81 @@ async function run() {
         assert(countRow.count === 1, `Pending count for worker is correct (expected 1, got ${countRow.count})`);
 
 
-        // ── Test 4: Update Permissions Simulation ──────────────────────────────
-        console.log('\n[T4] Update restrictions check');
+        // ── Test 4: Update Permissions & On Hold Status Simulation ──────────────
+        console.log('\n[T4] Update restrictions & On Hold status check');
         
-        // Simulator check: Assignee changes status
-        await pool.query('UPDATE tasks SET status = ? WHERE id = ?', ['in_progress', testTaskId]);
-        const [[taskRowUpdated]] = await pool.query('SELECT status FROM tasks WHERE id = ?', [testTaskId]);
-        assert(taskRowUpdated.status === 'in_progress', 'Assignee can update task status successfully');
+        // Simulator check: Update status to 'on_hold'
+        await pool.query('UPDATE tasks SET status = ? WHERE id = ?', ['on_hold', testTaskId]);
+        const [[taskRowHold]] = await pool.query('SELECT status FROM tasks WHERE id = ?', [testTaskId]);
+        assert(taskRowHold.status === 'on_hold', 'Status updated to on_hold successfully');
+
+        // Test task update logic for Manager managing a worker
+        const taskController = require('./src/controllers/task.controller');
+        const mockReq = {
+            params: { id: testTaskId },
+            body: { status: 'in_progress', due_date: '', remark: 'Moving back to in progress' },
+            user: { id: testUser1Id, role: 'manager', username: 'TaskValidationManager' }
+        };
+        let resCode = null;
+        let resJson = null;
+        const mockRes = {
+            status: (code) => { resCode = code; return mockRes; },
+            json: (data) => { resJson = data; return mockRes; }
+        };
+
+        await taskController.updateTask(mockReq, mockRes);
+        assert(resCode === 200 && resJson.success === true, 'Manager updated team task status successfully without error');
+
+        const [[taskRowUpdated]] = await pool.query('SELECT status, remarks FROM tasks WHERE id = ?', [testTaskId]);
+        assert(taskRowUpdated.status === 'in_progress', 'Task status updated to in_progress via controller');
+        assert(taskRowUpdated.remarks && taskRowUpdated.remarks.length > 0, 'Remark appended to task successfully');
 
 
-        // ── Test 5: Self-Assignment Capability ────────────────────────────────
-        console.log('\n[T5] Self-Assignment capability check');
+        // ── Test 5: Self-Assignment & Cross-Role Update Capability ────────────────
+        console.log('\n[T5] Self-Assignment & Manager/Admin update check');
         
-        // Manager creates task and assigns to themselves
-        const [selfInsert] = await pool.query(
+        // Link worker to manager
+        await pool.query('UPDATE users SET manager_id = ? WHERE id = ?', [testUser1Id, testUser2Id]);
+
+        // Worker creates task self-assigned to themselves
+        const [workerSelfInsert] = await pool.query(
             `INSERT INTO tasks (title, description, assigned_to, assigned_by, ad_platform, priority)
-             VALUES ('Review my own metrics', 'Check personal KPIs', ?, ?, 'general', 'medium')`,
-            [testUser1Id, testUser1Id]
+             VALUES ('Worker Self Created Task', 'Personal work item', ?, ?, 'general', 'medium')`,
+            [testUser2Id, testUser2Id]
         );
-        const selfTaskId = selfInsert.insertId;
-        assert(selfTaskId > 0, `Self-assigned task created in DB. ID: ${selfTaskId}`);
+        const workerSelfTaskId = workerSelfInsert.insertId;
+        assert(workerSelfTaskId > 0, `Worker self-assigned task created in DB. ID: ${workerSelfTaskId}`);
 
-        const [[selfTaskRow]] = await pool.query('SELECT * FROM tasks WHERE id = ?', [selfTaskId]);
-        assert(selfTaskRow.assigned_to === testUser1Id && selfTaskRow.assigned_by === testUser1Id, 'Self-assigned fields set correctly');
+        // 1. Manager updates Worker's self-created task
+        let mgrResCode = null, mgrResJson = null;
+        const mockMgrRes = {
+            status: (code) => { mgrResCode = code; return mockMgrRes; },
+            json: (data) => { mgrResJson = data; return mockMgrRes; }
+        };
+        await taskController.updateTask({
+            params: { id: workerSelfTaskId },
+            body: { status: 'completed', remark: 'Manager approved worker self-created task' },
+            user: { id: testUser1Id, role: 'manager', username: 'TaskValidationManager' }
+        }, mockMgrRes);
+
+        assert(mgrResCode === 200 && mgrResJson.success === true, 'Manager can update worker self-created task successfully');
+
+        // 2. Admin updates Worker's self-created task
+        let adminResCode = null, adminResJson = null;
+        const mockAdminRes = {
+            status: (code) => { adminResCode = code; return mockAdminRes; },
+            json: (data) => { adminResJson = data; return mockAdminRes; }
+        };
+        await taskController.updateTask({
+            params: { id: workerSelfTaskId },
+            body: { status: 'in_progress', priority: 'critical', remark: 'Admin adjusted priority' },
+            user: { id: 9999, role: 'admin', username: 'SystemAdmin' }
+        }, mockAdminRes);
+
+        assert(adminResCode === 200 && adminResJson.success === true, 'Admin can update worker self-created task successfully');
 
         // Cleanup self-assigned task
-        await pool.query('DELETE FROM tasks WHERE id = ?', [selfTaskId]);
+        await pool.query('DELETE FROM tasks WHERE id = ?', [workerSelfTaskId]);
 
     } catch (err) {
         console.error('\n[FATAL ERROR IN TEST SUITE]:', err.message);

@@ -624,7 +624,10 @@ const useTemplateMapping = async (templateId, mappingId) => {
 };
 
 const handleIncomingMessage = async (msgData) => {
-    const { fromPhone, messageId, timestamp, type, body, senderName, phoneId, replyToMessageId } = msgData;
+    const {
+        fromPhone, messageId, timestamp, type, body, senderName, phoneId, replyToMessageId,
+        location, media, interactive, reactionEmoji, contactsData, orderData
+    } = msgData;
 
     try {
         // 1. Normalize the phone number
@@ -653,22 +656,26 @@ const handleIncomingMessage = async (msgData) => {
 
         if (contact) {
             contactId = contact.id;
-            // Update last_message_at and ensure opt_in_status is true if they messaged us
+            // Update last_message_at and update name if senderName is provided by WhatsApp
             await pool.query(
                 `UPDATE whatsapp_contacts 
                  SET last_message_at = NOW(), 
                      opt_in_status = TRUE, 
                      status = 'active',
-                     opt_in_date = COALESCE(opt_in_date, NOW())
+                     opt_in_date = COALESCE(opt_in_date, NOW()),
+                     name = CASE 
+                         WHEN ? IS NOT NULL AND CHAR_LENGTH(TRIM(?)) > 0 THEN ? 
+                         ELSE name 
+                     END
                  WHERE id = ?`,
-                [contactId]
+                [senderName || null, senderName || null, senderName || null, contactId]
             );
         } else {
             // Create a new contact
             const [insertRes] = await pool.query(
                 `INSERT INTO whatsapp_contacts (phone, name, opt_in_status, opt_in_date, last_message_at, status)
                  VALUES (?, ?, TRUE, NOW(), NOW(), 'active')`,
-                [normalized, senderName || `WhatsApp User ${normalized.slice(-4)}`]
+                [normalized, senderName || null]
             );
             contactId = insertRes.insertId;
             console.log(`[Webhook] Created new contact ID ${contactId} for phone ${normalized}`);
@@ -687,7 +694,7 @@ const handleIncomingMessage = async (msgData) => {
         let linkedMsg = null;
         if (replyToMessageId) {
             const [[matchedMsg]] = await pool.query(
-                'SELECT source_app, source_user_id, source_user_name, source_reference_id FROM whatsapp_message_logs WHERE message_id = ? LIMIT 1',
+                'SELECT template_name, source_app, source_user_id, source_user_name, source_reference_id FROM whatsapp_message_logs WHERE message_id = ? LIMIT 1',
                 [replyToMessageId]
             );
             if (matchedMsg) {
@@ -697,7 +704,7 @@ const handleIncomingMessage = async (msgData) => {
 
         if (!linkedMsg) {
             const [[matchedMsg]] = await pool.query(
-                `SELECT source_app, source_user_id, source_user_name, source_reference_id 
+                `SELECT template_name, source_app, source_user_id, source_user_name, source_reference_id 
                  FROM whatsapp_message_logs 
                  WHERE recipient_number = ? AND direction = 'outgoing' AND sent_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
                  ORDER BY sent_at DESC LIMIT 1`,
@@ -718,7 +725,7 @@ const handleIncomingMessage = async (msgData) => {
             [
                 phoneId || 'N/A',
                 normalized,
-                'Customer Reply',
+                linkedMsg?.template_name || 'Customer Reply',
                 messageId,
                 linkedMsg?.source_app || null,
                 linkedMsg?.source_user_id || null,
@@ -737,6 +744,16 @@ const handleIncomingMessage = async (msgData) => {
         const activityMetadata = {
             body,
             type,
+            location: location || null,
+            media_id: media?.media_id || null,
+            audio_url: media?.audio_url || null,
+            mime_type: media?.mime_type || null,
+            caption: media?.caption || null,
+            filename: media?.filename || null,
+            interactive: interactive || null,
+            emoji: reactionEmoji || null,
+            contacts: contactsData || null,
+            order: orderData || null,
             raw_phone: fromPhone,
             waba_phone_id: phoneId,
             source_app: linkedMsg?.source_app || null,

@@ -16,7 +16,7 @@ const generateToken = (id) => {
 
 exports.register = async (req, res) => {
     try {
-        const { username, email, password } = req.body;
+        const { username, email, password, invite_token } = req.body;
 
         if (!username || !email || !password) {
             return res.status(400).json({ success: false, message: 'Please provide all fields' });
@@ -27,15 +27,126 @@ exports.register = async (req, res) => {
             return res.status(400).json({ success: false, message: 'User already exists' });
         }
 
+        let assignedManagerId = null;
+        let assignedRole = 'user';
+
+        if (invite_token) {
+            try {
+                const decoded = jwt.verify(invite_token, process.env.JWT_SECRET);
+                if (decoded.type === 'team_invite' && decoded.manager_id) {
+                    if (decoded.creator_role === 'admin') {
+                        // Admin invites create Manager accounts
+                        assignedRole = 'manager';
+                        assignedManagerId = null;
+                    } else {
+                        // Manager invites create Team Member accounts linked to that Manager
+                        assignedRole = 'user';
+                        assignedManagerId = decoded.manager_id;
+                    }
+                }
+            } catch (err) {
+                if (err.name === 'TokenExpiredError') {
+                    return res.status(410).json({
+                        success: false,
+                        message: 'Invitation link has expired (10-minute limit). Please ask for a new link.'
+                    });
+                }
+                return res.status(400).json({ success: false, message: 'Invalid invitation link.' });
+            }
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
-        const userId = await User.create({ username, email, password: hashedPassword });
+        const userId = await User.create({
+            username,
+            email,
+            password: hashedPassword,
+            role: assignedRole,
+            manager_id: assignedManagerId
+        });
 
         const token = generateToken(userId);
 
         res.status(201).json({
             success: true,
             token,
-            user: { id: userId, username, email, role: 'user', status: 'active' }
+            user: { id: userId, username, email, role: assignedRole, status: 'active', manager_id: assignedManagerId }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Generate a 10-minute Team Invitation Token for Manager/Admin
+// @route   POST /api/auth/generate-invite
+// @access  Private (Manager or Admin)
+exports.generateInviteToken = async (req, res) => {
+    try {
+        const { id, username, role } = req.user;
+        if (role !== 'manager' && role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Only Managers or Administrators can generate team invitation links.'
+            });
+        }
+
+        const inviteToken = jwt.sign(
+            { manager_id: id, manager_name: username, creator_role: role, type: 'team_invite' },
+            process.env.JWT_SECRET,
+            { expiresIn: '10m' }
+        );
+
+        res.status(200).json({
+            success: true,
+            invite_token: inviteToken,
+            expires_in_seconds: 600,
+            manager_id: id,
+            manager_name: username,
+            creator_role: role,
+            target_role: role === 'admin' ? 'manager' : 'user'
+        });
+    } catch (error) {
+        console.error('generateInviteToken Error:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Validate a Team Invitation Token
+// @route   GET /api/auth/validate-invite-token
+// @access  Public
+exports.validateInviteToken = async (req, res) => {
+    try {
+        const { token } = req.query;
+        if (!token) {
+            return res.status(400).json({ success: false, message: 'Invitation token is required.' });
+        }
+
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } catch (err) {
+            if (err.name === 'TokenExpiredError') {
+                return res.status(410).json({
+                    success: false,
+                    expired: true,
+                    message: 'This invitation link has expired (10-minute validity limit). Please request a new link.'
+                });
+            }
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid invitation link.'
+            });
+        }
+
+        if (decoded.type !== 'team_invite' || !decoded.manager_id) {
+            return res.status(400).json({ success: false, message: 'Invalid team invitation token payload.' });
+        }
+
+        res.status(200).json({
+            success: true,
+            manager_id: decoded.manager_id,
+            manager_name: decoded.manager_name || 'Manager',
+            creator_role: decoded.creator_role || 'manager',
+            target_role: decoded.creator_role === 'admin' ? 'manager' : 'user'
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

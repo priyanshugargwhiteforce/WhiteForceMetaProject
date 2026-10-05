@@ -295,7 +295,19 @@ const getAttributeKeys = async (listId = null) => {
     return Array.from(keys);
 };
 
-const getChatThreads = async () => {
+const getChatThreads = async (page = 1, limit = 20, search = '') => {
+    const limitVal = parseInt(limit) || 20;
+    const pageVal = parseInt(page) || 1;
+    const offset = (pageVal - 1) * limitVal;
+    const params = [];
+    
+    let searchCondition = '';
+    if (search && search.trim() !== '') {
+        const searchLike = `%${search.trim()}%`;
+        searchCondition = ` AND (c.name LIKE ? OR c.phone LIKE ?)`;
+        params.push(searchLike, searchLike);
+    }
+    
     const query = `
         SELECT c.id, c.phone, c.name, c.last_message_at, c.status, c.engagement_score,
                a.event_type, a.metadata, a.event_timestamp
@@ -309,14 +321,24 @@ const getChatThreads = async () => {
                 GROUP BY contact_id
             ) latest ON latest.max_id = ca.id
         ) a ON a.contact_id = c.id
-        WHERE c.last_message_at IS NOT NULL
+        WHERE c.last_message_at IS NOT NULL ${searchCondition}
         ORDER BY c.last_message_at DESC
+        LIMIT ? OFFSET ?
     `;
-    const [rows] = await pool.query(query);
-    return rows.map(r => ({
+    
+    params.push(limitVal + 1, offset);
+    
+    const [rows] = await pool.query(query, params);
+    
+    const hasMore = rows.length > limitVal;
+    const resultRows = hasMore ? rows.slice(0, limitVal) : rows;
+    
+    const threads = resultRows.map(r => ({
         ...r,
         metadata: typeof r.metadata === 'string' ? JSON.parse(r.metadata) : (r.metadata || {})
     }));
+    
+    return { threads, hasMore };
 };
 
 const getChatMessages = async (contactId) => {
@@ -330,10 +352,16 @@ const getChatMessages = async (contactId) => {
 
     const messages = [];
     const messageMap = {};
+    let lastIncomingTimestamp = null;
 
     for (const act of rows) {
         const metadata = typeof act.metadata === 'string' ? JSON.parse(act.metadata) : (act.metadata || {});
         const msgId = act.message_id;
+        const isOutgoing = act.event_type !== 'replied';
+
+        if (act.event_type === 'replied' && act.event_timestamp) {
+            lastIncomingTimestamp = act.event_timestamp;
+        }
 
         if (msgId) {
             if (messageMap[msgId]) {
@@ -341,13 +369,22 @@ const getChatMessages = async (contactId) => {
                 msg.status = act.event_type;
                 if (metadata.error) msg.error = metadata.error;
             } else {
-                const isOutgoing = act.event_type !== 'replied';
                 const msg = {
                     id: act.id,
                     message_id: msgId,
                     campaign_id: act.campaign_id,
                     type: metadata.type || (isOutgoing ? 'template' : 'text'),
                     body: metadata.body || (isOutgoing ? `Template: ${metadata.template_name || 'Campaign Template'}` : ''),
+                    location: metadata.location || null,
+                    media_id: metadata.media_id || null,
+                    audio_url: metadata.audio_url || null,
+                    mime_type: metadata.mime_type || null,
+                    caption: metadata.caption || null,
+                    filename: metadata.filename || null,
+                    interactive: metadata.interactive || null,
+                    emoji: metadata.emoji || null,
+                    contacts: metadata.contacts || null,
+                    order: metadata.order || null,
                     status: act.event_type,
                     isOutgoing,
                     timestamp: act.event_timestamp,
@@ -357,13 +394,22 @@ const getChatMessages = async (contactId) => {
                 messages.push(msg);
             }
         } else {
-            const isOutgoing = act.event_type !== 'replied';
             messages.push({
                 id: act.id,
                 message_id: null,
                 campaign_id: act.campaign_id,
-                type: act.event_type === 'unsubscribed' ? 'system' : 'text',
+                type: act.event_type === 'unsubscribed' ? 'system' : (metadata.type || 'text'),
                 body: act.event_type === 'unsubscribed' ? 'User unsubscribed' : (metadata.body || `Event: ${act.event_type}`),
+                location: metadata.location || null,
+                media_id: metadata.media_id || null,
+                audio_url: metadata.audio_url || null,
+                mime_type: metadata.mime_type || null,
+                caption: metadata.caption || null,
+                filename: metadata.filename || null,
+                interactive: metadata.interactive || null,
+                emoji: metadata.emoji || null,
+                contacts: metadata.contacts || null,
+                order: metadata.order || null,
                 status: act.event_type,
                 isOutgoing,
                 timestamp: act.event_timestamp
@@ -371,7 +417,45 @@ const getChatMessages = async (contactId) => {
         }
     }
 
-    return messages;
+    // Calculate 24-Hour Customer Service Window Status
+    let window24h = {
+        isOpen: false,
+        lastIncomingAt: null,
+        expiresAt: null,
+        remainingMinutes: 0,
+        remainingFormatted: 'Expired'
+    };
+
+    if (lastIncomingTimestamp) {
+        const lastTime = new Date(lastIncomingTimestamp).getTime();
+        if (!isNaN(lastTime)) {
+            const expiresTime = lastTime + (24 * 60 * 60 * 1000);
+            const nowTime = Date.now();
+            const diffMs = expiresTime - nowTime;
+
+            if (diffMs > 0) {
+                const hours = Math.floor(diffMs / (1000 * 60 * 60));
+                const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                window24h = {
+                    isOpen: true,
+                    lastIncomingAt: new Date(lastTime).toISOString(),
+                    expiresAt: new Date(expiresTime).toISOString(),
+                    remainingMinutes: Math.floor(diffMs / (1000 * 60)),
+                    remainingFormatted: `${hours}h ${mins}m remaining`
+                };
+            } else {
+                window24h = {
+                    isOpen: false,
+                    lastIncomingAt: new Date(lastTime).toISOString(),
+                    expiresAt: new Date(expiresTime).toISOString(),
+                    remainingMinutes: 0,
+                    remainingFormatted: 'Expired'
+                };
+            }
+        }
+    }
+
+    return { messages, window24h };
 };
 
 module.exports = {

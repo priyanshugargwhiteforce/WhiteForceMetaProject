@@ -15,7 +15,11 @@ const {
     deleteMetaConfig,
     updateAdOwner,
     getTeamMembers,
-    getFacebookPages
+    getFacebookPages,
+    getPageTrackerHistory,
+    syncPageTracker,
+    addOrUpdateMonthlyMetric,
+    deleteMonthlyMetric
 } = require('../controllers/meta.controller');
 
 const { authorizeMeta } = require('../middlewares/auth.middleware');
@@ -34,6 +38,11 @@ router.post('/ads/owner', updateAdOwner);
 
 // Ad account and analytics routes
 router.get('/fb-pages', getFacebookPages);
+router.get('/page-tracker/history', getPageTrackerHistory);
+router.post('/page-tracker/sync', syncPageTracker);
+router.post('/page-tracker/updates', addOrUpdateMonthlyMetric);
+router.delete('/page-tracker/entry/:id', deleteMonthlyMetric);
+
 router.get('/accounts', getAdAccounts);
 router.get('/accounts/:accountId', getAccountDetails);
 router.get('/insights/:accountId', getAccountInsights);

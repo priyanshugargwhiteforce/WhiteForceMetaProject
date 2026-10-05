@@ -5,18 +5,20 @@ const whatsappChannelsController = require('../../controllers/whatsapp/whatsapp-
 const whatsappTemplatesController = require('../../controllers/whatsapp/whatsapp-templates.controller');
 const whatsappContactsController = require('../../controllers/whatsapp/whatsapp-contacts.controller');
 const whatsappCampaignsController = require('../../controllers/whatsapp/whatsapp-campaigns.controller');
+const whatsappCallsController = require('../../controllers/whatsapp/whatsapp-calls.controller');
 const { protect, authorizeWhatsapp } = require('../../middlewares/auth.middleware');
 
-// Public Webhook endpoints (No protect middleware)
-router.get('/webhook', whatsappTemplatesController.verifyWebhook);
-router.post('/webhook', whatsappTemplatesController.receiveWebhook);
+// Public Webhook endpoints (No protect middleware) - Handled by Webhook Dispatcher
+const whatsappWebhookController = require('../../controllers/whatsapp/whatsapp-webhook.controller');
+router.get('/webhook', whatsappWebhookController.verifyWebhook);
+router.post('/webhook', whatsappWebhookController.receiveWebhook);
 
 // --- External In-House App Tracking APIs (x-internal-api-key) ---
 const whatsappExternalController = require('../../controllers/whatsapp/whatsapp-external.controller');
 
 const validateExternalApiKey = (req, res, next) => {
     const apiKey = req.headers['x-internal-api-key'];
-    const expectedKey = process.env.INTERNAL_API_KEY || 'company_internal_whatsapp_tracking_secret_2026';
+    const expectedKey = process.env.INTERNAL_API_KEY || 'whiteforceadmanager2026garg18';
     
     if (!apiKey || apiKey !== expectedKey) {
         return res.status(401).json({ success: false, message: 'Unauthorized: Invalid API Key.' });
@@ -78,6 +80,12 @@ router.get('/chats/events', whatsappContactsController.getChatEvents);
 router.get('/chats', whatsappContactsController.getChatThreads);
 router.get('/chats/:contactId/messages', whatsappContactsController.getChatMessages);
 router.post('/chats/:contactId/send', whatsappContactsController.sendFreeTextChat);
+router.get('/media/:mediaId/stream', whatsappController.streamWhatsAppMedia);
+
+// WhatsApp Call Logs Routes
+router.get('/calls', whatsappCallsController.getCallLogs);
+router.get('/calls/:id', whatsappCallsController.getCallDetails);
+router.delete('/calls/:id', whatsappCallsController.deleteCallLog);
 
 // Sprint 9: Contact Intelligence Routes — MUST be before /:id param routes
 router.get('/contacts/segments', whatsappContactsController.getEngagementSegments);
@@ -160,11 +168,39 @@ router.get('/analytics/live', whatsappAnalyticsController.getLiveWabaAnalytics);
 router.get('/analytics/pricing', whatsappAnalyticsController.getWabaPricingAnalytics);
 router.post('/analytics/pricing/sync', whatsappAnalyticsController.syncWabaPricingAnalytics);
 
+// --- Manual Billing & Payments History Routes ---
+router.get('/analytics/payments', whatsappAnalyticsController.getWabaPayments);
+router.post('/analytics/payments', whatsappAnalyticsController.addWabaPayment);
+router.delete('/analytics/payments/:id', whatsappAnalyticsController.deleteWabaPayment);
+
 // --- Dashboard UI External Tracker routes (Requires JWT Auth protect) ---
 router.get('/dashboard/external-messages', whatsappExternalController.getDashboardExternalMessages);
 router.get('/dashboard/external-conversation/:phone', whatsappExternalController.getDashboardExternalConversation);
 router.get('/dashboard/external-apps', whatsappExternalController.getDashboardExternalApps);
 router.get('/dashboard/external-templates', whatsappExternalController.getDashboardExternalTemplates);
+router.get('/dashboard/external-users', whatsappExternalController.getDashboardExternalUsers);
+
+// --- Weekly Business Report Routes ---
+const { sendWeeklyBusinessReport, getWeeklyReportMetrics } = require('../../services/weeklyBusinessReport.service');
+
+router.get('/weekly-report/preview', async (req, res) => {
+    try {
+        const metrics = await getWeeklyReportMetrics();
+        res.json({ success: true, metrics });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+router.post('/weekly-report/trigger', async (req, res) => {
+    try {
+        const { phone } = req.body;
+        const result = await sendWeeklyBusinessReport(phone);
+        res.json({ success: true, message: 'Weekly business report triggered successfully', data: result });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
 
 module.exports = router;
 

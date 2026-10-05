@@ -15,6 +15,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(accessLogger);
 
+// Serve static uploaded files (e.g. WhatsApp audio media)
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
 // Basic route for testing
 app.get('/', (req, res) => {
     res.json({ message: 'Welcome to the Meta API Project Backend' });
@@ -29,18 +32,26 @@ app.use('/api/users', protect, require('./routes/user.routes'));
 app.use('/api/meta', protect, require('./routes/meta.routes'));
 app.use('/api/meta/posting', require('./routes/meta-posting.routes'));
 app.use('/api/ai', protect, require('./routes/ai.routes'));
-app.use('/api/google', protect, require('./routes/google.routes'));
+app.use('/api/google', require('./routes/google.routes'));
+app.use('/api/reports', protect, require('./routes/reports.routes'));
 app.use('/api/whatsapp', require('./routes/whatsapp/whatsapp.routes'));
 app.use('/api/youtube-ads', protect, require('./routes/youtubeAd.routes'));
+app.use('/api/youtube', require('./routes/youtubeChannel.routes'));
+app.use('/api/youtube/channels', require('./routes/youtubeChannel.routes'));
 app.use('/api/linkedin', require('./routes/linkedin/linkedin.routes'));
 app.use('/api/linkedin/ads', require('./routes/linkedin/ads.routes'));
 
-app.use('/api/tasks', protect, require('./routes/task.routes'));;
+app.use('/api/tasks', protect, require('./routes/task.routes'));
+app.use('/api/daily-tasks', protect, require('./routes/dailyTask.routes'));
+app.use('/api/moms', protect, require('./routes/mom.routes'));
 
 // Phase 4 - Media Library, Assets, and Creatives Router Registry
 app.use('/api/media', require('./routes/media.routes'));
 app.use('/api/linkedin/assets', require('./routes/linkedin/assets.routes'));
 app.use('/api/linkedin/creatives', require('./routes/linkedin/creatives.routes'));
+
+// Purchase Order (PO) Router
+app.use('/api/po', require('./routes/po/po.routes'));
 
 // Health check route
 app.get('/health', (req, res) => {

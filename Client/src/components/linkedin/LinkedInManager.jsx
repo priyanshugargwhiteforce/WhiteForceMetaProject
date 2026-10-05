@@ -7,6 +7,7 @@ import {
   IndianRupee, RefreshCw, Calendar, Users, Briefcase, Info,
   CheckCircle, Database, ShieldAlert, Award
 } from 'lucide-react';
+import CustomSelect from '../CustomSelect';
 
 const LinkedInManager = () => {
   const [adAccounts, setAdAccounts] = useState([]);
@@ -296,15 +297,12 @@ const LinkedInManager = () => {
           </button>
 
           {/* LinkedIn Ad Account Selector */}
-          <select
+          <CustomSelect
             value={selectedAccountId}
-            onChange={(e) => setSelectedAccountId(e.target.value)}
-            className="bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-2xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-w-[200px] text-slate-800 dark:text-white cursor-pointer"
-          >
-            {adAccounts.map(acc => (
-              <option key={acc.id} value={acc.id}>{acc.name}</option>
-            ))}
-          </select>
+            onChange={setSelectedAccountId}
+            options={adAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
+            className="min-w-[200px] rounded-2xl px-4 py-2.5 text-sm"
+          />
         </div>
       </div>
 
