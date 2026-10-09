@@ -36,6 +36,12 @@ router.post('/track-external-message', validateExternalApiKey, whatsappExternalC
 router.get('/external/messages', validateExternalApiKey, whatsappExternalController.getExternalMessages);
 router.get('/external/conversation/:phone', validateExternalApiKey, whatsappExternalController.getExternalConversation);
 
+// --- External In-House Payment Reminder APIs (x-internal-api-key) ---
+const whatsappPaymentReminderController = require('../../controllers/whatsapp/whatsapp-payment-reminder.controller');
+router.post('/send-payment-reminder', validateExternalApiKey, whatsappPaymentReminderController.sendPaymentReminder);
+router.post('/send-overdue-payment-reminder', validateExternalApiKey, whatsappPaymentReminderController.sendOverduePaymentReminder);
+
+
 // Apply protection & authorization to all subsequent routes
 
 router.use(protect);
