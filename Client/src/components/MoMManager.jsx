@@ -40,6 +40,17 @@ import logoImg from '../assets/white-forcelogo.png';
 
 const DEPARTMENTS = ['SEO', 'Marketing', 'IT', 'HR', 'Payroll', 'Other'];
 
+// Presentation-only accent styles per department (visual aid — no effect on data/logic)
+const DEPARTMENT_STYLES = {
+  SEO: { badge: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20', dot: 'bg-violet-500' },
+  Marketing: { badge: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20', dot: 'bg-rose-500' },
+  IT: { badge: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20', dot: 'bg-blue-500' },
+  HR: { badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20', dot: 'bg-emerald-500' },
+  Payroll: { badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20', dot: 'bg-amber-500' },
+  Other: { badge: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20', dot: 'bg-slate-500' },
+};
+const getDeptStyle = (dept) => DEPARTMENT_STYLES[dept] || DEPARTMENT_STYLES.Other;
+
 const MoMManager = () => {
   const { user } = useAuth();
   const { theme } = useTheme();
@@ -501,95 +512,196 @@ const MoMManager = () => {
   }, [moms]);
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
-      {/* Top Header Navigation & Action Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900/40 p-5 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm">
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => navigate('/tasks')}
-            className="p-2 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 rounded-xl transition-all"
-            title="Back to Task Manager"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <div className="flex items-center space-x-2">
-              <h1 className="text-xl font-bold text-slate-900 dark:text-white">Minutes of Meeting (MoM)</h1>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 uppercase tracking-wider">
-                Corporate Log
-              </span>
+    <div className="lg:px-8 py-0 max-w-7xl mx-auto space-y-8 mom-shell">
+      {/* Fonts: Poppins everywhere by default, Ubuntu reserved for .fontUbuntu / .titleMeeting, JetBrains Mono for data/numerals */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Ubuntu:wght@400;500;700&family=JetBrains+Mono:wght@500;600;700&display=swap"
+        rel="stylesheet"
+      />
+      <style>{`
+        @media screen {
+          .mom-shell,
+          .mom-shell input,
+          .mom-shell select,
+          .mom-shell button,
+          .mom-shell textarea {
+            font-family: 'Poppins', sans-serif;
+          }
+          .mom-shell .fontUbuntu,
+          .mom-shell .titleMeeting {
+            font-family: 'Ubuntu', sans-serif;
+          }
+          .mom-shell .mom-mono {
+            font-family: 'JetBrains Mono', monospace;
+          }
+
+          /* Page wash: a quiet dotted texture behind the whole log, warm in light, deep in dark */
+          .mom-shell {
+            background-size: 26px 26px;
+            border-radius: 22px;
+          }
+          .dark .mom-shell {
+            background-image: radial-gradient(circle at 1px 1px, rgba(244, 63, 94, 0.08) 1px, transparent 0);
+            background-size: 26px 26px;
+            background-color: #0a0d16;
+          }
+
+          /* One orchestrated entrance for the page's main sections only — not per-card, not on hover */
+          @keyframes momRise {
+            from { opacity: 0; transform: translateY(14px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          .mom-shell .mom-anim {
+            opacity: 0;
+            animation: momRise 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .mom-shell .mom-anim {
+              animation: none;
+              opacity: 1;
+            }
+          }
+        }
+        .mom-shell .custom-scrollbar::-webkit-scrollbar,
+        .mom-shell .scrollbar-thin::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+        .mom-shell .custom-scrollbar::-webkit-scrollbar-track,
+        .mom-shell .scrollbar-thin::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .mom-shell .custom-scrollbar::-webkit-scrollbar-thumb,
+        .mom-shell .scrollbar-thin::-webkit-scrollbar-thumb {
+          background-color: rgba(148, 163, 184, 0.45);
+          border-radius: 10px;
+        }
+        .mom-shell .custom-scrollbar::-webkit-scrollbar-thumb:hover,
+        .mom-shell .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(148, 163, 184, 0.7);
+        }
+        .mom-shell .custom-scrollbar,
+        .mom-shell .scrollbar-thin {
+          scrollbar-width: thin;
+        }
+        .mom-shell select.mom-select {
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          appearance: none;
+        }
+      `}</style>
+
+      {/* Top Header Navigation & Action Bar — gradient masthead, the page's one bold moment */}
+      <div
+        className="mom-anim relative overflow-hidden rounded-2xl p-5 sm:p-6 shadow-xl shadow-rose-500/20 dark:shadow-none dark:ring-1 dark:ring-white/10"
+        style={{ animationDelay: '0ms' }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-rose-600 via-rose-500 to-amber-500"></div>
+        <div
+          className="absolute inset-0 opacity-25"
+          style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.6) 1px, transparent 1px)', backgroundSize: '15px 15px' }}
+        ></div>
+        <div className="absolute -right-12 -top-16 w-64 h-64 rounded-full bg-white/15 blur-3xl"></div>
+        <div className="absolute -left-10 -bottom-16 w-48 h-48 rounded-full bg-black/10 blur-3xl"></div>
+
+        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div className="flex items-center space-x-3.5">
+            <button
+              onClick={() => navigate('/tasks')}
+              className="p-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl transition-colors backdrop-blur-sm"
+              title="Back to Task Manager"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <div className="flex items-center space-x-2 flex-wrap">
+                <h1 className="text-2xl leading-tight text-white fontUbuntu">Minutes of Meeting (MoM)</h1>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white border border-white/30 uppercase tracking-wider">
+                  Corporate Log
+                </span>
+              </div>
+              <p className="text-xs text-white/80 font-medium mt-1">
+                Document, structure, and export point-wise team meeting minutes across departments
+              </p>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-              Document, structure, and export point-wise team meeting minutes across departments
-            </p>
           </div>
-        </div>
 
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => exportAllMoMsToExcel(filteredMoms)}
-            className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
-            title="Export all MoMs to Excel (.xlsx)"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>Export Excel</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => exportAllMoMsToExcel(filteredMoms)}
+              className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs border border-white/20 backdrop-blur-sm transition-colors cursor-pointer"
+              title="Export all MoMs to Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Export Excel</span>
+            </button>
 
-          <button
-            onClick={handleOpenCreateModal}
-            className="flex items-center space-x-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-lg shadow-rose-500/10 transition-all font-semibold text-xs cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>+ Create New MoM</span>
-          </button>
+            <button
+              onClick={handleOpenCreateModal}
+              className="flex items-center space-x-2 px-4 py-2.5 bg-white hover:bg-rose-50 text-rose-600 rounded-xl shadow-lg shadow-black/10 transition-colors font-bold text-xs cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Create New MoM</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* KPI Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-900/40 p-4 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm flex items-center space-x-4">
-          <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center font-bold">
-            <FileText className="w-5 h-5" />
+      {/* KPI Stats Strip — one ledger panel, divided like a register, not four repeated cards */}
+      <div
+        className="mom-anim bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 dark:ring-1 dark:ring-rose-500/10 rounded-2xl shadow-sm overflow-hidden"
+        style={{ animationDelay: '90ms' }}
+      >
+        <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-slate-100 dark:divide-white/5">
+          <div className="p-5 flex items-center space-x-3.5">
+            <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
+              <FileText className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="block text-[11px] font-semibold  text-red-600 tracking-wide">Total MoMs</span>
+              <span className="mom-mono text-2xl font-semibold text-slate-900 dark:text-white">{stats.total}</span>
+            </div>
           </div>
-          <div>
-            <span className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Total MoMs</span>
-            <span className="text-xl font-bold text-slate-900 dark:text-white">{stats.total}</span>
-          </div>
-        </div>
 
-        <div className="bg-white dark:bg-slate-900/40 p-4 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm flex items-center space-x-4">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold">
-            <UserCheck className="w-5 h-5" />
+          <div className="p-5 flex items-center space-x-3.5">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+              <UserCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="block text-[11px] font-semibold  text-yellow-600 tracking-wide">CEO Shailesh Rajpal Meetings</span>
+              <span className="mom-mono text-2xl font-semibold text-slate-900 dark:text-white">{stats.ceoMeetings}</span>
+            </div>
           </div>
-          <div>
-            <span className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">CEO Shailesh Rajpal Meetings</span>
-            <span className="text-xl font-bold text-slate-900 dark:text-white">{stats.ceoMeetings}</span>
-          </div>
-        </div>
 
-        <div className="bg-white dark:bg-slate-900/40 p-4 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm flex items-center space-x-4">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center font-bold">
-            <Building className="w-5 h-5" />
+          <div className="p-5 flex items-center space-x-3.5">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+              <Building className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="block text-[11px] font-semibold  text-blue-600 tracking-wide">Marketing & SEO</span>
+              <span className="mom-mono text-2xl font-semibold text-slate-900 dark:text-white">{stats.marketingCount + stats.seoCount}</span>
+            </div>
           </div>
-          <div>
-            <span className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Marketing & SEO</span>
-            <span className="text-xl font-bold text-slate-900 dark:text-white">{stats.marketingCount + stats.seoCount}</span>
-          </div>
-        </div>
 
-        <div className="bg-white dark:bg-slate-900/40 p-4 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm flex items-center space-x-4">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold">
-            <Users className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">HR & Payroll</span>
-            <span className="text-xl font-bold text-slate-900 dark:text-white">{stats.hrCount}</span>
+          <div className="p-5 flex items-center space-x-3.5">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="block text-[11px] font-semibold text-green-600 tracking-wide">HR & Payroll</span>
+              <span className="mom-mono text-2xl font-semibold text-slate-900 dark:text-white">{stats.hrCount}</span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Filter & Search Toolbar */}
-      <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl p-4 flex flex-col lg:flex-row gap-3 items-center justify-between shadow-sm">
+      <div
+        className="mom-anim bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 dark:ring-1 dark:ring-rose-500/10 rounded-2xl p-4 flex flex-col lg:flex-row gap-3 items-center justify-between shadow-sm"
+        style={{ animationDelay: '150ms' }}
+      >
         <div className="relative w-full lg:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -605,37 +717,46 @@ const MoMManager = () => {
           {/* Department Filter */}
           <div className="flex items-center space-x-2">
             <Filter className="w-3.5 h-3.5 text-slate-400" />
-            <select
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
-              className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-rose-500 text-slate-800 dark:text-slate-100 cursor-pointer"
-            >
-              <option value="All" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">All Departments</option>
-              {DEPARTMENTS.map(dept => (
-                <option key={dept} value={dept} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">{dept}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={departmentFilter}
+                onChange={(e) => setDepartmentFilter(e.target.value)}
+                className="mom-select bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl pl-3 pr-7 py-2 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-rose-500 text-slate-800 dark:text-slate-100 cursor-pointer"
+              >
+                <option value="All" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">All Departments</option>
+                {DEPARTMENTS.map(dept => (
+                  <option key={dept} value={dept} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">{dept}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
 
           {/* Items Per Page Selector */}
           <div className="flex items-center space-x-2">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Show:</span>
-            <select
-              value={itemsPerPage}
-              onChange={(e) => setItemsPerPage(Number(e.target.value))}
-              className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-rose-500 text-slate-800 dark:text-slate-100 cursor-pointer"
-            >
-              <option value={5} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">5</option>
-              <option value={10} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">10</option>
-              <option value={15} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">15</option>
-              <option value={20} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">20</option>
-            </select>
+            <div className="relative">
+              <select
+                value={itemsPerPage}
+                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                className="mom-select bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl pl-2.5 pr-7 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-rose-500 text-slate-800 dark:text-slate-100 cursor-pointer"
+              >
+                <option value={5} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">5</option>
+                <option value={10} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">10</option>
+                <option value={15} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">15</option>
+                <option value={20} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">20</option>
+              </select>
+              <ChevronDown className="w-3 h-3 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main MoMs Scrollable Table Container */}
-      <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+      <div
+        className="mom-anim bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 dark:ring-1 dark:ring-rose-500/10 rounded-2xl shadow-sm overflow-hidden flex flex-col"
+        style={{ animationDelay: '210ms' }}
+      >
         {loading ? (
           <div className="p-12 text-center space-y-3">
             <Loader2 className="w-8 h-8 animate-spin text-rose-500 mx-auto" />
@@ -655,15 +776,15 @@ const MoMManager = () => {
           <>
             <div className="max-h-[600px] overflow-x-auto overflow-y-auto custom-scrollbar">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider border-b border-slate-200 dark:border-white/5">
+                <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-900 dark:to-slate-950 backdrop-blur-md  dark:text-slate-400 border-b border-slate-200 dark:border-white/5 titleMeeting">
                   <tr>
-                    <th className="p-4">Meeting Title</th>
-                    <th className="p-4">Department</th>
-                    <th className="p-4">Meeting Date & Day</th>
-                    <th className="p-4">Meeting With</th>
-                    <th className="p-4">Logged By</th>
-                    <th className="p-4 text-center">Topics</th>
-                    <th className="p-4 text-right">Actions</th>
+                    <th className="p-4 text-blue-600">Meeting Title</th>
+                    <th className="p-4 text-blue-600">Department</th>
+                    <th className="p-4 text-blue-600">Meeting Date & Day</th>
+                    <th className="p-4 text-blue-600">Meeting With</th>
+                    <th className="p-4 text-blue-600">Logged By</th>
+                    <th className="p-4 text-blue-600 text-center">Topics</th>
+                    <th className="p-4 text-blue-600 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-medium text-slate-700 dark:text-slate-200">
@@ -671,27 +792,29 @@ const MoMManager = () => {
                     const withDisplay = item.meeting_with === 'Other' ? (item.custom_meeting_with || 'Other') : item.meeting_with;
                     const pointsCount = Array.isArray(item.discussion_points) ? item.discussion_points.length : 0;
                     const canEditOrDelete = user?.role === 'admin' || user?.id === item.created_by || user?.id === item.creator_manager_id;
+                    const deptStyle = getDeptStyle(item.department);
 
                     return (
-                      <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors">
-                        <td className="p-4 font-bold text-slate-900 dark:text-white max-w-xs truncate">
+                      <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] even:bg-slate-50/40 dark:even:bg-white/[0.015] transition-colors">
+                        <td className="p-4 font-semibold pTagFont text-slate-900 dark:text-white max-w-xs truncate">
                           <div>
                             <span className="block truncate">{item.title}</span>
-                            {item.agenda && <span className="block text-[10px] text-slate-400 font-normal truncate mt-0.5">{item.agenda}</span>}
+                            {item.agenda && <span className="block text-[10px] text-slate-600 pTagFont font-medium truncate mt-0.5">{item.agenda}</span>}
                           </div>
                         </td>
 
                         <td className="p-4">
-                          <span className="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${deptStyle.badge}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${deptStyle.dot}`}></span>
                             {item.department}
                           </span>
                         </td>
 
                         <td className="p-4 whitespace-nowrap">
                           <div className="flex items-center space-x-1.5">
-                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                            <span>{formatDateDisplay(item.meeting_date)}</span>
-                            {item.meeting_day && <span className="text-[10px] text-slate-400 font-semibold">({item.meeting_day})</span>}
+                            <Calendar className="w-3.5 h-3.5 text-green-600" />
+                            <span className="mom-mono text-[11px] pTagFont">{formatDateDisplay(item.meeting_date)}</span>
+                            {item.meeting_day && <span className="text-[10px] text-green-600 pTagFont font-semibold">({item.meeting_day})</span>}
                           </div>
                         </td>
 
@@ -701,25 +824,25 @@ const MoMManager = () => {
 
                         <td className="p-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">
                           <div className="flex items-center space-x-1.5">
-                            <div className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-[9px] flex items-center justify-center">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 dark:from-slate-600 dark:to-slate-700 text-slate-700 dark:text-slate-200 font-bold text-[9px] flex items-center justify-center shrink-0">
                               {item.created_by_name ? item.created_by_name.charAt(0).toUpperCase() : 'U'}
                             </div>
-                            <span>{item.created_by_name || 'User'}</span>
+                            <span className='pTagFont text-slate-700'>{item.created_by_name || 'User'}</span>
                           </div>
                         </td>
 
                         <td className="p-4 text-center">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
-                            {pointsCount} Points
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                            {pointsCount} {pointsCount === 1 ? 'Point' : 'Points'}
                           </span>
                         </td>
 
                         <td className="p-4 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end space-x-2">
+                          <div className="flex items-center justify-end gap-1">
                             {/* View Details */}
                             <button
                               onClick={() => { setSelectedMoM(item); setIsViewModalOpen(true); }}
-                              className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"
+                              className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all hover:scale-105"
                               title="View Discussion Details"
                             >
                               <Eye className="w-4 h-4" />
@@ -728,7 +851,7 @@ const MoMManager = () => {
                             {/* Print / Export PDF */}
                             <button
                               onClick={() => { setSelectedMoM(item); setIsPrintModalOpen(true); }}
-                              className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"
+                              className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all hover:scale-105"
                               title="Print / Download PDF"
                             >
                               <Printer className="w-4 h-4" />
@@ -737,7 +860,7 @@ const MoMManager = () => {
                             {/* Export to Excel */}
                             <button
                               onClick={() => exportMoMToExcel(item)}
-                              className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                              className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-all hover:scale-105"
                               title="Export MoM to Excel (.xlsx)"
                             >
                               <FileSpreadsheet className="w-4 h-4" />
@@ -747,7 +870,7 @@ const MoMManager = () => {
                             {canEditOrDelete && (
                               <button
                                 onClick={() => handleOpenEditModal(item)}
-                                className="p-1.5 text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors"
+                                className="p-1.5 text-amber-500 hover:bg-amber-500/10 rounded-lg transition-all hover:scale-105"
                                 title="Edit MoM"
                               >
                                 <Edit2 className="w-4 h-4" />
@@ -758,7 +881,7 @@ const MoMManager = () => {
                             {canEditOrDelete && (
                               <button
                                 onClick={() => { setDeletingId(item.id); setIsDeleteModalOpen(true); }}
-                                className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
+                                className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all hover:scale-105"
                                 title="Delete MoM"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -794,7 +917,7 @@ const MoMManager = () => {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="px-3 font-bold text-slate-800 dark:text-white">
+                <span className="mom-mono px-3 font-semibold text-slate-800 dark:text-white">
                   Page {currentPage} of {totalPages}
                 </span>
                 <button
@@ -823,11 +946,13 @@ const MoMManager = () => {
           <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden my-auto max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-slate-200 dark:border-white/5 flex justify-between items-center bg-slate-50 dark:bg-slate-950/20 shrink-0">
-              <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center space-x-2">
-                <FileText className="w-4.5 h-4.5 text-rose-500" />
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center space-x-2.5">
+                <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 text-white flex items-center justify-center shadow-md shadow-rose-500/30">
+                  <FileText className="w-4 h-4" />
+                </span>
                 <span>{editingId ? 'Edit Minutes of Meeting (MoM)' : 'Create Minutes of Meeting (MoM)'}</span>
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -957,10 +1082,12 @@ const MoMManager = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="font-bold text-slate-900 dark:text-white text-xs flex items-center space-x-1.5">
-                      <Layers className="w-4 h-4 text-rose-500" />
+                      <span className="w-6 h-6 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
+                        <Layers className="w-3.5 h-3.5" />
+                      </span>
                       <span>Discussion Points & Action Items (Point-Wise)</span>
                     </h4>
-                    <p className="text-[10px] text-slate-400">Add structured main topics and nested sub-points / action decisions.</p>
+                    <p className="text-[10px] text-slate-400 mt-1 ml-7">Add structured main topics and nested sub-points / action decisions.</p>
                   </div>
                   <button
                     type="button"
@@ -974,7 +1101,7 @@ const MoMManager = () => {
 
                 <div className="space-y-4">
                   {formPoints.map((pt, tIdx) => (
-                    <div key={pt.id || tIdx} className="bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-xl p-4 space-y-3">
+                    <div key={pt.id || tIdx} className="bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 border-l-4 border-l-rose-400 dark:border-l-rose-500 rounded-xl p-4 space-y-3">
                       {/* Topic Title Row */}
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-bold text-xs text-rose-500 whitespace-nowrap">Point {tIdx + 1}:</span>
@@ -1031,7 +1158,7 @@ const MoMManager = () => {
                       </div>
 
                       {/* Action Task Assignment Bar */}
-                      <div className="mt-3 pt-2.5 border-t border-slate-200/80 dark:border-white/10 flex flex-wrap items-center gap-3 bg-slate-100/70 dark:bg-slate-900/50 p-2.5 rounded-xl">
+                      <div className="mt-3 pt-2.5 border-t border-slate-200/80 dark:border-white/10 flex flex-wrap items-center gap-3 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 p-2.5 rounded-xl">
                         <div className="flex items-center space-x-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 shrink-0">
                           <UserCheck className="w-4 h-4 text-blue-500" />
                           <span>Assign Action Task:</span>
@@ -1092,7 +1219,7 @@ const MoMManager = () => {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold border border-slate-200 dark:border-white/10 rounded-xl text-slate-600 dark:text-slate-300"
+                  className="px-4 py-2 text-xs font-semibold border border-slate-200 dark:border-white/10 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
                 >
                   Cancel
                 </button>
@@ -1105,7 +1232,7 @@ const MoMManager = () => {
                 ) : (
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-rose-500/10"
+                    className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-rose-500/10 hover:shadow-rose-500/20 transition-all"
                   >
                     {editingId ? 'Save Changes' : 'Save Minutes of Meeting'}
                   </button>
@@ -1121,11 +1248,13 @@ const MoMManager = () => {
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 backdrop-blur-md p-4 sm:p-6 overflow-hidden">
           <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden my-auto max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-200 dark:border-white/5 flex justify-between items-center bg-slate-50 dark:bg-slate-950/20 shrink-0">
-              <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center space-x-2">
-                <Eye className="w-5 h-5 text-blue-500" />
+              <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center space-x-2.5">
+                <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/30">
+                  <Eye className="w-4.5 h-4.5" />
+                </span>
                 <span>Minutes of Meeting Details</span>
               </h3>
-              <button onClick={() => setIsViewModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+              <button onClick={() => setIsViewModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1177,7 +1306,7 @@ const MoMManager = () => {
                 {Array.isArray(selectedMoM.discussion_points) && selectedMoM.discussion_points.length > 0 ? (
                   <div className="space-y-4">
                     {selectedMoM.discussion_points.map((pt, idx) => (
-                      <div key={idx} className="bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-xl p-4 space-y-2.5 shadow-sm">
+                      <div key={idx} className="bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 border-l-4 border-l-blue-400 dark:border-l-blue-500 rounded-xl p-4 space-y-2.5 shadow-sm">
                         <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center">
                           <span className="px-2.5 py-0.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-md text-xs font-bold mr-2.5">Point {idx + 1}</span>
                           <span>{pt.topic}</span>
@@ -1373,7 +1502,9 @@ const MoMManager = () => {
             {/* Top Action Bar (Hidden during print) */}
             <div className="flex justify-between items-center pb-3 border-b border-slate-200 no-print">
               <div className="flex items-center space-x-2">
-                <Printer className="w-5 h-5 text-emerald-600" />
+                <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/30">
+                  <Printer className="w-4 h-4" />
+                </span>
                 <span className="font-bold text-sm text-slate-900">Executive A4 Printable Minutes of Meeting</span>
               </div>
               <div className="flex items-center space-x-3">
@@ -1569,7 +1700,7 @@ const MoMManager = () => {
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 backdrop-blur-md p-4 overflow-hidden">
           <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-sm shadow-2xl p-6 space-y-4 text-center my-auto animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-12 h-12 bg-rose-500/10 text-rose-500 rounded-2xl flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 bg-rose-500/10 text-rose-500 rounded-2xl flex items-center justify-center mx-auto ring-4 ring-rose-500/5">
               <AlertTriangle className="w-6 h-6" />
             </div>
             <div>
@@ -1581,13 +1712,13 @@ const MoMManager = () => {
             <div className="flex items-center justify-center space-x-3 pt-2">
               <button
                 onClick={() => setIsDeleteModalOpen(false)}
-                className="px-4 py-2 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300"
+                className="px-4 py-2 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteMoM}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-lg shadow-rose-500/10"
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-lg shadow-rose-500/10 transition-all"
               >
                 Yes, Delete
               </button>
