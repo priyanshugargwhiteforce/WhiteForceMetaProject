@@ -17,6 +17,95 @@ const getDayName = (dateStr) => {
     return days[d.getDay()];
 };
 
+// Helper to enrich MoM discussion points with live task status and remarks
+const enrichMoMsWithTaskData = async (rows) => {
+    if (!rows || rows.length === 0) return rows;
+
+    let taskRows = [];
+    try {
+        const [tasks] = await pool.query(
+            `SELECT id, title, description, assigned_to, status, remarks, priority, updated_at 
+             FROM tasks 
+             WHERE description LIKE 'MoM Ref: MOM-#%'`
+        );
+        taskRows = tasks || [];
+    } catch (err) {
+        console.error('Error fetching tasks for MoMs:', err.message);
+        taskRows = [];
+    }
+
+    const tasksByMom = {};
+    for (const t of taskRows) {
+        const match = t.description ? t.description.match(/MoM Ref: MOM-#(\d+)/) : null;
+        if (match) {
+            const mId = parseInt(match[1]);
+            if (!tasksByMom[mId]) tasksByMom[mId] = [];
+            tasksByMom[mId].push(t);
+        }
+    }
+
+    return rows.map(r => {
+        let points = [];
+        try {
+            points = typeof r.discussion_points === 'string'
+                ? JSON.parse(r.discussion_points)
+                : (r.discussion_points || []);
+            if (!Array.isArray(points)) points = [];
+        } catch (e) {
+            points = [];
+        }
+
+        const relatedTasks = tasksByMom[r.id] || [];
+
+        const enrichedPoints = points.map(pt => {
+            if (!pt.assign_to && !pt.assignee_name) {
+                return pt;
+            }
+
+            // 1. Match by stored task_id
+            let matched = pt.task_id ? relatedTasks.find(t => Number(t.id) === Number(pt.task_id)) : null;
+
+            // 2. Match by assignee & topic title/description
+            if (!matched && pt.assign_to) {
+                matched = relatedTasks.find(t => 
+                    Number(t.assigned_to) === Number(pt.assign_to) && 
+                    (pt.topic && (t.title.includes(pt.topic) || t.description.includes(pt.topic)))
+                );
+            }
+
+            // 3. Fallback: match by assignee if single task for user in this MoM
+            if (!matched && pt.assign_to) {
+                const userTasks = relatedTasks.filter(t => Number(t.assigned_to) === Number(pt.assign_to));
+                if (userTasks.length === 1) {
+                    matched = userTasks[0];
+                }
+            }
+
+            let remarks = [];
+            if (matched && matched.remarks) {
+                try {
+                    remarks = typeof matched.remarks === 'string' ? JSON.parse(matched.remarks) : matched.remarks;
+                    if (!Array.isArray(remarks)) remarks = [];
+                } catch (e) {
+                    remarks = [];
+                }
+            }
+
+            return {
+                ...pt,
+                task_id: matched ? matched.id : (pt.task_id || null),
+                task_status: matched ? matched.status : (pt.task_status || 'pending'),
+                task_remarks: remarks
+            };
+        });
+
+        return {
+            ...r,
+            discussion_points: enrichedPoints
+        };
+    });
+};
+
 // @desc    Get all MoM records with role hierarchy filtering
 // @route   GET /api/moms
 // @access  Private
@@ -71,21 +160,7 @@ exports.getMoMs = async (req, res) => {
 
         const [rows] = await pool.query(query, queryParams);
 
-        // Parse discussion_points JSON if string
-        const formattedRows = rows.map(r => {
-            let points = [];
-            try {
-                points = typeof r.discussion_points === 'string' 
-                    ? JSON.parse(r.discussion_points) 
-                    : (r.discussion_points || []);
-            } catch (e) {
-                points = [];
-            }
-            return {
-                ...r,
-                discussion_points: points
-            };
-        });
+        const formattedRows = await enrichMoMsWithTaskData(rows);
 
         res.status(200).json({
             success: true,
@@ -125,22 +200,11 @@ exports.getMoMById = async (req, res) => {
             });
         }
 
-        const record = rows[0];
-        let points = [];
-        try {
-            points = typeof record.discussion_points === 'string' 
-                ? JSON.parse(record.discussion_points) 
-                : (record.discussion_points || []);
-        } catch (e) {
-            points = [];
-        }
+        const formattedRows = await enrichMoMsWithTaskData(rows);
 
         res.status(200).json({
             success: true,
-            data: {
-                ...record,
-                discussion_points: points
-            }
+            data: formattedRows[0]
         });
     } catch (error) {
         console.error('getMoMById Error:', error.message);
@@ -273,13 +337,23 @@ exports.createMoM = async (req, res) => {
                     const taskDesc = `MoM Ref: MOM-#${result.insertId} (${deptVal} Dept)\nMeeting Date: ${formattedDate}\n\nAction Sub-points:\n${subPointsText}`;
                     const taskPriority = (pt.priority || 'medium').toLowerCase();
 
-                    await pool.query(
+                    const [taskInsertResult] = await pool.query(
                         `INSERT INTO tasks (title, description, assigned_to, assigned_by, ad_platform, priority, due_date, status)
                          VALUES (?, ?, ?, ?, 'general', ?, ?, 'pending')`,
                         [taskTitle, taskDesc, Number(pt.assign_to), createdBy, taskPriority, formattedDate]
                     );
+                    pt.task_id = taskInsertResult.insertId;
+                    pt.task_status = 'pending';
+                    pt.task_remarks = [];
                     createdTasksCount++;
                 }
+            }
+
+            if (createdTasksCount > 0) {
+                await pool.query(
+                    `UPDATE meeting_moms SET discussion_points = ? WHERE id = ?`,
+                    [JSON.stringify(pointsArray), result.insertId]
+                );
             }
         }
 
@@ -347,6 +421,37 @@ exports.updateMoM = async (req, res) => {
                 pointsArray = JSON.parse(discussion_points);
             } catch (e) {
                 pointsArray = [];
+            }
+        }
+
+        // Auto-sync tasks for assigned discussion points on update
+        if (Array.isArray(pointsArray)) {
+            for (const pt of pointsArray) {
+                if (pt.assign_to && Number(pt.assign_to) > 0) {
+                    const taskTitle = pt.topic ? `[MoM Task] ${pt.topic}` : `[MoM Task] ${title ? title.trim() : record.title}`;
+                    let subPointsText = '';
+                    if (Array.isArray(pt.sub_points) && pt.sub_points.length > 0) {
+                        subPointsText = pt.sub_points.map(s => `- ${s}`).join('\n');
+                    } else {
+                        subPointsText = `- ${pt.topic || 'Action Decision'}`;
+                    }
+                    const taskDesc = `MoM Ref: MOM-#${id} (${deptVal} Dept)\nMeeting Date: ${formattedDate}\n\nAction Sub-points:\n${subPointsText}`;
+                    const taskPriority = (pt.priority || 'medium').toLowerCase();
+
+                    if (pt.task_id && Number(pt.task_id) > 0) {
+                        await pool.query(
+                            `UPDATE tasks SET title = ?, description = ?, assigned_to = ?, priority = ?, due_date = ? WHERE id = ?`,
+                            [taskTitle, taskDesc, Number(pt.assign_to), taskPriority, formattedDate, Number(pt.task_id)]
+                        );
+                    } else {
+                        const [taskInsertResult] = await pool.query(
+                            `INSERT INTO tasks (title, description, assigned_to, assigned_by, ad_platform, priority, due_date, status)
+                             VALUES (?, ?, ?, ?, 'general', ?, ?, 'pending')`,
+                            [taskTitle, taskDesc, Number(pt.assign_to), req.user.id, taskPriority, formattedDate]
+                        );
+                        pt.task_id = taskInsertResult.insertId;
+                    }
+                }
             }
         }
 

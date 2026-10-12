@@ -1,4 +1,5 @@
 # WhatsApp Payment & Overdue Reminders — API Integration Guide
+
 ## Production Integration Manual for Developers & AI Agents (PHP, Node.js, Python & cURL)
 
 ---
@@ -8,25 +9,28 @@
 Yeh API external applications (**PHP/Laravel web apps, Core PHP billing systems, ERPs, CRM portals, Python microservices, ya Node.js systems**) ko White Force WhatsApp Gateway ke through **Payment Reminder** aur **Overdue Payment Reminder** templates automated bhejney ki suvidha deti hai.
 
 ### Features
-* **Meta Cloud API (v24.0) Verified Delivery**: Don't worry about Meta Graph API complex payloads, tokens, ya rate limits — gateway handle karega.
-* **Automatic Phone Sanitization**: 10-digit Indian numbers (`9876543210`) ya standard formats automatically `919876543210` me clean ho jaate hain.
-* **Dynamic PDF Attachment**: Har invoice ka PDF WhatsApp document format me attach hota hai jiska filename automatically derive hota hai.
-* **Built-in Duplicate Protection (Idempotency)**: Same invoice reference ID aur customer number par 15 minute ke andar repeat call aane par duplicate WhatsApp message spam hone se block ho jata hai.
-* **Audit Logging & Delivery Tracking**: Har outgoing reminder `whatsapp_message_logs` me audit hota hai aur Meta delivery webhooks se automatically track hota hai.
+
+- **Meta Cloud API (v24.0) Verified Delivery**: Don't worry about Meta Graph API complex payloads, tokens, ya rate limits — gateway handle karega.
+- **Automatic Phone Sanitization**: 10-digit Indian numbers (`9876543210`) ya standard formats automatically `919876543210` me clean ho jaate hain.
+- **Dynamic PDF Attachment**: Har invoice ka PDF WhatsApp document format me attach hota hai jiska filename automatically derive hota hai.
+- **Built-in Duplicate Protection (Idempotency)**: Same invoice reference ID aur customer number par 15 minute ke andar repeat call aane par duplicate WhatsApp message spam hone se block ho jata hai.
+- **Audit Logging & Delivery Tracking**: Har outgoing reminder `whatsapp_message_logs` me audit hota hai aur Meta delivery webhooks se automatically track hota hai.
 
 ---
 
 ## 2. API Endpoints & Authentication
 
 ### Base URLs
-* **Production**: `https://wfadmanager.astro-buddy.in/api/whatsapp`
-* **Local / Development**: `http://localhost:8000/api/whatsapp`
+
+- **Production**: `https://wfadmanager.astro-buddy.in/api/whatsapp`
+- **Local / Development**: `http://localhost:8000/api/whatsapp`
 
 ### Required HTTP Headers
-| Header Name | Type | Value / Description | Required? |
-| :--- | :--- | :--- | :--- |
-| `Content-Type` | String | `application/json` | **Yes** |
-| `x-internal-api-key` | String | `whiteforceadmanager2026garg18` *(from `.env`)* | **Yes** |
+
+| Header Name          | Type   | Value / Description                             | Required? |
+| :------------------- | :----- | :---------------------------------------------- | :-------- |
+| `Content-Type`       | String | `application/json`                              | **Yes**   |
+| `x-internal-api-key` | String | `whiteforceadmanager2026garg18` _(from `.env`)_ | **Yes**   |
 
 ---
 
@@ -34,11 +38,12 @@ Yeh API external applications (**PHP/Laravel web apps, Core PHP billing systems,
 
 Send gentle payment reminder with invoice PDF attachment.
 
-* **HTTP Method**: `POST`
-* **Route**: `/api/whatsapp/send-payment-reminder`
-* **Full URL**: `https://wfadmanager.astro-buddy.in/api/whatsapp/send-payment-reminder`
+- **HTTP Method**: `POST`
+- **Route**: `/api/whatsapp/send-payment-reminder`
+- **Full URL**: `https://wfadmanager.astro-buddy.in/api/whatsapp/send-payment-reminder`
 
 ### WhatsApp Message Preview
+
 ```text
 [ 📄 Document: Invoice_WF-2-24-26.pdf ]
 
@@ -63,25 +68,29 @@ Powered By White-Force
 ```
 
 ### Request Payload Fields
-| Field Name | Type | Required? | Description & Example |
-| :--- | :--- | :--- | :--- |
-| `source_app` | String | **Yes** | Calling app name (e.g. `"billing_app"`, `"payroll_system"`, `"crm"`) |
-| `recipient_phone` | String | **Yes** | Customer phone number (e.g. `"919300855707"` ya `"9300855707"`) |
-| `pdf_url` | String | **Yes** | Publicly accessible HTTPS URL of Invoice PDF |
-| `customer_name` | String | **Yes** | Recipient / Customer Name (`{{1}}`, e.g. `"Suresh Kumar"`) |
-| `payroll_month` | String | **Yes** | Billing / Payroll Month (`{{2}}`, e.g. `"July"`) |
-| `invoice_date` | String | **Yes** | Invoice Issue Date (`{{3}}`, e.g. `"02-04-2026"`) |
-| `invoice_number` | String | **Yes** | Invoice ID (`{{4}}`, e.g. `"WF-2-24-26"`) |
-| `invoice_amount` | String/Number | **Yes** | Total invoice amount (`{{5}}`, e.g. `"12345"`) |
-| `pending_amount` | String/Number | **Yes** | Remaining balance (`{{6}}`, e.g. `"1234"`) |
-| `pdf_filename` | String | *Optional* | Custom PDF display name (e.g. `"Invoice_July_2026.pdf"`) |
-| `source_reference_id` | String | *Optional* | Unique invoice/transaction reference for duplicate prevention |
-| `source_user_name` | String | *Optional* | Name of billing agent/system operator triggering the reminder |
+
+| Field Name            | Type          | Required?  | Description & Example                                                |
+| :-------------------- | :------------ | :--------- | :------------------------------------------------------------------- |
+| `source_app`          | String        | **Yes**    | Calling app name (e.g. `"billing_app"`, `"payroll_system"`, `"crm"`) |
+| `recipient_phone`     | String        | **Yes**    | Customer phone number (e.g. `"919300855707"` ya `"9300855707"`)      |
+| `pdf_url`             | String        | **Yes**    | Publicly accessible HTTPS URL of Invoice PDF                         |
+| `customer_name`       | String        | **Yes**    | Recipient / Customer Name (`{{1}}`, e.g. `"Suresh Kumar"`)           |
+| `payroll_month`       | String        | **Yes**    | Billing / Payroll Month (`{{2}}`, e.g. `"July"`)                     |
+| `invoice_date`        | String        | **Yes**    | Invoice Issue Date (`{{3}}`, e.g. `"02-04-2026"`)                    |
+| `invoice_number`      | String        | **Yes**    | Invoice ID (`{{4}}`, e.g. `"WF-2-24-26"`)                            |
+| `invoice_amount`      | String/Number | **Yes**    | Total invoice amount (`{{5}}`, e.g. `"12345"`)                       |
+| `pending_amount`      | String/Number | **Yes**    | Remaining balance (`{{6}}`, e.g. `"1234"`)                           |
+| `pdf_filename`        | String        | _Optional_ | Custom PDF display name (e.g. `"Invoice_July_2026.pdf"`)             |
+| `source_reference_id` | String        | _Optional_ | Unique invoice/transaction reference for duplicate prevention        |
+| `source_user_name`    | String        | _Optional_ | Name of billing agent/system operator triggering the reminder        |
 
 ### Sample JSON Request
+
 ```json
 {
   "source_app": "billing_portal",
+  "source_user_name": "Priyanshu",
+  "source_user_id": "233",
   "recipient_phone": "919300855707",
   "pdf_url": "https://wfadmanager.astro-buddy.in/uploads/sample_invoice.pdf",
   "customer_name": "Suresh Kumar",
@@ -95,6 +104,7 @@ Powered By White-Force
 ```
 
 ### Sample Response (`200 OK`)
+
 ```json
 {
   "success": true,
@@ -115,11 +125,12 @@ Powered By White-Force
 
 Send overdue payment alert when an invoice has passed its due date.
 
-* **HTTP Method**: `POST`
-* **Route**: `/api/whatsapp/send-overdue-payment-reminder`
-* **Full URL**: `https://wfadmanager.astro-buddy.in/api/whatsapp/send-overdue-payment-reminder`
+- **HTTP Method**: `POST`
+- **Route**: `/api/whatsapp/send-overdue-payment-reminder`
+- **Full URL**: `https://wfadmanager.astro-buddy.in/api/whatsapp/send-overdue-payment-reminder`
 
 ### WhatsApp Message Preview
+
 ```text
 [ 📄 Document: Overdue_Invoice_24554645.pdf ]
 
@@ -146,27 +157,31 @@ White Force Billing Team
 ```
 
 ### Request Payload Fields
-| Field Name | Type | Required? | Description & Example |
-| :--- | :--- | :--- | :--- |
-| `source_app` | String | **Yes** | Calling app name (e.g. `"billing_app"`, `"payroll_system"`) |
-| `recipient_phone` | String | **Yes** | Customer phone number (e.g. `"919300855707"`) |
-| `pdf_url` | String | **Yes** | Publicly accessible HTTPS URL of Overdue Invoice PDF |
-| `customer_name` | String | **Yes** | Customer Name (`{{1}}`, e.g. `"Suresh"`) |
-| `payroll_month` | String | **Yes** | Payroll Month (`{{2}}`, e.g. `"July"`) |
-| `invoice_date` | String | **Yes** | Invoice Issue Date (`{{3}}`, e.g. `"02-02-2026"`) |
-| `invoice_number` | String | **Yes** | Invoice ID (`{{4}}`, e.g. `"24554645"`) |
-| `invoice_amount` | String/Number | **Yes** | Total invoice amount (`{{5}}`, e.g. `"4534534"`) |
-| `pending_amount` | String/Number | **Yes** | Remaining overdue amount (`{{6}}`, e.g. `"5345"`) |
-| `payment_due_date` | String | **Yes** | Original Due Date (`{{7}}`, e.g. `"01-02-2026"`) |
-| `overdue_by_days` | String/Number | **Yes** | Days overdue (`{{8}}`, e.g. `"1"` ya `1`) |
-| `pdf_filename` | String | *Optional* | Custom PDF display name |
-| `source_reference_id` | String | *Optional* | Unique reference for duplicate prevention |
-| `source_user_name` | String | *Optional* | User name who triggered this alert |
+
+| Field Name            | Type          | Required?  | Description & Example                                       |
+| :-------------------- | :------------ | :--------- | :---------------------------------------------------------- |
+| `source_app`          | String        | **Yes**    | Calling app name (e.g. `"billing_app"`, `"payroll_system"`) |
+| `recipient_phone`     | String        | **Yes**    | Customer phone number (e.g. `"919300855707"`)               |
+| `pdf_url`             | String        | **Yes**    | Publicly accessible HTTPS URL of Overdue Invoice PDF        |
+| `customer_name`       | String        | **Yes**    | Customer Name (`{{1}}`, e.g. `"Suresh"`)                    |
+| `payroll_month`       | String        | **Yes**    | Payroll Month (`{{2}}`, e.g. `"July"`)                      |
+| `invoice_date`        | String        | **Yes**    | Invoice Issue Date (`{{3}}`, e.g. `"02-02-2026"`)           |
+| `invoice_number`      | String        | **Yes**    | Invoice ID (`{{4}}`, e.g. `"24554645"`)                     |
+| `invoice_amount`      | String/Number | **Yes**    | Total invoice amount (`{{5}}`, e.g. `"4534534"`)            |
+| `pending_amount`      | String/Number | **Yes**    | Remaining overdue amount (`{{6}}`, e.g. `"5345"`)           |
+| `payment_due_date`    | String        | **Yes**    | Original Due Date (`{{7}}`, e.g. `"01-02-2026"`)            |
+| `overdue_by_days`     | String/Number | **Yes**    | Days overdue (`{{8}}`, e.g. `"1"` ya `1`)                   |
+| `pdf_filename`        | String        | _Optional_ | Custom PDF display name                                     |
+| `source_reference_id` | String        | _Optional_ | Unique reference for duplicate prevention                   |
+| `source_user_name`    | String        | _Optional_ | User name who triggered this alert                          |
 
 ### Sample JSON Request
+
 ```json
 {
   "source_app": "billing_portal",
+  "source_user_name": "Priyanshu",
+  "source_user_id": "233",
   "recipient_phone": "919300855707",
   "pdf_url": "https://wfadmanager.astro-buddy.in/uploads/overdue_invoice.pdf",
   "customer_name": "Suresh",
@@ -182,6 +197,7 @@ White Force Billing Team
 ```
 
 ### Sample Response (`200 OK`)
+
 ```json
 {
   "success": true,
@@ -219,7 +235,7 @@ function sendWhatsAppPaymentReminder(array $data, bool $isOverdue = false): arra
     $baseUrl = 'https://wfadmanager.astro-buddy.in/api/whatsapp'; // or http://localhost:8000/api/whatsapp
     $apiKey = 'whiteforceadmanager2026garg18'; // Replace with your internal API key from .env
 
-    $endpoint = $isOverdue 
+    $endpoint = $isOverdue
         ? $baseUrl . '/send-overdue-payment-reminder'
         : $baseUrl . '/send-payment-reminder';
 
@@ -366,39 +382,39 @@ class WhatsAppReminderService
 ### C. Node.js (Axios)
 
 ```javascript
-const axios = require('axios');
+const axios = require("axios");
 
-const BASE_URL = 'https://wfadmanager.astro-buddy.in/api/whatsapp';
-const API_KEY = 'whiteforceadmanager2026garg18';
+const BASE_URL = "https://wfadmanager.astro-buddy.in/api/whatsapp";
+const API_KEY = "whiteforceadmanager2026garg18";
 
 async function sendPaymentReminder(data) {
   try {
     const res = await axios.post(`${BASE_URL}/send-payment-reminder`, data, {
       headers: {
-        'Content-Type': 'application/json',
-        'x-internal-api-key': API_KEY
+        "Content-Type": "application/json",
+        "x-internal-api-key": API_KEY,
       },
-      timeout: 15000
+      timeout: 15000,
     });
-    console.log('✓ Success:', res.data);
+    console.log("✓ Success:", res.data);
     return res.data;
   } catch (err) {
-    console.error('✗ API Error:', err.response?.data || err.message);
+    console.error("✗ API Error:", err.response?.data || err.message);
     throw err;
   }
 }
 
 // Example call
 sendPaymentReminder({
-  source_app: 'node_billing',
-  recipient_phone: '9300855707',
-  pdf_url: 'https://example.com/inv.pdf',
-  customer_name: 'Suresh Kumar',
-  payroll_month: 'July',
-  invoice_date: '02-04-2026',
-  invoice_number: 'WF-2-24-26',
-  invoice_amount: '12345',
-  pending_amount: '1234'
+  source_app: "node_billing",
+  recipient_phone: "9300855707",
+  pdf_url: "https://example.com/inv.pdf",
+  customer_name: "Suresh Kumar",
+  payroll_month: "July",
+  invoice_date: "02-04-2026",
+  invoice_number: "WF-2-24-26",
+  invoice_amount: "12345",
+  pending_amount: "1234",
 });
 ```
 
@@ -466,27 +482,26 @@ curl -X POST https://wfadmanager.astro-buddy.in/api/whatsapp/send-payment-remind
 
 ## 6. Error Handling & Response Codes
 
-| HTTP Status | Error Type | Common Cause & Resolution |
-| :--- | :--- | :--- |
-| **`400 Bad Request`** | Validation Error | Koi required field missing hai ya `pdf_url` valid HTTP/HTTPS URL nahi hai. Response JSON me `errors` array check karein. |
-| **`401 Unauthorized`** | Auth Failed | `x-internal-api-key` header missing hai ya invalid key pass ki gayi hai. Header verify karein. |
-| **`400 Bad Request`** | Missing source_app | `source_app` field body me missing hai (e.g. `"billing_crm"` pass karein). |
-| **`200 OK` (duplicate_skipped)** | Idempotency | Same invoice number aur customer phone number ko pichle 15 minute me reminder already sent hai. Duplicate prevent ho gaya. |
-| **`502 Bad Gateway`** | Meta API Rejection | Customer phone number WhatsApp par register nahi hai, Meta rate-limit lag gaya hai, ya PDF link Meta CDN se fetch nahi ho paya. `metaError` object check karein. |
+| HTTP Status                      | Error Type         | Common Cause & Resolution                                                                                                                                        |
+| :------------------------------- | :----------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`400 Bad Request`**            | Validation Error   | Koi required field missing hai ya `pdf_url` valid HTTP/HTTPS URL nahi hai. Response JSON me `errors` array check karein.                                         |
+| **`401 Unauthorized`**           | Auth Failed        | `x-internal-api-key` header missing hai ya invalid key pass ki gayi hai. Header verify karein.                                                                   |
+| **`400 Bad Request`**            | Missing source_app | `source_app` field body me missing hai (e.g. `"billing_crm"` pass karein).                                                                                       |
+| **`200 OK` (duplicate_skipped)** | Idempotency        | Same invoice number aur customer phone number ko pichle 15 minute me reminder already sent hai. Duplicate prevent ho gaya.                                       |
+| **`502 Bad Gateway`**            | Meta API Rejection | Customer phone number WhatsApp par register nahi hai, Meta rate-limit lag gaya hai, ya PDF link Meta CDN se fetch nahi ho paya. `metaError` object check karein. |
 
 ### Sample Validation Error Response (`400 Bad Request`)
+
 ```json
 {
   "success": false,
   "message": "Validation failed: invoice_amount is required, pending_amount is required",
-  "errors": [
-    "invoice_amount is required",
-    "pending_amount is required"
-  ]
+  "errors": ["invoice_amount is required", "pending_amount is required"]
 }
 ```
 
 ### Sample Duplicate Prevented Response (`200 OK`)
+
 ```json
 {
   "success": true,

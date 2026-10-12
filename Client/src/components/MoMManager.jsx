@@ -32,7 +32,9 @@ import {
   MinusCircle,
   Layers,
   FileSpreadsheet,
-  Zap
+  Zap,
+  MessageSquare,
+  Send
 } from 'lucide-react';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
@@ -70,6 +72,12 @@ const MoMManager = () => {
   const [editingId, setEditingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  // Task Remarks Modal State
+  const [isRemarksModalOpen, setIsRemarksModalOpen] = useState(false);
+  const [selectedPointForRemarks, setSelectedPointForRemarks] = useState(null);
+  const [newRemarkText, setNewRemarkText] = useState('');
+  const [isAddingRemark, setIsAddingRemark] = useState(false);
 
   // Form State
   const todayStr = new Date().toISOString().split('T')[0];
@@ -129,6 +137,104 @@ const MoMManager = () => {
       }
     } catch (err) {
       console.error('Failed to fetch assignable users for MoM:', err);
+    }
+  };
+
+  // Status Formatter & Styling Helpers
+  const formatStatus = (st) => {
+    if (!st) return 'Pending';
+    switch (st.toLowerCase()) {
+      case 'in_progress': return 'In Progress';
+      case 'completed': return 'Completed';
+      case 'on_hold': return 'On Hold';
+      case 'cancelled': return 'Cancelled';
+      case 'pending': default: return 'Pending';
+    }
+  };
+
+  const getStatusBadgeClass = (st) => {
+    switch ((st || '').toLowerCase()) {
+      case 'completed':
+        return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+      case 'in_progress':
+        return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
+      case 'on_hold':
+        return 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20';
+      case 'cancelled':
+        return 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20';
+      case 'pending':
+      default:
+        return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
+    }
+  };
+
+  // Open View Modal and fetch freshest live status & remarks
+  const handleOpenViewModal = async (mom) => {
+    setSelectedMoM(mom);
+    setIsViewModalOpen(true);
+    try {
+      const res = await axios.get(`/api/moms/${mom.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success && res.data.data) {
+        setSelectedMoM(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch updated MoM details:', err);
+    }
+  };
+
+  // Open Remarks Popup for a specific point
+  const handleOpenRemarksModal = (pt) => {
+    setSelectedPointForRemarks(pt);
+    setNewRemarkText('');
+    setIsRemarksModalOpen(true);
+  };
+
+  // Quick submit remark directly to the linked task
+  const handleAddRemark = async (e) => {
+    e.preventDefault();
+    if (!newRemarkText.trim() || !selectedPointForRemarks?.task_id) return;
+    try {
+      setIsAddingRemark(true);
+      const res = await axios.put(`/api/tasks/${selectedPointForRemarks.task_id}`, {
+        remark: newRemarkText.trim()
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        const newRemarkObj = {
+          text: newRemarkText.trim(),
+          by: user?.role || 'user',
+          username: user?.username || 'You',
+          at: new Date().toISOString()
+        };
+        const updatedRemarks = [
+          ...(selectedPointForRemarks.task_remarks || []),
+          newRemarkObj
+        ];
+        setSelectedPointForRemarks(prev => ({
+          ...prev,
+          task_remarks: updatedRemarks
+        }));
+        setSelectedMoM(prev => {
+          if (!prev) return prev;
+          const updatedPoints = (prev.discussion_points || []).map(p => {
+            if (p.id === selectedPointForRemarks.id || (p.task_id && p.task_id === selectedPointForRemarks.task_id)) {
+              return { ...p, task_remarks: updatedRemarks };
+            }
+            return p;
+          });
+          return { ...prev, discussion_points: updatedPoints };
+        });
+        fetchMoMs();
+        setNewRemarkText('');
+      }
+    } catch (err) {
+      console.error('Failed to add remark:', err);
+      alert(err.response?.data?.message || 'Failed to submit remark.');
+    } finally {
+      setIsAddingRemark(false);
     }
   };
 
@@ -398,7 +504,11 @@ const MoMManager = () => {
       pointsText = item.discussion_points.map((pt, idx) => {
         let text = `Point ${idx + 1}: ${pt.topic}`;
         if (pt.assignee_name || pt.assign_to) {
-          text += ` [ASSIGNED TASK TO: ${pt.assignee_name || `User #${pt.assign_to}`} | Priority: ${pt.priority || 'Medium'}]`;
+          text += ` [ASSIGNED TASK TO: ${pt.assignee_name || `User #${pt.assign_to}`} | Status: ${(pt.task_status || 'Pending').toUpperCase()} | Priority: ${pt.priority || 'Medium'}]`;
+          if (Array.isArray(pt.task_remarks) && pt.task_remarks.length > 0) {
+            const remarksStr = pt.task_remarks.map(r => `"${r.text}" (${r.username || r.by || 'User'})`).join('; ');
+            text += `\n  * Remarks: ${remarksStr}`;
+          }
         }
         if (Array.isArray(pt.sub_points) && pt.sub_points.length > 0) {
           text += `\n  - ${pt.sub_points.join('\n  - ')}`;
@@ -445,7 +555,7 @@ const MoMManager = () => {
         pointsText = item.discussion_points.map((pt, idx) => {
           let text = `Point ${idx + 1}: ${pt.topic}`;
           if (pt.assignee_name || pt.assign_to) {
-            text += ` [Assigned: ${pt.assignee_name || `User #${pt.assign_to}`} (${pt.priority || 'Medium'})]`;
+            text += ` [Assigned: ${pt.assignee_name || `User #${pt.assign_to}`} | Status: ${(pt.task_status || 'Pending').toUpperCase()} (${pt.priority || 'Medium'})]`;
           }
           if (Array.isArray(pt.sub_points) && pt.sub_points.length > 0) {
             text += ` (Actions: ${pt.sub_points.join('; ')})`;
@@ -718,8 +828,8 @@ const MoMManager = () => {
                           <div className="flex items-center justify-end space-x-2">
                             {/* View Details */}
                             <button
-                              onClick={() => { setSelectedMoM(item); setIsViewModalOpen(true); }}
-                              className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"
+                              onClick={() => handleOpenViewModal(item)}
+                              className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors cursor-pointer"
                               title="View Discussion Details"
                             >
                               <Eye className="w-4 h-4" />
@@ -1191,14 +1301,37 @@ const MoMManager = () => {
                         )}
 
                         {(pt.assign_to || pt.assignee_name) && (
-                          <div className="pt-2 mt-2 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between text-xs">
-                            <span className="font-bold text-blue-600 dark:text-blue-400 flex items-center space-x-1.5">
-                              <UserCheck className="w-3.5 h-3.5" />
-                              <span>Assigned Action Task: <strong>{pt.assignee_name || `User #${pt.assign_to}`}</strong></span>
-                            </span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-500/10 text-blue-600 dark:text-blue-400 uppercase">
-                              Priority: {pt.priority || 'Medium'}
-                            </span>
+                          <div className="pt-2.5 mt-2.5 border-t border-slate-200/60 dark:border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-bold text-blue-600 dark:text-blue-400 flex items-center space-x-1.5">
+                                <UserCheck className="w-3.5 h-3.5 shrink-0" />
+                                <span>Assigned Action Task: <strong>{pt.assignee_name || `User #${pt.assign_to}`}</strong></span>
+                              </span>
+
+                              {/* Live Task Status Badge */}
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border uppercase tracking-wider flex items-center space-x-1 ${getStatusBadgeClass(pt.task_status)}`}>
+                                <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                <span>{formatStatus(pt.task_status)}</span>
+                              </span>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              {/* Priority Badge */}
+                              <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 uppercase">
+                                Priority: {pt.priority || 'Medium'}
+                              </span>
+
+                              {/* View Remarks Eye Button */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenRemarksModal(pt)}
+                                className="flex items-center space-x-1 px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 transition-colors shadow-sm cursor-pointer"
+                                title="View Task Remarks & Updates"
+                              >
+                                <Eye className="w-3 h-3 text-blue-500" />
+                                <span>Remarks {Array.isArray(pt.task_remarks) && pt.task_remarks.length > 0 ? `(${pt.task_remarks.length})` : '(0)'}</span>
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1235,6 +1368,128 @@ const MoMManager = () => {
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TASK REMARKS POPUP MODAL */}
+      {isRemarksModalOpen && selectedPointForRemarks && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-hidden">
+          <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden my-auto max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-white/5 flex justify-between items-center bg-slate-50 dark:bg-slate-950/30 shrink-0">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                    Task Remarks & Updates
+                  </h3>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-xs">
+                    {selectedPointForRemarks.topic || 'Discussion Action Task'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsRemarksModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Task Info Pill Strip */}
+            <div className="px-6 py-3 bg-slate-50/70 dark:bg-white/[0.02] border-b border-slate-200 dark:border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex items-center space-x-1.5 text-slate-700 dark:text-slate-300">
+                <UserCheck className="w-3.5 h-3.5 text-blue-500" />
+                <span>Assigned to: <strong className="text-slate-900 dark:text-white">{selectedPointForRemarks.assignee_name || `User #${selectedPointForRemarks.assign_to}`}</strong></span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border uppercase tracking-wider flex items-center space-x-1 ${getStatusBadgeClass(selectedPointForRemarks.task_status)}`}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                  <span>{formatStatus(selectedPointForRemarks.task_status)}</span>
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 uppercase">
+                  {selectedPointForRemarks.priority || 'Medium'}
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Body: Remarks Timeline */}
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar text-xs">
+              {Array.isArray(selectedPointForRemarks.task_remarks) && selectedPointForRemarks.task_remarks.length > 0 ? (
+                <div className="space-y-3">
+                  {selectedPointForRemarks.task_remarks.map((rmk, rIdx) => (
+                    <div
+                      key={rIdx}
+                      className="bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 rounded-xl p-3.5 space-y-1.5 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between text-[11px]">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-bold text-slate-900 dark:text-white">
+                            {rmk.username || 'Team Member'}
+                          </span>
+                          {rmk.by && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 uppercase">
+                              {rmk.by}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-slate-400">
+                          {rmk.at ? new Date(rmk.at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : ''}
+                        </span>
+                      </div>
+                      <p className="text-slate-700 dark:text-slate-200 leading-relaxed font-medium text-xs break-words whitespace-pre-wrap">
+                        {rmk.text}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-10 text-center space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-400 flex items-center justify-center mx-auto">
+                    <MessageSquare className="w-5 h-5" />
+                  </div>
+                  <p className="font-bold text-slate-700 dark:text-slate-200">No Remarks Yet</p>
+                  <p className="text-slate-400 text-[11px] max-w-xs mx-auto">
+                    No status update remarks have been submitted for this action task yet.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Add Remark Input (if task_id exists) */}
+            {selectedPointForRemarks.task_id && (
+              <form onSubmit={handleAddRemark} className="p-3 bg-slate-50 dark:bg-slate-950/40 border-t border-slate-200 dark:border-white/5 flex items-center space-x-2 shrink-0">
+                <input
+                  type="text"
+                  value={newRemarkText}
+                  onChange={(e) => setNewRemarkText(e.target.value)}
+                  placeholder="Add a remark on this task..."
+                  className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800 dark:text-slate-100"
+                />
+                <button
+                  type="submit"
+                  disabled={isAddingRemark || !newRemarkText.trim()}
+                  className="px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-bold text-xs flex items-center space-x-1 transition-all cursor-pointer"
+                >
+                  {isAddingRemark ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  <span>Add</span>
+                </button>
+              </form>
+            )}
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 border-t border-slate-200 dark:border-white/5 flex justify-end bg-slate-50/50 dark:bg-slate-950/20 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsRemarksModalOpen(false)}
+                className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl font-semibold text-xs transition-all"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
@@ -1497,7 +1752,7 @@ const MoMManager = () => {
 
                           {(pt.assign_to || pt.assignee_name) && (
                             <span className="px-1.5 py-0.5 bg-blue-100 text-blue-900 border border-blue-300 rounded text-[8px] font-black uppercase tracking-tight shrink-0 whitespace-nowrap">
-                              ⚡ TASK ASSIGNED: {pt.assignee_name || `USER #${pt.assign_to}`} ({pt.priority || 'MEDIUM'})
+                              ⚡ TASK: {pt.assignee_name || `USER #${pt.assign_to}`} &bull; {((pt.task_status || 'PENDING').replace('_', ' ')).toUpperCase()} &bull; {pt.priority || 'MEDIUM'}
                             </span>
                           )}
                         </div>
