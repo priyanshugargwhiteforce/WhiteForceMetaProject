@@ -21,6 +21,43 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+// Fonts + chrome polish, scoped to `.wf-overview` and shared across every role variant below
+const OverviewFontStyles = () => (
+  <>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>{`
+      @media screen {
+        .wf-overview,
+        .wf-overview button,
+        .wf-overview input,
+        .wf-overview select {
+          font-family: 'Poppins', sans-serif;
+        }
+      }
+      .wf-overview .wf-mono {
+        font-family: 'JetBrains Mono', monospace;
+      }
+      @keyframes wfOverviewRise {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .wf-overview .wf-fade {
+        animation: wfOverviewRise 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .wf-overview .wf-fade {
+          animation: none;
+        }
+      }
+    `}</style>
+  </>
+);
+
 const Overview = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -123,15 +160,15 @@ const AdminOverview = ({ navigate }) => {
     };
 
     return (
-      <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 transition-all duration-300 flex items-center space-x-3.5 shadow-sm">
-        <div className={`absolute -right-6 -top-6 w-20 h-20 opacity-[0.02] group-hover:scale-110 transition-transform duration-500 bg-gradient-to-br ${gradientClass[color]} rounded-full blur-xl`}></div>
+      <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 hover:shadow-md transition-all duration-300 flex items-center space-x-3.5 shadow-sm">
+        <div className={`absolute -right-6 -top-6 w-20 h-20 opacity-[0.04] group-hover:scale-110 group-hover:opacity-[0.08] transition-all duration-500 bg-gradient-to-br ${gradientClass[color]} rounded-full blur-xl`}></div>
 
-        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradientClass[color]} flex items-center justify-center flex-shrink-0 shadow-md shadow-slate-200 dark:shadow-none`}>
+        <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${gradientClass[color]} flex items-center justify-center flex-shrink-0 shadow-md shadow-slate-200 dark:shadow-none`}>
           <Icon className="w-5 h-5 text-white" />
         </div>
-        <div>
+        <div className="relative">
           <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest leading-none">{title}</p>
-          <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1 transition-all leading-none">
+          <h3 className="wf-mono text-2xl font-semibold text-slate-900 dark:text-white mt-1.5 leading-none">
             {value}
           </h3>
         </div>
@@ -140,42 +177,51 @@ const AdminOverview = ({ navigate }) => {
   };
 
   return (
-    <div className="p-8">
-      {/* Header section */}
-      <div className="flex items-center justify-between mb-6">
-        <div className='flex flex-col items-start'>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mb-1">Platform Admin Overview</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-xs">System-wide user & task statistics and live Facebook Pages intelligence.</p>
-        </div>
-        <div className="flex items-center space-x-3">
-          {configs.length > 0 && (
-            <div className="flex items-center space-x-2">
-              <label htmlFor="metaConfigSelect" className="text-xs font-bold text-slate-500 dark:text-slate-400">Meta Account:</label>
-              <select
-                id="metaConfigSelect"
-                value={selectedConfigId}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedConfigId(val);
-                  localStorage.setItem('selectedMetaConfigId', val);
-                }}
-                className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              >
-                {configs.map((config) => (
-                  <option key={config.id} value={config.id}>
-                    {config.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          {/* <button
-            onClick={() => navigate('/settings/meta')}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center group"
-          >
-            Manage Meta Configs
-            <ArrowUpRight className="w-3.5 h-3.5 ml-1.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-          </button> */}
+    <div className="wf-overview p-8">
+      <OverviewFontStyles />
+
+      {/* Gradient hero */}
+      <div className="wf-fade relative overflow-hidden rounded-2xl p-6 sm:p-7 mb-6 shadow-xl shadow-blue-500/20 dark:shadow-none dark:ring-1 dark:ring-white/10" style={{ animationDelay: '0ms' }}>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600"></div>
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.6) 1px, transparent 1px)', backgroundSize: '16px 16px' }}></div>
+        <div className="absolute -right-10 -top-16 w-64 h-64 rounded-full bg-white/15 blur-3xl"></div>
+        <div className="absolute -left-10 -bottom-16 w-48 h-48 rounded-full bg-black/10 blur-3xl"></div>
+
+        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+          <div className="flex flex-col items-start min-w-0">
+            <h2 className="text-2xl sm:text-[26px] font-bold text-white tracking-tight mb-1.5">Platform Admin Overview</h2>
+            <p className="text-white/70 text-xs sm:text-sm max-w-md">System-wide user & task statistics and live Facebook Pages intelligence.</p>
+          </div>
+          <div className="flex items-center space-x-3 shrink-0">
+            {configs.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <label htmlFor="metaConfigSelect" className="text-xs font-bold text-white/70">Meta Account:</label>
+                <select
+                  id="metaConfigSelect"
+                  value={selectedConfigId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedConfigId(val);
+                    localStorage.setItem('selectedMetaConfigId', val);
+                  }}
+                  className="bg-white/15 border border-white/20 rounded-xl px-3 py-1.5 text-xs font-bold text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/30"
+                >
+                  {configs.map((config) => (
+                    <option key={config.id} value={config.id} className="text-slate-900">
+                      {config.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {/* <button
+              onClick={() => navigate('/settings/meta')}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center group"
+            >
+              Manage Meta Configs
+              <ArrowUpRight className="w-3.5 h-3.5 ml-1.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </button> */}
+          </div>
         </div>
       </div>
 
@@ -230,8 +276,8 @@ const AdminOverview = ({ navigate }) => {
           </div>
 
           {/* Detailed Task Distribution Bar */}
-          <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4">
-            <div className="flex justify-between items-center mb-3">
+          <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 dark:ring-1 dark:ring-blue-500/10 rounded-2xl p-5 shadow-sm">
+            <div className="flex justify-between items-center mb-3.5">
               <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Task Status Distribution</h4>
               <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                 Total Tasks: {stats?.tasksStats?.total || 0} | On Hold: {stats?.tasksStats?.on_hold || 0} | Cancelled: {stats?.tasksStats?.cancelled || 0}
@@ -239,7 +285,7 @@ const AdminOverview = ({ navigate }) => {
             </div>
             {stats?.tasksStats?.total > 0 ? (
               <div>
-                <div className="w-full h-2.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden flex">
+                <div className="w-full h-3 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden flex">
                   <div
                     style={{ width: `${((stats?.tasksStats?.completed || 0) / stats.tasksStats.total) * 100}%` }}
                     className="bg-emerald-500 h-full"
@@ -266,12 +312,12 @@ const AdminOverview = ({ navigate }) => {
                     title={`Cancelled: ${stats?.tasksStats?.cancelled}`}
                   ></div>
                 </div>
-                <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2.5 text-[11px]">
-                  <span className="flex items-center"><span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5"></span>Completed ({stats?.tasksStats?.completed || 0})</span>
-                  <span className="flex items-center"><span className="w-2 h-2 rounded-full bg-blue-500 mr-1.5"></span>In Progress ({stats?.tasksStats?.in_progress || 0})</span>
-                  <span className="flex items-center"><span className="w-2 h-2 rounded-full bg-amber-500 mr-1.5"></span>Pending ({stats?.tasksStats?.pending || 0})</span>
-                  <span className="flex items-center"><span className="w-2 h-2 rounded-full bg-purple-500 mr-1.5"></span>On Hold ({stats?.tasksStats?.on_hold || 0})</span>
-                  <span className="flex items-center"><span className="w-2 h-2 rounded-full bg-rose-500 mr-1.5"></span>Cancelled ({stats?.tasksStats?.cancelled || 0})</span>
+                <div className="flex flex-wrap gap-2 mt-3 text-[11px]">
+                  <span className="flex items-center px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold"><span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5"></span>Completed ({stats?.tasksStats?.completed || 0})</span>
+                  <span className="flex items-center px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-400 font-semibold"><span className="w-2 h-2 rounded-full bg-blue-500 mr-1.5"></span>In Progress ({stats?.tasksStats?.in_progress || 0})</span>
+                  <span className="flex items-center px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold"><span className="w-2 h-2 rounded-full bg-amber-500 mr-1.5"></span>Pending ({stats?.tasksStats?.pending || 0})</span>
+                  <span className="flex items-center px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-400 font-semibold"><span className="w-2 h-2 rounded-full bg-purple-500 mr-1.5"></span>On Hold ({stats?.tasksStats?.on_hold || 0})</span>
+                  <span className="flex items-center px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-400 font-semibold"><span className="w-2 h-2 rounded-full bg-rose-500 mr-1.5"></span>Cancelled ({stats?.tasksStats?.cancelled || 0})</span>
                 </div>
               </div>
             ) : (
@@ -283,7 +329,9 @@ const AdminOverview = ({ navigate }) => {
           <div className="space-y-4">
             <div className="flex justify-between items-center border-b border-slate-200 dark:border-white/10 pb-3">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
-                <Globe className="w-5 h-5 mr-2 text-blue-500" />
+                <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 mr-2.5">
+                  <Globe className="w-4 h-4" />
+                </span>
                 Connected Facebook Pages
               </h3>
               <span className="px-2.5 py-0.5 text-[11px] font-bold bg-blue-500/10 text-blue-500 rounded-full">
@@ -293,14 +341,16 @@ const AdminOverview = ({ navigate }) => {
 
             {pages.length === 0 ? (
               <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-8 text-center flex flex-col items-center justify-center">
-                <Globe className="w-12 h-12 text-slate-300 dark:text-white/20 mb-3 animate-pulse" />
+                <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center mb-3">
+                  <Globe className="w-8 h-8 text-slate-300 dark:text-white/20" />
+                </div>
                 <h4 className="text-base font-bold text-slate-900 dark:text-white mb-1.5">No Connected Facebook Pages Found</h4>
                 <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm mb-4">
                   Verify that your current Meta account configuration is configured with access to pages under the Meta Settings.
                 </p>
                 <button
                   onClick={() => navigate('/settings/meta')}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition-all shadow-sm"
+                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl text-xs font-semibold transition-all shadow-md shadow-blue-500/20"
                 >
                   Configure Meta Accounts
                 </button>
@@ -310,7 +360,7 @@ const AdminOverview = ({ navigate }) => {
                 {pages.map((page) => (
                   <div
                     key={page.id}
-                    className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 hover:shadow-md dark:hover:shadow-white/[0.01] transition-all duration-300 flex flex-col justify-between"
+                    className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
                   >
                     <div>
                       {/* Top row: Profile & External Link */}
@@ -320,10 +370,10 @@ const AdminOverview = ({ navigate }) => {
                             <img
                               src={page.picture.data.url}
                               alt={page.name}
-                              className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-white/10 flex-shrink-0"
+                              className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-white/10 flex-shrink-0 ring-2 ring-blue-500/10"
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-white/5 dark:to-white/10 flex items-center justify-center text-slate-400 font-bold text-sm flex-shrink-0">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
                               {page.name.charAt(0)}
                             </div>
                           )}
@@ -351,8 +401,8 @@ const AdminOverview = ({ navigate }) => {
 
                       {/* FB Stats Row */}
                       <div className="flex justify-between items-center my-2.5 px-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                        <span>Likes: <strong className="text-slate-900 dark:text-white font-bold">{page.fan_count?.toLocaleString('en-IN') || 0}</strong></span>
-                        <span>Followers: <strong className="text-slate-900 dark:text-white font-bold">{page.followers_count?.toLocaleString('en-IN') || 0}</strong></span>
+                        <span>Likes: <strong className="wf-mono text-slate-900 dark:text-white font-bold">{page.fan_count?.toLocaleString('en-IN') || 0}</strong></span>
+                        <span>Followers: <strong className="wf-mono text-slate-900 dark:text-white font-bold">{page.followers_count?.toLocaleString('en-IN') || 0}</strong></span>
                       </div>
 
                       {/* Instagram Linked Section */}
@@ -437,12 +487,13 @@ const AdminOverview = ({ navigate }) => {
 
                     {/* Footer row */}
                     <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px]">
-                      <span className="text-slate-400 font-mono">ID: {page.id}</span>
+                      <span className="wf-mono text-slate-400">ID: {page.id}</span>
                       <button
                         onClick={() => navigate('/ad-accounts')}
-                        className="text-blue-500 hover:text-blue-400 font-bold transition-all hover:underline"
+                        className="flex items-center text-blue-500 hover:text-blue-400 font-bold transition-all"
                       >
-                        Campaigns &rarr;
+                        Campaigns
+                        <ArrowUpRight className="w-3 h-3 ml-1" />
                       </button>
                     </div>
                   </div>
@@ -525,10 +576,12 @@ const MetaOverviewSection = ({ navigate }) => {
       {/* Header section with Meta Account Selector */}
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-3">
         <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center">
-          <Globe className="w-5 h-5 mr-2.5 text-blue-500" />
+          <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-500/10 text-blue-500 mr-2.5">
+            <Globe className="w-4.5 h-4.5" />
+          </span>
           Connected Facebook Pages & Instagram
         </h3>
-        
+
         <div className="flex items-center space-x-3">
           {configs.length > 0 && (
             <div className="flex items-center space-x-2">
@@ -573,7 +626,9 @@ const MetaOverviewSection = ({ navigate }) => {
         </div>
       ) : pages.length === 0 ? (
         <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-8 text-center flex flex-col items-center justify-center">
-          <Globe className="w-12 h-12 text-slate-300 dark:text-white/20 mb-3" />
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center mb-3">
+            <Globe className="w-8 h-8 text-slate-300 dark:text-white/20" />
+          </div>
           <h4 className="text-base font-bold text-slate-900 dark:text-white mb-1.5">No Connected Facebook Pages Found</h4>
           <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm">
             Verify that your Meta account configuration has active access tokens with permission scopes to manage pages.
@@ -584,7 +639,7 @@ const MetaOverviewSection = ({ navigate }) => {
           {pages.map((page) => (
             <div
               key={page.id}
-              className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 hover:shadow-md dark:hover:shadow-white/[0.01] transition-all duration-300 flex flex-col justify-between"
+              className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
             >
               <div>
                 {/* Top row: Profile & External Link */}
@@ -594,10 +649,10 @@ const MetaOverviewSection = ({ navigate }) => {
                       <img
                         src={page.picture.data.url}
                         alt={page.name}
-                        className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-white/10 flex-shrink-0"
+                        className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-white/10 flex-shrink-0 ring-2 ring-blue-500/10"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-white/5 dark:to-white/10 flex items-center justify-center text-slate-400 font-bold text-sm flex-shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
                         {page.name.charAt(0)}
                       </div>
                     )}
@@ -625,8 +680,8 @@ const MetaOverviewSection = ({ navigate }) => {
 
                 {/* FB Stats Row */}
                 <div className="flex justify-between items-center my-2.5 px-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                  <span>Likes: <strong className="text-slate-900 dark:text-white font-bold">{page.fan_count?.toLocaleString('en-IN') || 0}</strong></span>
-                  <span>Followers: <strong className="text-slate-900 dark:text-white font-bold">{page.followers_count?.toLocaleString('en-IN') || 0}</strong></span>
+                  <span>Likes: <strong className="wf-mono text-slate-900 dark:text-white font-bold">{page.fan_count?.toLocaleString('en-IN') || 0}</strong></span>
+                  <span>Followers: <strong className="wf-mono text-slate-900 dark:text-white font-bold">{page.followers_count?.toLocaleString('en-IN') || 0}</strong></span>
                 </div>
 
                 {/* Instagram Linked Section */}
@@ -711,12 +766,13 @@ const MetaOverviewSection = ({ navigate }) => {
 
               {/* Footer row */}
               <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px]">
-                <span className="text-slate-400 font-mono">ID: {page.id}</span>
+                <span className="wf-mono text-slate-400">ID: {page.id}</span>
                 <button
                   onClick={() => navigate('/ad-accounts')}
-                  className="text-blue-500 hover:text-blue-400 font-bold transition-all hover:underline"
+                  className="flex items-center text-blue-500 hover:text-blue-400 font-bold transition-all"
                 >
-                  Campaigns &rarr;
+                  Campaigns
+                  <ArrowUpRight className="w-3 h-3 ml-1" />
                 </button>
               </div>
             </div>
@@ -777,13 +833,13 @@ const ManagerOverview = ({ user, navigate }) => {
     };
 
     return (
-      <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 transition-all duration-300 flex items-center space-x-3.5 shadow-sm">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${colorMap[color]}`}>
+      <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 hover:shadow-md transition-all duration-300 flex items-center space-x-3.5 shadow-sm">
+        <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${colorMap[color]}`}>
           <Icon className="w-5 h-5" />
         </div>
         <div>
           <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest leading-none">{title}</p>
-          <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1.5 transition-all leading-none">{value}</h3>
+          <h3 className="wf-mono text-2xl font-semibold text-slate-900 dark:text-white mt-1.5 leading-none">{value}</h3>
           {subtitle && <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 mt-1 leading-tight">{subtitle}</p>}
         </div>
       </div>
@@ -808,19 +864,27 @@ const ManagerOverview = ({ user, navigate }) => {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mb-1">Team & Progress Overview</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-xs">Dashboard summary of your team size, employee statuses, and work checklists.</p>
+    <div className="wf-overview p-6">
+      <OverviewFontStyles />
+
+      {/* Gradient hero */}
+      <div className="wf-fade relative overflow-hidden rounded-2xl p-6 mb-5 shadow-xl shadow-blue-500/20 dark:shadow-none dark:ring-1 dark:ring-white/10" style={{ animationDelay: '0ms' }}>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-700"></div>
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.6) 1px, transparent 1px)', backgroundSize: '16px 16px' }}></div>
+        <div className="absolute -right-10 -top-16 w-56 h-56 rounded-full bg-white/15 blur-3xl"></div>
+        <div className="relative flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className="text-2xl font-bold text-white tracking-tight mb-1.5">Team & Progress Overview</h2>
+            <p className="text-white/70 text-xs max-w-md">Dashboard summary of your team size, employee statuses, and work checklists.</p>
+          </div>
+          <button
+            onClick={() => navigate('/tasks')}
+            className="px-4 py-2.5 bg-white hover:bg-slate-50 text-blue-600 rounded-xl text-xs font-bold shadow-lg shadow-black/10 transition-all hover:scale-105 flex items-center group shrink-0"
+          >
+            Manage All Tasks
+            <ArrowUpRight className="w-3.5 h-3.5 ml-1.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+          </button>
         </div>
-        <button
-          onClick={() => navigate('/tasks')}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center group"
-        >
-          Manage All Tasks
-          <ArrowUpRight className="w-3.5 h-3.5 ml-1.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-        </button>
       </div>
 
       {loading ? (
@@ -858,10 +922,12 @@ const ManagerOverview = ({ user, navigate }) => {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {/* Team Directory (60% width) */}
-            <div className="lg:col-span-2 bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-5 shadow-sm">
+            <div className="lg:col-span-2 bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 dark:ring-1 dark:ring-blue-500/10 rounded-2xl p-5 shadow-sm">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
-                  <UserCheck className="w-5 h-5 mr-2.5 text-blue-500" />
+                  <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-500/10 text-blue-500 mr-2.5">
+                    <UserCheck className="w-4.5 h-4.5" />
+                  </span>
                   My Team Members
                 </h3>
                 <span className="text-[10px] font-bold px-2.5 py-1 bg-blue-500/10 text-blue-500 rounded-full">
@@ -929,10 +995,12 @@ const ManagerOverview = ({ user, navigate }) => {
             </div>
 
             {/* Manager's own tasks (40% width) */}
-            <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-5 shadow-sm">
+            <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 dark:ring-1 dark:ring-emerald-500/10 rounded-2xl p-5 shadow-sm">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
-                  <ListTodo className="w-5 h-5 mr-2.5 text-emerald-500" />
+                  <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-500 mr-2.5">
+                    <ListTodo className="w-4.5 h-4.5" />
+                  </span>
                   My Assigned Tasks
                 </h3>
               </div>
@@ -948,7 +1016,7 @@ const ManagerOverview = ({ user, navigate }) => {
                   {tasks.slice(0, 10).map((task) => (
                     <div
                       key={task.id}
-                      className="p-3 bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-xl space-y-2 group hover:border-slate-200 dark:hover:border-white/10 transition-all cursor-pointer shadow-sm"
+                      className="p-3 bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-xl space-y-2 group hover:border-slate-200 dark:hover:border-white/10 hover:shadow-sm transition-all cursor-pointer"
                       onClick={() => navigate('/tasks')}
                     >
                       <div className="flex justify-between items-start">
@@ -1042,13 +1110,13 @@ const EmployeeOverview = ({ user, navigate }) => {
     };
 
     return (
-      <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 transition-all duration-300 flex items-center space-x-3.5 shadow-sm">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${colorMap[color]}`}>
+      <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-4 relative overflow-hidden group hover:border-slate-300 dark:hover:border-white/20 hover:shadow-md transition-all duration-300 flex items-center space-x-3.5 shadow-sm">
+        <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${colorMap[color]}`}>
           <Icon className="w-5 h-5" />
         </div>
         <div>
           <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest leading-none">{title}</p>
-          <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1.5 transition-all leading-none">{value}</h3>
+          <h3 className="wf-mono text-2xl font-semibold text-slate-900 dark:text-white mt-1.5 leading-none">{value}</h3>
         </div>
       </div>
     );
@@ -1074,19 +1142,27 @@ const EmployeeOverview = ({ user, navigate }) => {
   const pendingCount = (stats?.myTasksStats?.pending || 0) + (stats?.myTasksStats?.in_progress || 0);
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mb-1">My Task Board</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-xs">Personal workspace. Track and update status of your assigned projects.</p>
+    <div className="wf-overview p-6">
+      <OverviewFontStyles />
+
+      {/* Gradient hero */}
+      <div className="wf-fade relative overflow-hidden rounded-2xl p-6 mb-5 shadow-xl shadow-emerald-500/20 dark:shadow-none dark:ring-1 dark:ring-white/10" style={{ animationDelay: '0ms' }}>
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 to-teal-700"></div>
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.6) 1px, transparent 1px)', backgroundSize: '16px 16px' }}></div>
+        <div className="absolute -right-10 -top-16 w-56 h-56 rounded-full bg-white/15 blur-3xl"></div>
+        <div className="relative flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className="text-2xl font-bold text-white tracking-tight mb-1.5">My Task Board</h2>
+            <p className="text-white/70 text-xs max-w-md">Personal workspace. Track and update status of your assigned projects.</p>
+          </div>
+          <button
+            onClick={() => navigate('/tasks')}
+            className="px-4 py-2.5 bg-white hover:bg-slate-50 text-emerald-600 rounded-xl text-xs font-bold shadow-lg shadow-black/10 transition-all hover:scale-105 flex items-center group shrink-0"
+          >
+            View Full Task Table
+            <ArrowUpRight className="w-3.5 h-3.5 ml-1.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+          </button>
         </div>
-        <button
-          onClick={() => navigate('/tasks')}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center group"
-        >
-          View Full Task Table
-          <ArrowUpRight className="w-3.5 h-3.5 ml-1.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-        </button>
       </div>
 
       {loading ? (
@@ -1126,9 +1202,11 @@ const EmployeeOverview = ({ user, navigate }) => {
           </div>
 
           {/* Detailed Task List */}
-          <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-5 shadow-sm">
+          <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 dark:ring-1 dark:ring-emerald-500/10 rounded-2xl p-5 shadow-sm">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center">
-              <Activity className="w-4 h-4 mr-2 text-blue-500" />
+              <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 mr-2.5">
+                <Activity className="w-4 h-4" />
+              </span>
               Active Checklists
             </h3>
 
@@ -1143,7 +1221,7 @@ const EmployeeOverview = ({ user, navigate }) => {
                 {tasks.map((task) => (
                   <div
                     key={task.id}
-                    className="p-3.5 bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-xl hover:border-slate-200 dark:hover:border-white/10 transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-3 cursor-pointer shadow-sm"
+                    className="p-3.5 bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-xl hover:border-slate-200 dark:hover:border-white/10 hover:shadow-sm transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-3 cursor-pointer"
                     onClick={() => navigate('/tasks')}
                   >
                     <div className="space-y-2 flex-1">
