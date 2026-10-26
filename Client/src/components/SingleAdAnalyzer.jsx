@@ -152,7 +152,7 @@ const SingleAdAnalyzer = () => {
   return (
     <div className="p-8 space-y-8">
       {/* Title & Navigation Block */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4 relative rounded-3xl z-10 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 p-8 mb-4 shadow-xl shadow-indigo-900/20 wf-fade" style={{ animationDelay: '0ms' }}>
         <div className="flex items-center space-x-4">
           {step !== STEPS.ACCOUNTS && (
             <button
@@ -164,7 +164,7 @@ const SingleAdAnalyzer = () => {
           )}
           <div>
             <div className="flex items-center space-x-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">
-              <span className={step === STEPS.ACCOUNTS ? "text-blue-600 dark:text-blue-400" : ""}>Accounts</span>
+              <span className={step === STEPS.ACCOUNTS ? "text-yellow-400 dark:text-blue-400" : ""}>Accounts</span>
               {step !== STEPS.ACCOUNTS && (
                 <>
                   <ChevronRight className="w-3 h-3" />
@@ -174,11 +174,11 @@ const SingleAdAnalyzer = () => {
               {step === STEPS.INSIGHTS && (
                 <>
                   <ChevronRight className="w-3 h-3" />
-                  <span className="text-blue-600 dark:text-blue-400">Analysis</span>
+                  <span className="text-yellow-600 dark:text-blue-400">Analysis</span>
                 </>
               )}
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white transition-colors">
+            <h2 className="text-2xl font-bold text-white dark:text-white transition-colors">
               {step === STEPS.ACCOUNTS && "Select Ad Account"}
               {step === STEPS.ADS && `Ads for ${selectedAccount?.name}`}
               {step === STEPS.INSIGHTS && "Performance Analytics"}
@@ -210,7 +210,7 @@ const SingleAdAnalyzer = () => {
               className="pl-11 pr-4 py-2.5 bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all min-w-[250px]"
             />
           </div>
-          <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-500">
+          <div className="p-2.5 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-white">
             <Target className="w-5 h-5" />
           </div>
         </div>
@@ -261,17 +261,20 @@ const SingleAdAnalyzer = () => {
                     </div>
 
                     <div className="relative z-10">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 mb-4 group-hover:scale-110 transition-transform duration-500">
+                      <div className='flex items-center mb-3'>
+  <div className="min-w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform duration-500">
                         <Users className="w-6 h-6 text-white" />
                       </div>
 
-                      <h3 className="text-lg font-bold mb-1 group-hover:text-blue-500 transition-colors line-clamp-1">{account.name}</h3>
+                      <h3 className="text-[14px] ml-3 font-semibold mb-1 group-hover:text-blue-500 transition-colors line-clamp-1">{account.name}</h3>
                       <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-4">{account.account_id}</p>
+                      </div>
+                    
 
                       <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-white/5">
                         <div className="flex items-center space-x-2">
                           <div className={`w-2 h-2 rounded-full ${account.account_status === 1 ? 'bg-emerald-500' : 'bg-red-500'} shadow-lg`}></div>
-                          <span className="text-[10px] font-bold uppercase tracking-tighter text-slate-400">
+                          <span className="text-[11.5px] pTagFont font-medium tracking-tighter text-slate-700">
                             {account.account_status === 1 ? 'Active' : 'Disabled'}
                           </span>
                         </div>

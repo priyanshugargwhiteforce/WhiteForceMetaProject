@@ -7,8 +7,8 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://localhost:8000",
-        // target: 'https://wfadmanager.astro-buddy.in',
+        // target: "http://localhost:8000",
+        target: 'https://wfadmanager.astro-buddy.in',
         changeOrigin: true,
         secure: false,
       },

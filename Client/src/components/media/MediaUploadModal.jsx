@@ -241,7 +241,7 @@ const MediaUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                         )}
                     </div>
 
-                    {/* Form Details */}
+                  
                     {file && (
                         <div className="space-y-4 animate-in fade-in duration-300">
                             {/* Asset Name */}
@@ -257,7 +257,7 @@ const MediaUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                                 />
                             </div>
 
-                            {/* Category Selector */}
+                   
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Asset Category</label>
                                 <div className="relative">
@@ -278,7 +278,7 @@ const MediaUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                         </div>
                     )}
 
-                    {/* Upload progress indicator */}
+                 
                     {uploading && (
                         <div className="space-y-2">
                             <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">

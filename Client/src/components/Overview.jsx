@@ -381,7 +381,7 @@ const AdminOverview = ({ navigate }) => {
                             <h4 className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors leading-tight truncate max-w-[140px]" title={page.name}>
                               {page.name}
                             </h4>
-                            <span className="inline-block mt-0.5 text-[9px] font-extrabold px-1.5 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded capitalize">
+                            <span className="inline-block mt-0.5 text-[9px] font-semibold pTagFont px-1.5 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded capitalize">
                               {page.category}
                             </span>
                           </div>
@@ -409,7 +409,7 @@ const AdminOverview = ({ navigate }) => {
                       {page.instagram_business_account?.id ? (
                         <div className="p-2.5 bg-gradient-to-tr from-purple-500/5 via-pink-500/5 to-orange-500/5 border border-pink-500/10 rounded-xl space-y-1.5 mt-2">
                           <div className="flex items-center justify-between text-[10.5px]">
-                            <span className="font-bold text-pink-500 flex items-center">
+                            <span className="font-semibold pTagFont text-pink-500 flex items-center">
                               <Camera className="w-3.5 h-3.5 mr-1" />
                               Instagram
                             </span>
@@ -418,7 +418,7 @@ const AdminOverview = ({ navigate }) => {
                                 href={`https://instagram.com/${page.instagram_business_account.username}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="font-bold text-purple-600 dark:text-purple-400 hover:underline"
+                                className="font-semibold pTagFont text-purple-600 dark:text-purple-400 hover:underline"
                               >
                                 @{page.instagram_business_account.username}
                               </a>
@@ -441,7 +441,7 @@ const AdminOverview = ({ navigate }) => {
                                   </div>
                                 )}
                                 {page.instagram_business_account.biography && (
-                                  <p className="text-[9px] text-slate-500 dark:text-slate-400 italic line-clamp-1 truncate leading-tight">
+                                  <p className="text-[10px] text-slate-600 font-medium dark:text-slate-400 pTagFont line-clamp-1 truncate leading-tight">
                                     {page.instagram_business_account.biography}
                                   </p>
                                 )}
@@ -450,20 +450,20 @@ const AdminOverview = ({ navigate }) => {
                               {/* Insta stats */}
                               <div className="grid grid-cols-3 gap-1 text-center py-1 bg-white/50 dark:bg-black/20 rounded-lg text-[9px] border border-slate-100 dark:border-white/5 font-medium">
                                 <div>
-                                  <span className="block text-[7.5px] text-slate-400 uppercase">Followers</span>
-                                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                                  <span className="block text-[8px] text-blue-600 pTagFont uppercase">Followers</span>
+                                  <span className="text-[12px] font-bold text-slate-800 dark:text-slate-200">
                                     {page.instagram_business_account.followers_count?.toLocaleString('en-IN') || 0}
                                   </span>
                                 </div>
                                 <div>
-                                  <span className="block text-[7.5px] text-slate-400 uppercase">Following</span>
-                                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                                  <span className="block text-[8px] text-blue-600 pTagFont uppercase">Following</span>
+                                  <span className="text-[12px] font-bold text-slate-800 dark:text-slate-200">
                                     {page.instagram_business_account.follows_count?.toLocaleString('en-IN') || 0}
                                   </span>
                                 </div>
                                 <div>
-                                  <span className="block text-[7.5px] text-slate-400 uppercase">Posts</span>
-                                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                                  <span className="block text-[8px] text-blue-600 pTagFont uppercase">Posts</span>
+                                  <span className="text-[12px] font-bold text-slate-800 dark:text-slate-200">
                                     {page.instagram_business_account.media_count?.toLocaleString('en-IN') || 0}
                                   </span>
                                 </div>
@@ -487,10 +487,10 @@ const AdminOverview = ({ navigate }) => {
 
                     {/* Footer row */}
                     <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px]">
-                      <span className="wf-mono text-slate-400">ID: {page.id}</span>
+                      <span className="wf-mono text-slate-600 pTagFont">ID: {page.id}</span>
                       <button
                         onClick={() => navigate('/ad-accounts')}
-                        className="flex items-center text-blue-500 hover:text-blue-400 font-bold transition-all"
+                        className="flex items-center pTagFont text-blue-500 hover:text-blue-400 font-semibold transition-all"
                       >
                         Campaigns
                         <ArrowUpRight className="w-3 h-3 ml-1" />

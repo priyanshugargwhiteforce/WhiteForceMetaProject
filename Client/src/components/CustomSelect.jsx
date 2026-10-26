@@ -70,7 +70,7 @@ const CustomSelect = ({
       </button>
 
       {isOpen && (
-        <div className={`absolute right-0 mt-2 z-50 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-white/10 shadow-2xl rounded-2xl p-1.5 focus:outline-none animate-in fade-in slide-in-from-top-2 duration-150 min-w-full ${dropdownClassName}`}>
+        <div className={`absolute right-0 mt-2 z-50 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-white/10 shadow-2xl rounded-2xl p-1.5 focus:outline-none animate-in fade-in slide-in-from-top-2 duration-150 w-[330px] ${dropdownClassName}`}>
           {showSearch && (
             <div className="p-1 border-b border-slate-100 dark:border-white/5 mb-1.5">
               <input

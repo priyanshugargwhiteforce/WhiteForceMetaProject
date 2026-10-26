@@ -17,6 +17,38 @@ const TIME_RANGES = {
   THIS_MONTH: 'this_month'
 };
 
+const MetaDashboardFontStyles = () => (
+  <>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    />
+    <style>{`
+      .wf-metadashboard, .wf-metadashboard * {
+        font-family: 'Poppins', sans-serif;
+      }
+      .wf-metadashboard .wf-mono {
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .wf-metadashboard .wf-fade {
+        opacity: 0;
+        animation: wfMetaDashboardFadeIn 0.6s ease-out forwards;
+      }
+      @keyframes wfMetaDashboardFadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .wf-metadashboard .wf-fade {
+          opacity: 1;
+          animation: none;
+          transform: none;
+        }
+      }
+    `}</style>
+  </>
+);
+
 const MetaDashboard = () => {
   const { user } = useAuth();
   const [adAccounts, setAdAccounts] = useState([]);
@@ -401,14 +433,14 @@ const MetaDashboard = () => {
   };
 
   const MetricCard = ({ title, value, icon: Icon, colorClass, gradientClass }) => (
-    <div className={`relative overflow-hidden rounded-[2rem] p-6 bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 group hover:shadow-2xl hover:shadow-${colorClass}-500/10 transition-all duration-500`}>
+    <div className={`relative overflow-hidden rounded-[2rem] p-6 bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 shadow-premium group hover:shadow-2xl hover:shadow-${colorClass}-500/10 hover:-translate-y-0.5 transition-all duration-500`}>
       <div className={`absolute -right-6 -top-6 w-32 h-32 opacity-[0.03] group-hover:scale-110 transition-transform duration-700 bg-${colorClass}-500 rounded-full blur-2xl`}></div>
       <div className="relative z-10 flex items-start justify-between">
         <div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{title}</p>
-          <h3 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">{value}</h3>
+          <p className="text-[10.5px] font-semibold text-slate-700 mb-2">{title}</p>
+          <h3 className="text-3xl font-bold text-slate-900 dark:text-white mb-1 wf-mono">{value}</h3>
         </div>
-        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${gradientClass} flex items-center justify-center shadow-lg shadow-${colorClass}-500/20`}>
+        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${gradientClass} flex items-center justify-center shadow-lg shadow-${colorClass}-500/20 group-hover:scale-110 transition-transform`}>
           <Icon className="w-6 h-6 text-white" />
         </div>
       </div>
@@ -416,60 +448,71 @@ const MetaDashboard = () => {
   );
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="wf-metadashboard px-8 pb-4 space-y-8">
+      <MetaDashboardFontStyles />
       {/* Title & Actions Block */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
-        <div>
-          <div className="flex items-center space-x-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
-            <span>Overview</span>
-            <ChevronRight className="w-3 h-3" />
-            <span className="text-blue-600 dark:text-blue-400">Meta Intelligence Dashboard</span>
-          </div>
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Performance Summary</h2>
-        </div>
+      <div className="z-10 relative rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 p-8 mb-4 shadow-xl shadow-indigo-900/20 wf-fade" style={{ animationDelay: '0ms' }}>
+        <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '18px 18px' }}></div>
+        <div className="absolute -top-10 right-10 w-56 h-56 bg-white/15 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-16 left-10 w-64 h-64 bg-black/10 rounded-full blur-3xl"></div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Meta Account Connection Dropdown */}
-          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-1 transition-colors">
-            <Database className="w-4 h-4 text-blue-500" />
-            <CustomSelect
-              value={selectedConfigId}
-              onChange={(val) => {
-                setSelectedConfigId(val);
-                localStorage.setItem('selectedMetaConfigId', val);
-              }}
-              options={[
-                { value: "", label: "Default Server Account" },
-                ...metaConfigs.map(cfg => ({ value: cfg.id, label: cfg.name }))
-              ]}
-              className="border-none bg-transparent py-1 text-xs px-1 min-w-[160px]"
-            />
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <div className="flex items-center space-x-2 text-[10px] font-bold text-white/60 uppercase tracking-widest mb-1.5">
+              <span>Overview</span>
+              <ChevronRight className="w-3 h-3" />
+              <span className="text-white">Meta Intelligence Dashboard</span>
+            </div>
+            <h2 className="text-3xl font-bold text-white tracking-tight mb-2">Performance Summary</h2>
+            <p className="text-white/70 text-sm max-w-md">Unified Meta Ads performance, trends & lead intelligence in one view.</p>
           </div>
 
-          {/* Sync Button */}
-          <button
-            disabled={syncing || !selectedAccount}
-            onClick={handleSyncRealtimeData}
-            className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-2xl font-bold text-xs shadow-lg shadow-emerald-500/10 transition-all hover:scale-105 disabled:opacity-50 disabled:pointer-events-none"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
-            <span>{syncing ? 'Syncing...' : 'Sync Realtime Data'}</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Meta Account Connection Dropdown */}
+            <div className="flex items-center space-x-2 bg-white/90 dark:bg-white/10 border border-white/40 rounded-2xl px-3 py-1 transition-colors">
+              <Database className="w-4 h-4 text-blue-600" />
+              <CustomSelect
+                value={selectedConfigId}
+                onChange={(val) => {
+                  setSelectedConfigId(val);
+                  localStorage.setItem('selectedMetaConfigId', val);
+                }}
+                options={[
+                  { value: "", label: "Default Server Account" },
+                  ...metaConfigs.map(cfg => ({ value: cfg.id, label: cfg.name }))
+                ]}
+                className="border-none bg-transparent font-semibold py-1 text-xs px-1 min-w-[160px]"
+              />
+            </div>
 
-          {/* Ad Account Selector */}
-          <CustomSelect
-            value={selectedAccount?.id || ""}
-            onChange={(val) => setSelectedAccount(adAccounts.find(a => a.id === val))}
-            options={adAccounts.length === 0 ? [{ value: "", label: "No Ad Accounts" }] : adAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
-            className="rounded-2xl px-4 py-2.5 text-sm min-w-[200px]"
-          />
+            {/* Sync Button */}
+            <button
+              disabled={syncing || !selectedAccount}
+              onClick={handleSyncRealtimeData}
+              className="flex items-center space-x-2 px-4 py-2.5 bg-white hover:bg-emerald-50 text-emerald-600 rounded-2xl font-semibold text-xs shadow-lg shadow-black/10 transition-all hover:scale-105 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+              <span>{syncing ? 'Syncing...' : 'Sync Realtime Data'}</span>
+            </button>
+
+            {/* Ad Account Selector */}
+            <div className="flex items-center space-x-2 bg-white/90 dark:bg-white/10 border border-white/40 rounded-2xl px-1 transition-colors">
+              <Users className="w-4 h-4 text-blue-600 ml-2" />
+              <CustomSelect
+                value={selectedAccount?.id || ""}
+                onChange={(val) => setSelectedAccount(adAccounts.find(a => a.id === val))}
+                options={adAccounts.length === 0 ? [{ value: "", label: "No Ad Accounts" }] : adAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
+                className="rounded-2xl px-2 py-2.5 font-semibold text-[13px] min-w-[180px] border-none bg-transparent"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
       <div>
         {/* Sync Success Alert */}
         {syncSuccess && (
-          <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-4 py-3 rounded-2xl flex items-center justify-between text-xs font-bold animate-in fade-in duration-300">
+          <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-4 py-3 rounded-2xl flex items-center justify-between text-xs font-bold animate-in fade-in duration-300 mb-6">
             <div className="flex items-center space-x-2">
               <CheckCircle className="w-4 h-4 shrink-0 text-emerald-500" />
               <span>{syncSuccess}</span>
@@ -479,16 +522,18 @@ const MetaDashboard = () => {
         )}
 
         {/* Premium Date Range & Month Filters Sub-bar */}
-        <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-5 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+        <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-5 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4 wf-fade" style={{ animationDelay: '60ms' }}>
           <div className="flex items-center space-x-2">
-            <Filter className="w-4 h-4 text-blue-500" />
-            <span className="text-sm font-bold">Refine Analysis</span>
+            <span className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
+              <Filter className="w-3.5 h-3.5" />
+            </span>
+            <span className="text-sm font-semibold pTagFont">Refine Analysis</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             {/* Dynamic Month Selector */}
             <div className="flex items-center space-x-1.5">
-              <span className="text-[10px] text-slate-400 font-bold uppercase">Month:</span>
+              <span className="text-[11px] text-blue-700 font-semibold pTagFont">Month:</span>
               <CustomSelect
                 value={selectedMonth}
                 onChange={(val) => {
@@ -500,14 +545,14 @@ const MetaDashboard = () => {
                   { value: "", label: "All Months" },
                   ...getRecentMonths().map(m => ({ value: m.value, label: m.label }))
                 ]}
-                className="rounded-2xl px-3 py-2 text-xs min-w-[150px]"
+                className="rounded-2xl px-3 pTagFont font-semibold py-2 text-xs min-w-[150px]"
               />
             </div>
 
             {/* Custom Date Range Pickers */}
             <div className="flex items-center space-x-1 bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-2xl p-1 px-3">
-              <Calendar className="w-3.5 h-3.5 text-slate-400 mr-1" />
-              <span className="text-[10px] text-slate-400 font-bold uppercase mr-1">From:</span>
+              <Calendar className="w-3.5 h-3.5 text-blue-700 mr-1" />
+              <span className="text-[11px] text-blue-700 font-semibold pTagFont mr-1">From:</span>
               <input
                 type="date"
                 value={startDate}
@@ -515,9 +560,9 @@ const MetaDashboard = () => {
                   setSelectedMonth('');
                   setStartDate(e.target.value);
                 }}
-                className="bg-transparent border-none text-xs font-bold focus:outline-none text-slate-700 dark:text-slate-300 w-28 cursor-pointer"
+                className="bg-transparent border-none text-xs font-semibold focus:outline-none text-slate-700 dark:text-slate-300 w-28 cursor-pointer"
               />
-              <span className="text-[10px] text-slate-400 font-bold uppercase mx-1">To:</span>
+              <span className="text-[11px] text-blue-700 font-semibold pTagFont mx-1">To:</span>
               <input
                 type="date"
                 value={endDate}
@@ -530,7 +575,7 @@ const MetaDashboard = () => {
             </div>
 
             {/* Quick Presets Group */}
-            <div className="flex bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-2xl p-1">
+            <div className="flex bg-[var(--bg-input)] border border-slate-200 pTagFont text-black-700 dark:border-white/5 rounded-2xl p-1">
               {[
                 { label: 'Today', value: TIME_RANGES.TODAY },
                 { label: 'This Week', value: TIME_RANGES.THIS_WEEK },
@@ -541,9 +586,9 @@ const MetaDashboard = () => {
                   <button
                     key={tab.value}
                     onClick={() => handlePresetClick(tab.value)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${isActive
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${isActive
                         ? 'bg-white dark:bg-white/10 shadow-sm text-blue-600 dark:text-blue-400'
-                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                        : 'text-slate-700 hover:text-slate-700 dark:hover:text-slate-300'
                       }`}
                   >
                     {tab.label}
@@ -576,16 +621,18 @@ const MetaDashboard = () => {
           </div>
         ) : error ? (
           <div className="bg-red-500/10 border border-red-500/20 rounded-3xl p-8 max-w-lg mx-auto text-center mt-10">
-            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-8 h-8 text-red-500" />
+            </div>
             <h3 className="text-xl font-bold mb-2">Data Sync Failed</h3>
             <p className="text-slate-500 text-sm mb-6">{error}</p>
             <button onClick={() => fetchDashboardData(selectedAccount.id)} className="px-6 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold transition-all">Retry Sync</button>
           </div>
         ) : (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 mt-5">
 
             {/* Metrics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 wf-fade" style={{ animationDelay: '100ms' }}>
               <MetricCard
                 title="Total Spend"
                 value={formatCurrency(metrics.spend)}
@@ -617,13 +664,15 @@ const MetaDashboard = () => {
             </div>
 
             {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 wf-fade" style={{ animationDelay: '140ms' }}>
               {/* Impressions Trend */}
               <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-8 shadow-sm">
                 <div className="flex items-center justify-between mb-8">
                   <div>
                     <h3 className="text-lg font-bold flex items-center">
-                      <TrendingUp className="w-5 h-5 mr-2 text-indigo-500" />
+                      <span className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center mr-3">
+                        <TrendingUp className="w-4 h-4 text-indigo-500" />
+                      </span>
                       Impressions & Clicks Trend
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">Daily visibility performance</p>
@@ -660,7 +709,9 @@ const MetaDashboard = () => {
                 <div className="flex items-center justify-between mb-8">
                   <div>
                     <h3 className="text-lg font-bold flex items-center">
-                      <IndianRupee className="w-5 h-5 mr-2 text-emerald-500" />
+                      <span className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center mr-3">
+                        <IndianRupee className="w-4 h-4 text-emerald-500" />
+                      </span>
                       Daily Ad Spend
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">Financial burn rate analysis</p>
@@ -689,12 +740,15 @@ const MetaDashboard = () => {
             </div>
 
             {/* Account Leads Database Section (Filtered by Selectors) */}
-            <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-8 shadow-sm">
+            <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-8 shadow-sm wf-fade" style={{ animationDelay: '180ms' }}>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div>
                   <h3 className="text-lg font-bold flex items-center text-slate-800 dark:text-white">
-                    <Users className="w-5 h-5 mr-2 text-blue-500" />
+                    <span className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center mr-3">
+                      <Users className="w-4 h-4 text-blue-500" />
+                    </span>
                     Account Leads Database
+                    <span className="ml-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest wf-mono">{leads.length} total</span>
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
                     Showing real-time lead submissions matching selected account ads and active date bounds.
@@ -726,8 +780,12 @@ const MetaDashboard = () => {
                       <th className="px-6 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lead Info</th>
                       <th className="px-6 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact Info</th>
                       <th className="px-6 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Location</th>
-                      <th className="px-6 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Platform</th>
-                      <th className="px-6 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ad & Campaign</th>
+                      <th className="px-6 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <span className="inline-flex items-center gap-1"><Globe className="w-3 h-3" />Platform</span>
+                      </th>
+                      <th className="px-6 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <span className="inline-flex items-center gap-1"><FileText className="w-3 h-3" />Ad & Campaign</span>
+                      </th>
                       <th className="px-6 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Created / Synced</th>
                     </tr>
                   </thead>
@@ -747,7 +805,7 @@ const MetaDashboard = () => {
                         <tr key={lead.lead_id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors">
                           <td className="px-6 py-3 text-xs">
                             <div className="font-bold text-slate-900 dark:text-white">{lead.full_name}</div>
-                            <div className="text-[9px] font-mono text-slate-400 mt-0.5">ID: {lead.lead_id}</div>
+                            <div className="text-[9px] font-mono wf-mono text-slate-400 mt-0.5">ID: {lead.lead_id}</div>
                           </td>
                           <td className="px-6 py-3 text-xs space-y-0.5">
                             <div className="flex items-center text-slate-600 dark:text-slate-300">
@@ -798,11 +856,11 @@ const MetaDashboard = () => {
               {leads.length > 0 && (
                 <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 dark:bg-white/[0.01] p-4 rounded-2xl border border-slate-100 dark:border-white/5">
                   <span className="text-xs text-slate-500 font-medium">
-                    Showing <span className="font-bold text-slate-800 dark:text-white">{(leadsCurrentPage - 1) * leadsPerPage + 1}</span> to{' '}
-                    <span className="font-bold text-slate-800 dark:text-white">
+                    Showing <span className="font-bold text-slate-800 dark:text-white wf-mono">{(leadsCurrentPage - 1) * leadsPerPage + 1}</span> to{' '}
+                    <span className="font-bold text-slate-800 dark:text-white wf-mono">
                       {Math.min(leadsCurrentPage * leadsPerPage, leads.length)}
                     </span> of{' '}
-                    <span className="font-bold text-slate-800 dark:text-white">{leads.length}</span> entries
+                    <span className="font-bold text-slate-800 dark:text-white wf-mono">{leads.length}</span> entries
                   </span>
                   <div className="flex items-center space-x-1">
                     <button
