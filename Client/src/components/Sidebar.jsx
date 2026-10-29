@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -32,7 +32,9 @@ import {
   Play,
   Film,
   ShieldCheck,
-  X
+  X,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import logo from "../assets/white-forcelogo.png";
 
@@ -98,6 +100,10 @@ const WhatsAppIcon = ({ className }) => (
   </svg>
 );
 
+// Lets collapsed NavItem / NavDropdown read the sidebar's collapse state and
+// pin it open on demand, without threading a prop through every call site.
+const SidebarUIContext = createContext({ collapsed: true, expand: () => {} });
+
 const Sidebar = ({ isOpen, onClose }) => {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
@@ -123,6 +129,29 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   const [pendingCount, setPendingCount] = useState(0);
   const [isApiConnected, setIsApiConnected] = useState(true);
+
+  // Sidebar minimize/expand — starts minimized by default, stays how she pins it across reloads.
+  // isPinned = a deliberate, persisted "keep it open" choice (click). It's the only thing that
+  // changes the space the sidebar reserves in the layout, so it's the only thing that can move the body.
+  // isHovering = a transient "peek" while the mouse is over the rail — purely visual, never persisted,
+  // never changes the reserved layout width.
+  const [isPinned, setIsPinned] = useState(() => {
+    try {
+      return localStorage.getItem('wf_sidebar_pinned') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [isHovering, setIsHovering] = useState(false);
+  const isExpanded = isPinned || isHovering;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('wf_sidebar_pinned', isPinned ? '1' : '0');
+    } catch {
+      // ignore storage errors (private mode, quota, etc.)
+    }
+  }, [isPinned]);
 
   useEffect(() => {
     const checkApiStatus = async () => {
@@ -182,40 +211,107 @@ const Sidebar = ({ isOpen, onClose }) => {
     <>
       {/* Mobile Sidebar Backdrop Overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm md:hidden transition-opacity duration-300"
           onClick={onClose}
         />
       )}
 
-      <aside className={`
-        w-72 border-r border-slate-200 dark:border-white/5 bg-[var(--bg-sidebar)] backdrop-blur-3xl 
-        flex flex-col fixed inset-y-0 left-0 z-[70] md:sticky md:top-0 h-screen transition-transform transition-colors duration-300
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
-      `}>
+      {/*
+        Outer box: this is the ONLY element whose width the surrounding layout sees — it stays at the
+        pinned width always, so a hover-peek never reflows the page body. The actual visible panel is
+        an absolutely-positioned child that's free to grow wider and float over the page on hover.
+      */}
+      <aside
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+        className={`
+          relative shrink-0 ${isPinned ? 'w-72' : 'w-20'} fixed inset-y-0 left-0 z-[70] md:sticky md:top-0 h-screen transition-all duration-300
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+        `}
+      >
+        <div
+          className={`
+            wf-sidebar wf-anim absolute inset-y-0 left-0 ${(isExpanded || isOpen) ? 'w-72' : 'w-20'} border-r border-slate-200 dark:border-white/5
+            bg-[var(--bg-sidebar)] backdrop-blur-3xl flex flex-col h-screen transition-all duration-300
+            ${!isPinned && isHovering ? 'shadow-2xl shadow-black/15 dark:shadow-black/50' : ''}
+          `}
+        >
+        {/* Fonts + chrome polish, scoped to this sidebar only */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+        <style>{`
+          @media screen {
+            .wf-sidebar,
+            .wf-sidebar button,
+            .wf-sidebar input {
+              font-family: 'Poppins', sans-serif;
+            }
+          }
+          /* Scrollable nav, scrollbar fully hidden in every browser — stays scrollable, just invisible */
+          .wf-sidebar nav {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+          }
+          .wf-sidebar nav::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+            display: none;
+          }
+          @keyframes wfSidebarIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+          .wf-sidebar.wf-anim {
+            animation: wfSidebarIn 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .wf-sidebar.wf-anim {
+              animation: none;
+            }
+          }
+        `}</style>
+
+        {/* Pin open / unpin toggle — desktop only. Reflects the PINNED state, not the hover peek. */}
+        <button
+          onClick={() => setIsPinned(prev => !prev)}
+          className="hidden md:flex absolute -right-3.5 top-9 z-10 w-7 h-7 items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 shadow-md text-[rgb(44_50_80)] dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-500/40 transition-all"
+          title={isPinned ? 'Unpin sidebar' : 'Pin sidebar open'}
+        >
+          {isPinned ? <PanelLeftClose className="w-3.5 h-3.5" /> : <PanelLeftOpen className="w-3.5 h-3.5" />}
+        </button>
+
         {/* Close Button on Mobile Sidebar */}
         <div className="flex md:hidden justify-end p-4 absolute right-2 top-2 z-50">
-          <button 
+          <button
             onClick={onClose}
-            className="p-2 bg-slate-100/50 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 rounded-xl text-slate-500 transition-all cursor-pointer"
+            className="p-2 bg-slate-100/50 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 rounded-xl text-[rgb(44_50_80)] transition-all cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-8">
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="flex items-center justify-center">
-              <img src={logo} alt="Logo" className="w-15 h-10 object-cover" />
+        <div className={`transition-all duration-300 ${(isExpanded || isOpen) ? 'pt-7 px-5' : 'p-5'}`}>
+          <div className={`flex items-center mb-2 ${(isExpanded || isOpen) ? 'space-x-3' : 'justify-center'}`}>
+            <div className="relative flex items-center justify-center shrink-0">
+              <div className="absolute inset-0 rounded-xl bg-blue-500/15 blur-md"></div>
+              <img src={logo} alt="Logo" className="relative w-15 h-10 object-cover" />
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight leading-none transition-colors">White Force</h1>
-              <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] mt-1 transition-colors">Ad Management</p>
-            </div>
+            {(isExpanded || isOpen) && (
+              <div className="overflow-hidden whitespace-nowrap">
+                <h1 className="text-xl font-semibold logoHead dark:text-white tracking-tight leading-none transition-colors">White Force</h1>
+                <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] mt-1 transition-colors">Ad Management</p>
+              </div>
+            )}
           </div>
         </div>
 
-      <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto pt-4">
+      <SidebarUIContext.Provider value={{ collapsed: !(isExpanded || isOpen), expand: () => setIsPinned(true) }}>
+      <nav className={`flex-1 flex justify-between flex-col space-y-1.5 overflow-y-auto pt-4 ${(isExpanded || isOpen) ? 'px-4' : 'px-2'}`}>
         <NavItem
           icon={LayoutDashboard}
           label="Overview"
@@ -511,7 +607,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             open={openDropdown === 'linkedin'}
             onToggle={() => setOpenDropdown(openDropdown === 'linkedin' ? null : 'linkedin')}
           >
-            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-3 pt-2 pb-1">
+            <div className="text-[10px] font-bold text-[rgb(44_50_80)] dark:text-slate-500 uppercase tracking-widest px-3 pt-2 pb-1">
               Reporting
             </div>
             <NavItem
@@ -545,7 +641,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
             <div className="border-t border-slate-200 dark:border-white/5 my-1.5 mx-2"></div>
 
-            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-3 pt-2 pb-1">
+            <div className="text-[10px] font-bold text-[rgb(44_50_80)] dark:text-slate-500 uppercase tracking-widest px-3 pt-2 pb-1">
               Management
             </div>
             <NavItem
@@ -603,9 +699,13 @@ const Sidebar = ({ isOpen, onClose }) => {
 
         {(user?.role === 'admin' || user?.role === 'manager') && (
           <>
-            <div className="pt-6 pb-2 px-4">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">System</p>
-            </div>
+            {/* <div className={`pt-6 pb-2 ${(isExpanded || isOpen) ? 'px-4' : 'px-2'}`}>
+              {(isExpanded || isOpen) ? (
+                <p className="text-[10px] font-bold text-[rgb(44_50_80)] uppercase tracking-widest">System</p>
+              ) : (
+                <div className="h-px bg-slate-200 dark:bg-white/10 mx-1"></div>
+              )}
+            </div> */}
             <NavItem
               icon={PieChart}
               label="Reports"
@@ -648,59 +748,123 @@ const Sidebar = ({ isOpen, onClose }) => {
           </>
         )}
       </nav>
+      </SidebarUIContext.Provider>
 
       <div className="p-4 border-t border-slate-200 dark:border-white/5">
         {/* Compact API Status Badge */}
-        <div className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <span className="relative flex h-2 w-2">
+        {(isExpanded || isOpen) ? (
+          <div className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <span className="relative flex h-2 w-2">
+                {isApiConnected && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                )}
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${isApiConnected ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+              </span>
+              <span className={`text-[11px] font-bold ${isApiConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                {isApiConnected ? 'API Connected' : 'API Offline'}
+              </span>
+            </div>
+            <span className="text-[9px] font-mono text-[rgb(44_50_80)] dark:text-slate-500">v24.0</span>
+          </div>
+        ) : (
+          <div className="flex justify-center" title={isApiConnected ? 'API Connected (v24.0)' : 'API Offline (v24.0)'}>
+            <span className="relative flex h-2.5 w-2.5">
               {isApiConnected && (
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               )}
-              <span className={`relative inline-flex rounded-full h-2 w-2 ${isApiConnected ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
-            </span>
-            <span className={`text-[11px] font-bold ${isApiConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-              {isApiConnected ? 'API Connected' : 'API Offline'}
+              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isApiConnected ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
             </span>
           </div>
-          <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500">v24.0</span>
-        </div>
+        )}
       </div>
-    </aside>
+        </div>
+      </aside>
     </>
   );
 };
 
-const NavDropdown = ({ icon: Icon, label, open, onToggle, colorScheme = 'blue', children }) => (
-  <div className="mb-1">
-    <button
-      onClick={onToggle}
-      className={`flex items-center justify-between w-full px-4 py-3 rounded-2xl transition-all duration-300 group ${open ? 'bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
-        }`}
-    >
-      <div className="flex items-center">
-        <Icon className={`w-5 h-5 mr-3 transition-colors ${open ? (colorScheme === 'whatsapp' ? 'text-emerald-500' : 'text-blue-500') : (colorScheme === 'whatsapp' ? 'group-hover:text-emerald-500' : 'group-hover:text-blue-500')}`} />
-        <span className="font-semibold text-sm">{label}</span>
+const NavDropdown = ({ icon: Icon, label, open, onToggle, colorScheme = 'blue', children }) => {
+  const { collapsed, expand } = useContext(SidebarUIContext);
+
+  const handleClick = () => {
+    if (collapsed) {
+      expand();
+      if (!open) onToggle();
+    } else {
+      onToggle();
+    }
+  };
+
+  if (collapsed) {
+    return (
+      <div className="mb-1 flex justify-center">
+        <button
+          onClick={handleClick}
+          title={label}
+          className="group flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300"
+        >
+          <span
+            className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-300 ${open
+                ? (colorScheme === 'whatsapp'
+                  ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30'
+                  : 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30')
+                : (colorScheme === 'whatsapp'
+                  ? 'text-[rgb(44_50_80)] dark:text-slate-400 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-500/10 group-hover:text-emerald-600 dark:group-hover:text-emerald-400'
+                  : 'text-[rgb(44_50_80)] dark:text-slate-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-500/10 group-hover:text-blue-600 dark:group-hover:text-blue-400')
+              }`}
+          >
+            <Icon className="w-[18px] h-[18px]" />
+          </span>
+        </button>
       </div>
-      <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${open ? (colorScheme === 'whatsapp' ? 'rotate-180 text-emerald-500' : 'rotate-180 text-blue-500') : ''}`} />
-    </button>
-    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${open ? 'max-h-[800px] opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
-      <div className="pl-4 pr-2 py-1 space-y-1 border-l-2 border-slate-100 dark:border-white/5 ml-6">
-        {children}
+    );
+  }
+
+  return (
+    <div className="mb-1">
+      <button
+        onClick={handleClick}
+        className={`flex items-center justify-between w-full px-4 py-2 rounded-2xl transition-all duration-300 group ${open ? 'bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white' : 'text-[rgb(44_50_80)] dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
+          }`}
+      >
+        <div className="flex items-center">
+          <span
+            className={`flex items-center justify-center w-8 h-8 rounded-xl mr-3 transition-all duration-300 ${open
+                ? (colorScheme === 'whatsapp'
+                  ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/30'
+                  : 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/30')
+                : (colorScheme === 'whatsapp'
+                  ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/20'
+                  : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-500/20')
+              }`}
+          >
+            <Icon className="w-4 h-4" />
+          </span>
+          <span className="font-medium text-[13.6px]">{label}</span>
+        </div>
+        <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${open ? (colorScheme === 'whatsapp' ? 'rotate-180 text-emerald-500' : 'rotate-180 text-blue-500') : 'text-slate-400'}`} />
+      </button>
+      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${open ? 'max-h-[800px] opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
+        <div className="pl-4 pr-2 py-1 space-y-1 border-l-2 border-slate-100 dark:border-white/5 ml-6">
+          {children}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const SubNavDropdown = ({ icon: Icon, label, open, onToggle, active = false, children }) => (
   <div className="mb-1">
     <button
       onClick={onToggle}
-      className={`flex items-center justify-between w-full px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-all duration-300 group ${open || active ? 'text-slate-900 dark:text-white bg-slate-50 dark:bg-white/5 font-semibold' : ''
+      className={`flex items-center justify-between w-full px-3 py-2 text-[rgb(44_50_80)] dark:text-slate-400 hover:text-blue-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-all duration-300 group ${open || active ? 'text-slate-900 dark:text-white bg-slate-50 dark:bg-white/5 font-semibold' : ''
         }`}
     >
       <div className="flex items-center">
-        <Icon className={`w-4 h-4 mr-3 transition-colors ${open || active ? 'text-blue-500' : 'group-hover:text-blue-500'}`} />
+        <span className={`flex items-center justify-center w-6 h-6 rounded-lg mr-3 transition-all duration-300 ${open || active ? 'bg-blue-500/15 text-blue-500' : 'text-slate-400 group-hover:bg-blue-500/10 group-hover:text-blue-500'}`}>
+          <Icon className="w-3.5 h-3.5" />
+        </span>
         <span className="font-semibold text-xs">{label}</span>
       </div>
       <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${open ? 'rotate-180 text-blue-500' : 'text-slate-400 group-hover:text-blue-500'}`} />
@@ -713,35 +877,82 @@ const SubNavDropdown = ({ icon: Icon, label, open, onToggle, active = false, chi
   </div>
 );
 
-const NavItem = ({ icon: Icon, label, active = false, onClick, isSubItem = false, badge = null, colorScheme = 'blue', disabled = false, title = null }) => (
-  <button
-    disabled={disabled}
-    onClick={disabled ? (e) => e.preventDefault() : onClick}
-    title={disabled ? (title || 'Coming Soon') : undefined}
-    className={`flex items-center w-full transition-all duration-300 relative ${
-      disabled ? 'cursor-not-allowed opacity-50 select-none' : 'group cursor-pointer'
-    } ${isSubItem ? 'px-3 py-2.5 rounded-xl' : 'px-4 py-3 rounded-2xl'
-      } ${active
-        ? (colorScheme === 'whatsapp'
-          ? 'bg-gradient-to-r from-emerald-600/20 to-teal-600/10 text-emerald-600 dark:text-white border border-emerald-500/20'
-          : 'bg-gradient-to-r from-blue-600/20 to-indigo-600/10 text-blue-600 dark:text-white border border-blue-500/20')
-        : (colorScheme === 'whatsapp'
-          ? 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-emerald-600 dark:hover:text-white border border-transparent'
-          : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-blue-600 dark:hover:text-white border border-transparent')
-      }`}
-  >
-    {active && !isSubItem && <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full shadow-[0_0_12px_rgba(16,185,129,0.5)] ${colorScheme === 'whatsapp' ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>}
-    {active && isSubItem && <div className={`absolute -left-4 top-1/2 -translate-y-1/2 w-1 h-4 rounded-r-full shadow-[0_0_12px_rgba(16,185,129,0.5)] ${colorScheme === 'whatsapp' ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>}
-    <Icon className={`transition-colors ${isSubItem ? 'w-4 h-4 mr-3' : 'w-5 h-5 mr-3'} ${active ? (colorScheme === 'whatsapp' ? 'text-emerald-500 dark:text-emerald-400' : 'text-blue-500 dark:text-blue-400') : (colorScheme === 'whatsapp' ? 'group-hover:text-emerald-500 dark:group-hover:text-emerald-400' : 'group-hover:text-blue-500 dark:group-hover:text-blue-400')}`} />
-    <span className={`font-semibold ${isSubItem ? 'text-xs' : 'text-sm'}`}>{label}</span>
+const NavItem = ({ icon: Icon, label, active = false, onClick, isSubItem = false, badge = null, colorScheme = 'blue', disabled = false, title = null }) => {
+  const { collapsed } = useContext(SidebarUIContext);
 
-    {badge !== null && badge > 0 && !disabled && (
-      <span className="ml-auto bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.4)] animate-pulse">
-        {badge}
-      </span>
-    )}
-    {active && !isSubItem && badge === null && !disabled && <ChevronRight className={`w-4 h-4 ml-auto ${colorScheme === 'whatsapp' ? 'text-emerald-500 dark:text-emerald-400' : 'text-blue-500 dark:text-blue-400'}`} />}
-  </button>
-);
+  if (collapsed && !isSubItem) {
+    return (
+      <button
+        disabled={disabled}
+        onClick={disabled ? (e) => e.preventDefault() : onClick}
+        title={disabled ? (title || 'Coming Soon') : label}
+        className={`group relative flex items-center justify-center w-11 h-11 mx-auto rounded-2xl transition-all duration-300 ${disabled ? 'cursor-not-allowed opacity-50 select-none' : 'cursor-pointer'
+          }`}
+      >
+        <span
+          className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-300 ${active
+              ? (colorScheme === 'whatsapp'
+                ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30'
+                : 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30')
+              : (colorScheme === 'whatsapp'
+                ? 'text-[rgb(44_50_80)] dark:text-slate-400 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-500/10 group-hover:text-emerald-600 dark:group-hover:text-emerald-400'
+                : 'text-[rgb(44_50_80)] dark:text-slate-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-500/10 group-hover:text-blue-600 dark:group-hover:text-blue-400')
+            }`}
+        >
+          <Icon className="w-[18px] h-[18px]" />
+        </span>
+        {badge !== null && badge > 0 && !disabled && (
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.6)]"></span>
+        )}
+      </button>
+    );
+  }
+
+  return (
+    <button
+      disabled={disabled}
+      onClick={disabled ? (e) => e.preventDefault() : onClick}
+      title={disabled ? (title || 'Coming Soon') : undefined}
+      className={`flex items-center w-full transition-all duration-300 relative ${
+        disabled ? 'cursor-not-allowed opacity-50 select-none' : 'group cursor-pointer'
+      } ${isSubItem ? 'px-3 py-2.5 rounded-xl' : 'px-4 py-2 rounded-2xl'
+        } ${active
+          ? (colorScheme === 'whatsapp'
+            ? 'bg-gradient-to-r from-emerald-600/20 to-teal-600/10 text-emerald-600 dark:text-white border border-emerald-500/20'
+            : 'bg-gradient-to-r from-blue-600/20 to-indigo-600/10 text-blue-600 dark:text-white border border-blue-500/20')
+          : (colorScheme === 'whatsapp'
+            ? 'text-[rgb(44_50_80)] dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-emerald-600 dark:hover:text-white border border-transparent'
+            : 'text-[rgb(44_50_80)] dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-blue-600 dark:hover:text-white border border-transparent')
+        }`}
+    >
+      {active && !isSubItem && <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full shadow-[0_0_12px_rgba(16,185,129,0.5)] ${colorScheme === 'whatsapp' ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>}
+      {active && isSubItem && <div className={`absolute -left-4 top-1/2 -translate-y-1/2 w-1 h-4 rounded-r-full shadow-[0_0_12px_rgba(16,185,129,0.5)] ${colorScheme === 'whatsapp' ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>}
+      {!isSubItem ? (
+        <span
+          className={`flex items-center justify-center w-9 h-9 rounded-xl mr-3 shrink-0 transition-all duration-300 ${active
+              ? (colorScheme === 'whatsapp'
+                ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/30'
+                : 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/30')
+              : (colorScheme === 'whatsapp'
+                ? 'text-[rgb(44_50_80)] dark:text-slate-400 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-500/10 group-hover:text-emerald-600 dark:group-hover:text-emerald-400'
+                : 'text-[rgb(44_50_80)] dark:text-slate-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-500/10 group-hover:text-blue-600 dark:group-hover:text-blue-400')
+            }`}
+        >
+          <Icon className="w-[18px] h-[18px]" />
+        </span>
+      ) : (
+        <Icon className={`w-4 h-4 mr-3 shrink-0 transition-colors ${active ? (colorScheme === 'whatsapp' ? 'text-emerald-500 dark:text-emerald-400' : 'text-blue-500 dark:text-blue-400') : (colorScheme === 'whatsapp' ? 'group-hover:text-emerald-500 dark:group-hover:text-emerald-400' : 'group-hover:text-blue-500 dark:group-hover:text-blue-400')}`} />
+      )}
+      <span className={`font-medium ${isSubItem ? 'text-xs' : 'text-[13.6px]'}`}>{label}</span>
+
+      {badge !== null && badge > 0 && !disabled && (
+        <span className="ml-auto bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.4)] animate-pulse">
+          {badge}
+        </span>
+      )}
+      {active && !isSubItem && badge === null && !disabled && <ChevronRight className={`w-4 h-4 ml-auto ${colorScheme === 'whatsapp' ? 'text-emerald-500 dark:text-emerald-400' : 'text-blue-500 dark:text-blue-400'}`} />}
+    </button>
+  );
+};
 
 export default Sidebar;

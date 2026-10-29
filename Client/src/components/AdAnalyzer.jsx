@@ -29,6 +29,38 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import CustomSelect from './CustomSelect';
 
+const AdAnalyzerFontStyles = () => (
+  <>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    />
+    <style>{`
+      .wf-adanalyzer, .wf-adanalyzer * {
+        font-family: 'Poppins', sans-serif;
+      }
+      .wf-adanalyzer .wf-mono {
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .wf-adanalyzer .wf-fade {
+        opacity: 0;
+        animation: wfAdAnalyzerFadeIn 0.6s ease-out forwards;
+      }
+      @keyframes wfAdAnalyzerFadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .wf-adanalyzer .wf-fade {
+          opacity: 1;
+          animation: none;
+          transform: none;
+        }
+      }
+    `}</style>
+  </>
+);
+
 const AdAnalyzer = () => {
   const { theme, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(true);
@@ -404,9 +436,12 @@ ${JSON.stringify(data)}`;
 
   if (error && !isReportModalOpen) {
     return (
-      <div className="p-8 flex items-center justify-center">
+      <div className="wf-adanalyzer p-8 flex items-center justify-center">
+        <AdAnalyzerFontStyles />
         <div className="bg-red-500/10 border border-red-500/20 rounded-3xl p-8 max-w-md w-full text-center">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-red-500" />
+          </div>
           <h2 className="text-xl font-bold text-[var(--text-main)] mb-2">Analysis Failed</h2>
           <p className="text-[var(--text-muted)] text-sm mb-6">{error}</p>
           <button onClick={() => window.location.reload()} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-all">Retry Analysis</button>
@@ -416,48 +451,67 @@ ${JSON.stringify(data)}`;
   }
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="wf-adanalyzer py-0 px-8 space-y-8">
+      <AdAnalyzerFontStyles />
       {/* Title & Controls Block */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
-        <div>
-          <div className="flex items-center space-x-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">
-            <span>Analytics</span>
-            <ChevronRight className="w-3 h-3" />
-            <span className="text-blue-600 dark:text-blue-400">Ad Analyzer</span>
-          </div>
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight leading-none">Performance Breakdown</h2>
-        </div>
+      <div className="relative rounded-3xl z-10 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 p-8 mb-4 shadow-xl shadow-indigo-900/20 wf-fade" style={{ animationDelay: '0ms' }}>
+        <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '18px 18px' }}></div>
+        <div className="absolute -top-10 right-10 w-56 h-56 bg-white/15 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-16 left-10 w-64 h-64 bg-black/10 rounded-full blur-3xl"></div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Sync Button */}
-          <button
-            disabled={syncing || !selectedAccountId}
-            onClick={handleSyncRealtimeData}
-            className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-2xl font-bold text-xs shadow-lg shadow-emerald-500/10 transition-all hover:scale-105 disabled:opacity-50 disabled:pointer-events-none"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
-            <span>{syncing ? 'Syncing...' : 'Sync Realtime Data'}</span>
-          </button>
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className='w-[50%]'>
+            <div className="flex items-center space-x-2 text-[10px] font-bold text-white/60 uppercase tracking-widest mb-1.5">
+              <span>Analytics</span>
+              <ChevronRight className="w-3 h-3" />
+              <span className="text-white">Ad Analyzer</span>
+            </div>
+            <h2 className="text-3xl font-bold text-white tracking-tight leading-none mb-2">Performance Breakdown</h2>
+            <p className="text-white/70 text-[13px] pTagFont w-full">Daily spend, reach & conversion trends for your connected Meta ad account.</p>
+            <div className="flex items-center gap-2 mt-4">
+              <span className="flex items-center gap-1.5 px-3 py-1 pTagFont rounded-full bg-white/15 text-[12.3px] font-medium text-white">
+                <Info className="w-3 h-3" />
+                AI-Powered Analysis
+              </span>
+              <span className="flex items-center gap-1.5 px-3 py-1 pTagFont rounded-full bg-white/15 text-[12.3px] font-medium text-white">
+                <Clock className="w-3 h-3" />
+                Live Daily Data
+              </span>
+            </div>
+          </div>
 
-          <div className="flex items-center space-x-3 bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-2xl px-4 py-1 transition-all">
-            <Users className="w-4 h-4 text-blue-500" />
-            <CustomSelect
-              value={selectedAccountId}
-              onChange={setSelectedAccountId}
-              options={adAccounts.map(account => ({
-                value: account.id,
-                label: `${account.name} (${account.account_id})`
-              }))}
-              className="border-none bg-transparent py-1 text-sm px-1 min-w-[200px]"
-            />
+          <div className="flex flex-wrap items-center gap-3 w-[50%]">
+            {/* Sync Button */}
+          
+
+            <div className="flex items-center space-x-3 bg-white/90 dark:bg-white/10 border border-white/40 rounded-2xl px-4 py-1 transition-all">
+              <Users className="w-4 h-4 text-blue-600" />
+              <CustomSelect
+                value={selectedAccountId}
+                onChange={setSelectedAccountId}
+                options={adAccounts.map(account => ({
+                  value: account.id,
+                  label: `${account.name} (${account.account_id})`
+                }))}
+                className="border-none bg-transparent py-1 text-[13px] font-semibold px-1 min-w-[200px]"
+              />
+            </div>
+            <div className="flex items-center space-x-2 px-4 py-2 bg-white/15 border border-white/20 rounded-xl">
+              <Calendar className="w-4 h-4 text-white" />
+              <span className="text-xs font-semibold text-white">Daily Increments</span>
+            </div>
+              <button
+              disabled={syncing || !selectedAccountId}
+              onClick={handleSyncRealtimeData}
+              className="flex items-center space-x-2 px-4 py-2.5 bg-white hover:bg-emerald-50 text-emerald-600 rounded-2xl font-semibold text-xs shadow-lg shadow-black/10 transition-all hover:scale-105 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+              <span>{syncing ? 'Syncing...' : 'Sync Realtime Data'}</span>
+            </button>
+            {/* <button className="p-2.5 bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-xl text-slate-500 hover:text-blue-500 transition-all">
+              <Download className="w-4 h-4" />
+            </button> */}
           </div>
-          <div className="flex items-center space-x-2 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-            <Calendar className="w-4 h-4 text-blue-400" />
-            <span className="text-xs font-bold text-blue-400 uppercase">Daily Increments</span>
-          </div>
-          {/* <button className="p-2.5 bg-[var(--bg-input)] border border-slate-200 dark:border-white/5 rounded-xl text-slate-500 hover:text-blue-500 transition-all">
-            <Download className="w-4 h-4" />
-          </button> */}
         </div>
       </div>
 
@@ -493,7 +547,16 @@ ${JSON.stringify(data)}`;
         ) : (
           <div className="fade-in space-y-8">
             {/* Summary Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="flex items-center justify-between px-1 wf-fade" style={{ animationDelay: '80ms' }}>
+              <h3 className="text-[12.5px] font-semibold text-blue-700 dark:text-slate-400 flex items-center gap-2">
+                <span className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                  <BarChart3 className="w-3.5 h-3.5" />
+                </span>
+                Summary Overview
+              </h3>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest wf-mono">{data.length} days tracked</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 wf-fade" style={{ animationDelay: '120ms' }}>
               <MetricCard
                 label="Total Spend"
                 value={formatCurrency(data.reduce((sum, d) => sum + parseFloat(d.spend), 0))}
@@ -525,13 +588,19 @@ ${JSON.stringify(data)}`;
             </div>
 
             {/* Main Data Table */}
-            <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl overflow-hidden shadow-sm transition-colors">
+            <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl overflow-hidden shadow-sm transition-colors wf-fade" style={{ animationDelay: '160ms' }}>
               <div className="p-6 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
                 <h3 className="font-bold text-lg flex items-center">
-                  <BarChart3 className="w-5 h-5 mr-2 text-blue-500" />
+                  <span className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center mr-3">
+                    <BarChart3 className="w-4 h-4 text-blue-500" />
+                  </span>
                   Daily Performance Logs
                 </h3>
                 <div className="flex items-center space-x-2">
+                  <span className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    <Filter className="w-3 h-3" />
+                    Filter
+                  </span>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                     <input type="text" placeholder="Filter dates..." className="ml-2 pl-9 pr-4 py-1.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-xs focus:outline-none focus:border-blue-500/50" />
@@ -544,7 +613,9 @@ ${JSON.stringify(data)}`;
                   <thead>
                     <tr className="bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/10">
                       <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Date</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Spend</th>
+                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                        <span className="inline-flex items-center gap-1"><DollarSign className="w-3 h-3" />Spend</span>
+                      </th>
                       <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Impressions</th>
                       <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">CTR</th>
                       <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">CPC</th>
@@ -570,31 +641,31 @@ ${JSON.stringify(data)}`;
                                 <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
                                   <Calendar className="w-4 h-4 text-blue-500" />
                                 </div>
-                                <span className="text-sm font-bold">{day.date_start}</span>
+                                <span className="text-sm font-bold wf-mono">{day.date_start}</span>
                               </div>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(day.spend)}</span>
+                              <span className="text-sm font-mono wf-mono font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(day.spend)}</span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-sm font-mono text-slate-600 dark:text-slate-300">{formatNumber(day.impressions)}</span>
+                              <span className="text-sm font-mono wf-mono text-slate-600 dark:text-slate-300">{formatNumber(day.impressions)}</span>
                             </td>
                             <td className="px-6 py-4 text-center">
-                              <div className="inline-flex items-center px-2 py-1 rounded-lg bg-blue-500/5 text-blue-600 dark:text-blue-400 text-xs font-bold border border-blue-500/10">
+                              <div className="inline-flex items-center px-2 py-1 rounded-lg bg-blue-500/5 text-blue-600 dark:text-blue-400 text-xs font-bold border border-blue-500/10 wf-mono">
                                 {parseFloat(day.ctr).toFixed(2)}%
                               </div>
                             </td>
                             <td className="px-6 py-4 text-center">
-                              <span className="text-sm font-mono text-slate-500">{parseFloat(day.cpc).toFixed(2)}</span>
+                              <span className="text-sm font-mono wf-mono text-slate-500">{parseFloat(day.cpc).toFixed(2)}</span>
                             </td>
                             <td className="px-6 py-4 text-center">
-                              <span className="text-sm font-mono text-slate-500">{parseFloat(day.cpm).toFixed(2)}</span>
+                              <span className="text-sm font-mono wf-mono text-slate-500">{parseFloat(day.cpm).toFixed(2)}</span>
                             </td>
                             <td className="px-6 py-4 text-right">
-                              <span className="text-sm font-bold text-indigo-500">{leads > 0 ? (parseFloat(day.spend) / parseFloat(leads)).toFixed(0) : 0}</span>
+                              <span className="text-sm font-bold wf-mono text-indigo-500">{leads > 0 ? (parseFloat(day.spend) / parseFloat(leads)).toFixed(0) : 0}</span>
                             </td>
                             <td className="px-6 py-4 text-right">
-                              <span className="text-sm font-mono font-bold text-blue-600">₹{leads}</span>
+                              <span className="text-sm font-mono wf-mono font-bold text-blue-600">₹{leads}</span>
                             </td>
                           </tr>
                         );
@@ -606,8 +677,9 @@ ${JSON.stringify(data)}`;
 
               {/* Pagination Controls */}
               <div className="p-6 border-t border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50/30 dark:bg-white/[0.01]">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                  Showing <span className="text-blue-500">{Math.min(data.length, (currentPage - 1) * itemsPerPage + 1)}</span> to <span className="text-blue-500">{Math.min(data.length, currentPage * itemsPerPage)}</span> of {data.length} results
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                  <Clock className="w-3 h-3 text-slate-400" />
+                  Showing <span className="text-blue-500 wf-mono">{Math.min(data.length, (currentPage - 1) * itemsPerPage + 1)}</span> to <span className="text-blue-500 wf-mono">{Math.min(data.length, currentPage * itemsPerPage)}</span> of {data.length} results
                 </p>
                 <div className="flex items-center space-x-2">
                   <button
@@ -642,10 +714,18 @@ ${JSON.stringify(data)}`;
             </div>
 
             {/* Detailed Action Breakdown */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="flex items-center gap-2 px-1 wf-fade" style={{ animationDelay: '200ms' }}>
+              <span className="w-7 h-7 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+                <Info className="w-3.5 h-3.5" />
+              </span>
+              <h3 className="text-[12.5px] font-semibold text-blue-700 dark:text-slate-400">Deep Dive & Recommendations</h3>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 wf-fade" style={{ animationDelay: '220ms' }}>
               <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-6 transition-colors">
                 <h3 className="font-bold text-lg mb-6 flex items-center">
-                  <Target className="w-5 h-5 mr-2 text-indigo-500" />
+                  <span className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center mr-3">
+                    <Target className="w-4 h-4 text-indigo-500" />
+                  </span>
                   Conversion Actions (Latest Day)
                 </h3>
                 <div className="space-y-4">
@@ -656,7 +736,7 @@ ${JSON.stringify(data)}`;
                         <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 capitalize">{action.action_type.replace(/_/g, ' ')}</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-sm font-mono font-bold text-blue-600 dark:text-blue-400">₹{parseFloat(action.value).toFixed(2)}</span>
+                        <span className="text-sm font-mono wf-mono font-bold text-blue-600 dark:text-blue-400">₹{parseFloat(action.value).toFixed(2)}</span>
                         <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Cost / Action</p>
                       </div>
                     </div>
@@ -665,6 +745,7 @@ ${JSON.stringify(data)}`;
               </div>
 
               <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-8 text-white relative overflow-hidden group">
+                <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '16px 16px' }}></div>
                 <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
                   <PieChart className="w-48 h-48" />
                 </div>
@@ -718,7 +799,7 @@ ${JSON.stringify(data)}`;
                     <p className="text-xs text-slate-500 font-medium">Deep meta-analysis and strategic scaling recommendations</p>
                   </div>
                 </div>
-                {/* Close button inside capture area for alignment, but we hide it in PDF if we could. 
+                {/* Close button inside capture area for alignment, but we hide it in PDF if we could.
                     Actually, it's better to keep it simple. */}
               </div>
 
@@ -746,7 +827,7 @@ ${JSON.stringify(data)}`;
                           <span className="px-3 py-1 bg-blue-500 text-white text-[10px] font-bold rounded-full uppercase tracking-widest">{aiReport.summary.overall_status}</span>
                           <div className="text-right">
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Health Score</p>
-                            <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{aiReport.summary.performance_score}/100</p>
+                            <p className="text-3xl font-bold text-blue-600 dark:text-blue-400 wf-mono">{aiReport.summary.performance_score}/100</p>
                           </div>
                         </div>
                         <h4 className="text-lg font-bold mb-2">Verdict: {aiReport.summary.campaign_health}</h4>
@@ -760,11 +841,17 @@ ${JSON.stringify(data)}`;
                     </div>
 
                     {/* Metrics Deep Dive */}
+                    <div className="flex items-center gap-2">
+                      <span className="w-7 h-7 rounded-lg bg-slate-500/10 text-slate-500 flex items-center justify-center">
+                        <ArrowDownRight className="w-3.5 h-3.5" />
+                      </span>
+                      <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Metrics Deep Dive</h4>
+                    </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {Object.entries(aiReport.metrics_analysis).map(([key, value]) => (
                         <div key={key} className="bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 rounded-2xl p-4">
                           <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">{key}</p>
-                          <p className="text-xl font-bold mb-1">{value.average}{key === 'ctr' ? '%' : ''}</p>
+                          <p className="text-xl font-bold mb-1 wf-mono">{value.average}{key === 'ctr' ? '%' : ''}</p>
                           <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded uppercase ${value.status.toLowerCase().includes('excellent') || value.status.toLowerCase().includes('good') ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
                             {value.status}
                           </span>
@@ -880,11 +967,11 @@ const MetricCard = ({ label, value, icon: Icon, color, trend }) => {
   };
 
   return (
-    <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 rounded-3xl p-6 hover:bg-slate-50 dark:hover:bg-white/[0.04] transition-all group relative overflow-hidden">
+    <div className="bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-premium hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:-translate-y-0.5 transition-all group relative overflow-hidden">
       <div className={`absolute -right-4 -top-4 w-24 h-24 bg-gradient-to-br opacity-[0.03] blur-2xl rounded-full ${colorMap[color].split(' ')[0]}`}></div>
 
       <div className="flex items-center justify-between mb-4 relative z-10">
-        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br flex items-center justify-center border ${colorMap[color]}`}>
+        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br flex items-center justify-center border group-hover:scale-110 transition-transform ${colorMap[color]}`}>
           <Icon className="w-6 h-6" />
         </div>
         <div className="flex items-center space-x-1 text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg">
@@ -894,8 +981,8 @@ const MetricCard = ({ label, value, icon: Icon, color, trend }) => {
       </div>
 
       <div className="relative z-10">
-        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">{label}</p>
-        <h3 className="text-2xl font-bold text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors">{value}</h3>
+        <p className="text-slate-700 text-[11.5px] font-semibold mb-1">{label}</p>
+        <h3 className="text-2xl font-bold text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors wf-mono">{value}</h3>
       </div>
     </div>
   );

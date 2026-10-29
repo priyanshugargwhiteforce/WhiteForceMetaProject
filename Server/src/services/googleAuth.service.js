@@ -5,7 +5,7 @@ const GoogleAccount = require('../models/googleAccount.model');
 const getOAuthCredentials = () => {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_OAUTH_REDIRECT_URI || 'http://localhost:8000/api/google/auth/callback';
+    const redirectUri = process.env.GOOGLE_OAUTH_REDIRECT_URI || 'https://wfadmanager.astro-buddy.in/api/google/auth/callback';
 
     if (!clientId || !clientSecret) {
         throw new Error('Google OAuth credentials (GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET) are missing in environment variables.');

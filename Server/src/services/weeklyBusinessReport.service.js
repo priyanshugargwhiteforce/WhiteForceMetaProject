@@ -5,26 +5,99 @@ const campaignsService = require('./whatsapp-campaigns.service');
 const { cleanPhoneNumber } = require('./dailyTaskReminder.service');
 
 /**
- * Format a Date object into "DD MMM YYYY" string (e.g., "27 Aug 2026")
+ * Format a 7-day Date range into compact string (e.g. "02-09 Oct" or "26 Sep - 03 Oct")
+ * Keeping it strictly compact (9-13 chars) to stay safely under Meta's 1024-character body limit.
  */
-function formatDateShort(dateObj) {
+function formatDateRangeCompact(startObj, endObj) {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const d = String(dateObj.getDate()).padStart(2, '0');
-    const m = months[dateObj.getMonth()];
-    const y = dateObj.getFullYear();
-    return `${d} ${m} ${y}`;
+    const d1 = String(startObj.getDate()).padStart(2, '0');
+    const m1 = months[startObj.getMonth()];
+    const d2 = String(endObj.getDate()).padStart(2, '0');
+    const m2 = months[endObj.getMonth()];
+    if (m1 === m2) {
+        return `${d1}-${d2} ${m1}`;
+    }
+    return `${d1} ${m1} - ${d2} ${m2}`;
 }
 
 /**
- * Clean numeric string / number into formatted string (e.g. 12345 -> "12,345" or "12345")
+ * Clean numeric string / number into formatted string.
+ * Formats numbers >= 10,000 compactly (e.g. 15k, 1.2M) to conserve character budget.
  */
 function formatNum(val, decimals = 0) {
     const num = parseFloat(val || 0);
     if (isNaN(num)) return '0';
+    if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'M';
+    if (num >= 10000) return Math.round(num / 1000) + 'k';
     if (decimals > 0) {
         return num.toFixed(decimals);
     }
     return Math.round(num).toString();
+}
+
+/**
+ * Ensures template parameter string fits within Meta's 1024 character limit.
+ * Raw template body text without parameters is exactly 900 characters.
+ * Maximum allowable parameter budget is 124 chars (1024 - 900).
+ * This function enforces a safety budget of 118 characters (total body <= 1018).
+ */
+function ensureMetaCharacterBudget(parameters) {
+    const FIXED_BODY_LENGTH = 900;
+    const MAX_ALLOWED_BODY_LENGTH = 1018; // 6 chars buffer below 1024 limit
+    const MAX_PARAM_BUDGET = MAX_ALLOWED_BODY_LENGTH - FIXED_BODY_LENGTH; // 118 chars
+
+    let sanitized = parameters.map(p => (p === null || p === undefined) ? '0' : String(p));
+    let totalParamLen = sanitized.reduce((sum, p) => sum + p.length, 0);
+
+    if (totalParamLen <= MAX_PARAM_BUDGET) {
+        return sanitized;
+    }
+
+    console.warn(`[Weekly Business Report] Parameter length (${totalParamLen}) exceeds safe budget (${MAX_PARAM_BUDGET}). Auto-compacting...`);
+
+    // Pass 1: Compact recipient name (index 0) to max 6 chars
+    sanitized[0] = sanitized[0].trim().split(' ')[0].substring(0, 6);
+
+    // Pass 2: Compact account names (index 12, 17, 26) to max 4 chars
+    sanitized[12] = sanitized[12].substring(0, 4);
+    sanitized[17] = sanitized[17].substring(0, 4);
+    sanitized[26] = sanitized[26].substring(0, 4);
+
+    // Pass 3: Compact date range (index 1) to max 9 chars
+    if (sanitized[1].length > 9) {
+        sanitized[1] = sanitized[1].replace(/\s+/g, '').substring(0, 9);
+    }
+
+    totalParamLen = sanitized.reduce((sum, p) => sum + p.length, 0);
+    if (totalParamLen <= MAX_PARAM_BUDGET) {
+        return sanitized;
+    }
+
+    // Pass 4: Compact numbers >= 1000 into 'k' notation
+    for (let i = 2; i < sanitized.length; i++) {
+        if (i === 12 || i === 17 || i === 26) continue;
+        const num = parseFloat(sanitized[i]);
+        if (!isNaN(num) && num >= 1000) {
+            sanitized[i] = Math.round(num / 1000) + 'k';
+        }
+    }
+
+    totalParamLen = sanitized.reduce((sum, p) => sum + p.length, 0);
+    if (totalParamLen <= MAX_PARAM_BUDGET) {
+        return sanitized;
+    }
+
+    // Pass 5: Safety trim if extreme numbers persist
+    for (let i = sanitized.length - 1; i >= 0 && totalParamLen > MAX_PARAM_BUDGET; i--) {
+        if (sanitized[i].length > 3) {
+            const diff = totalParamLen - MAX_PARAM_BUDGET;
+            const trimAmount = Math.min(sanitized[i].length - 2, diff);
+            sanitized[i] = sanitized[i].substring(0, sanitized[i].length - trimAmount);
+            totalParamLen -= trimAmount;
+        }
+    }
+
+    return sanitized;
 }
 
 /**
@@ -37,7 +110,7 @@ async function getWeeklyReportMetrics() {
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const startWeeklyStr = sevenDaysAgo.toISOString().split('T')[0];
     const endWeeklyStr = now.toISOString().split('T')[0];
-    const dateRangeLabel = `${formatDateShort(sevenDaysAgo).replace(' ' + now.getFullYear(), '')} - ${formatDateShort(now)}`;
+    const dateRangeLabel = formatDateRangeCompact(sevenDaysAgo, now);
 
     // Monthly Period (1st of current month to today)
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -172,13 +245,21 @@ async function getWeeklyReportMetrics() {
     const metaAcc1Obj = activeMetaAccountsList[0] || { name: 'N/A', weekly: { spend: 0, leads: 0, impressions: 0, clicks: 0 } };
     const metaAcc2Obj = activeMetaAccountsList[1] || { name: 'N/A', weekly: { spend: 0, leads: 0, impressions: 0, clicks: 0 } };
 
-    const acc1Name = metaAcc1Obj.name ? (metaAcc1Obj.name.length > 10 ? metaAcc1Obj.name.substring(0, 10) : metaAcc1Obj.name) : 'WF Ads 1';
+    const getCleanAccName = (rawName, fallback) => {
+        if (!rawName) return fallback;
+        const trimmed = String(rawName).trim();
+        // If rawName is a numeric Meta Ad Account ID (e.g. "1170953674"), use concise alias like 'WF-1' to save characters
+        if (/^\d+$/.test(trimmed)) return fallback;
+        return trimmed.length > 5 ? trimmed.substring(0, 5) : trimmed;
+    };
+
+    const acc1Name = getCleanAccName(metaAcc1Obj.name, 'WF-1');
     const acc1Spend = metaAcc1Obj.weekly.spend;
     const acc1Leads = metaAcc1Obj.weekly.leads;
     const acc1Impressions = metaAcc1Obj.weekly.impressions;
     const acc1Clicks = metaAcc1Obj.weekly.clicks;
 
-    const acc2Name = metaAcc2Obj.name ? (metaAcc2Obj.name.length > 10 ? metaAcc2Obj.name.substring(0, 10) : metaAcc2Obj.name) : 'WF Ads 2';
+    const acc2Name = getCleanAccName(metaAcc2Obj.name, 'WF-2');
     const acc2Spend = metaAcc2Obj.weekly.spend;
     const acc2Leads = metaAcc2Obj.weekly.leads;
     const acc2Impressions = metaAcc2Obj.weekly.impressions;
@@ -192,8 +273,7 @@ async function getWeeklyReportMetrics() {
     // ==========================================
     // 3. GOOGLE ADS METRICS
     // ==========================================
-    let googleAccountName = process.env.GOOGLE_CUSTOMER_ID || 'Google Ads';
-    if (googleAccountName.length > 10) googleAccountName = googleAccountName.substring(0, 10);
+    const googleAccountName = 'G-Ads';
     
     // Google Weekly
     const [[googleWeeklyTrend]] = await pool.query(
@@ -324,8 +404,10 @@ async function sendWeeklyBusinessReport(overridePhone = null) {
 
         if (!targetPhone) {
             const adminInfo = await resolveAdminPhoneNumber();
-            recipientName = adminInfo.name;
+            recipientName = (adminInfo.name || 'Admin').trim().split(' ')[0].substring(0, 8);
             targetPhone = adminInfo.phone;
+        } else {
+            recipientName = recipientName.trim().split(' ')[0].substring(0, 8);
         }
 
         if (!targetPhone) {
@@ -365,7 +447,7 @@ async function sendWeeklyBusinessReport(overridePhone = null) {
         const metrics = await getWeeklyReportMetrics();
 
         // Construct 35 parameters payload
-        const parameters = [
+        const rawParameters = [
             recipientName,                // {{1}}
             metrics.dateRangeLabel,       // {{2}}
             metrics.waWeeklySpend,        // {{3}}
@@ -402,6 +484,11 @@ async function sendWeeklyBusinessReport(overridePhone = null) {
             metrics.googleMonthClicks,    // {{34}}
             metrics.googleMonthImpressions // {{35}}
         ];
+
+        // Guarantee parameters strictly fit Meta's 1024-character body limit
+        const parameters = ensureMetaCharacterBudget(rawParameters);
+        const renderedBodyLength = 900 + parameters.reduce((sum, p) => sum + String(p).length, 0);
+        console.log(`[Weekly Business Report] Rendered template body length: ${renderedBodyLength} / 1024 characters.`);
 
         const campaignName = `Weekly Business Report - ${recipientName} - ${todayStr}`;
         const recipients = [
@@ -460,7 +547,16 @@ async function sendWeeklyBusinessReport(overridePhone = null) {
                 console.log(`✅ [Weekly Business Report] WhatsApp report INSTANTLY DELIVERED to "${recipientName}" (${targetPhone}). Message ID: ${messageId}`);
             }
         } catch (directErr) {
-            console.error('[Weekly Business Report Direct Send Error]:', directErr.response?.data || directErr.message);
+            const errData = directErr.response?.data || directErr.message;
+            console.error('[Weekly Business Report Direct Send Error]:', errData);
+            await pool.query(
+                `UPDATE whatsapp_campaign_recipients 
+                 SET status = "failed", error_message = ? 
+                 WHERE campaign_id = ? AND phone = ?`,
+                [JSON.stringify(errData), campaignRes.campaignId, targetPhone]
+            ).catch(() => {});
+            await pool.query('UPDATE whatsapp_campaigns SET status = "failed" WHERE id = ?', [campaignRes.campaignId]).catch(() => {});
+            throw new Error(`Direct send failed: ${directErr.response?.data?.error?.message || directErr.message}`);
         }
 
         return {

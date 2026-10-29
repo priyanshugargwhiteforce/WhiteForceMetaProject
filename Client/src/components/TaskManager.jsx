@@ -482,45 +482,86 @@ const TaskManager = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-100% mx-auto space-y-8">
-      {/* Title & Actions Block */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900/40 p-5 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm dark:shadow-md">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Task Management</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Assign, track, and execute tasks mapped to Meta, Google, LinkedIn, or WhatsApp campaigns</p>
-        </div>
+    <div className="wf-taskmgr p-4 md:p-6 lg:p-8 max-w-100% mx-auto space-y-8">
+      {/* Fonts + chrome polish, scoped to this page */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
+        rel="stylesheet"
+      />
+      <style>{`
+        @media screen {
+          .wf-taskmgr,
+          .wf-taskmgr button,
+          .wf-taskmgr input,
+          .wf-taskmgr select,
+          .wf-taskmgr textarea {
+            font-family: 'Poppins', sans-serif;
+          }
+        }
+        .wf-taskmgr .wf-mono {
+          font-family: 'JetBrains Mono', monospace;
+        }
+        @keyframes wfTaskRise {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .wf-taskmgr .wf-fade {
+          animation: wfTaskRise 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .wf-taskmgr .wf-fade {
+            animation: none;
+          }
+        }
+      `}</style>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {canCreateTask && (
+      {/* Gradient hero */}
+      <div className="wf-fade relative overflow-hidden rounded-2xl p-6 sm:p-7 shadow-xl shadow-blue-500/20 dark:shadow-none dark:ring-1 dark:ring-white/10" style={{ animationDelay: '0ms' }}>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600"></div>
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.6) 1px, transparent 1px)', backgroundSize: '16px 16px' }}></div>
+        <div className="absolute -right-10 -top-16 w-64 h-64 rounded-full bg-white/15 blur-3xl"></div>
+        <div className="absolute -left-10 -bottom-16 w-48 h-48 rounded-full bg-black/10 blur-3xl"></div>
+
+        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight mb-1.5">Task Management</h1>
+            <p className="text-white/70 text-xs font-medium max-w-md">Assign, track, and execute tasks mapped to Meta, Google, LinkedIn, or WhatsApp campaigns</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            {canCreateTask && (
+              <button
+                onClick={() => { resetForm(); setIsCreateModalOpen(true); }}
+                className="flex items-center space-x-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-blue-600 rounded-xl shadow-lg shadow-black/10 transition-all hover:scale-105 font-bold text-xs"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Task</span>
+              </button>
+            )}
+
             <button
-              onClick={() => { resetForm(); setIsCreateModalOpen(true); }}
-              className="flex items-center space-x-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/10 transition-all font-semibold text-xs"
+              onClick={() => navigate('/daily-tasks')}
+              className="flex items-center space-x-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-emerald-600 rounded-xl shadow-lg shadow-black/10 transition-all hover:scale-105 font-bold text-xs"
             >
-              <Plus className="w-4 h-4" />
-              <span>Create Task</span>
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>+ Daily Creative Task</span>
             </button>
-          )}
 
-          <button
-            onClick={() => navigate('/daily-tasks')}
-            className="flex items-center space-x-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-lg shadow-emerald-500/10 transition-all font-semibold text-xs"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>+ Daily Creative Task</span>
-          </button>
-
-          <button
-            onClick={() => navigate('/mom')}
-            className="flex items-center space-x-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-lg shadow-rose-500/10 transition-all font-semibold text-xs"
-          >
-            <FileText className="w-4 h-4" />
-            <span>+ MoM (Minutes of Meeting)</span>
-          </button>
+            <button
+              onClick={() => navigate('/mom')}
+              className="flex items-center space-x-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-rose-600 rounded-xl shadow-lg shadow-black/10 transition-all hover:scale-105 font-bold text-xs"
+            >
+              <FileText className="w-4 h-4" />
+              <span>+ MoM (Minutes of Meeting)</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* KPI Cards Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="wf-fade grid grid-cols-2 lg:grid-cols-5 gap-4" style={{ animationDelay: '60ms' }}>
         <KPIItemCard title="Total Tasks" value={stats.total} color="blue" icon={ClipboardList} />
         <KPIItemCard title="Pending" value={stats.pending} color="slate" icon={Clock} />
         <KPIItemCard title="In Progress" value={stats.inProgress} color="indigo" icon={Clock} />
@@ -529,16 +570,21 @@ const TaskManager = () => {
       </div>
 
       {/* Filters Area */}
-      <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl p-4 flex flex-col lg:flex-row gap-3 items-center shadow-sm">
-        <div className="relative w-full lg:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search tasks..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
-          />
+      <div className="wf-fade bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 dark:ring-1 dark:ring-blue-500/10 rounded-2xl p-4 flex flex-col lg:flex-row gap-3 items-center shadow-sm" style={{ animationDelay: '100ms' }}>
+        <div className="flex items-center gap-2.5 w-full lg:w-auto">
+          <span className="hidden sm:flex items-center justify-center w-9 h-9 rounded-lg bg-blue-500/10 text-blue-500 shrink-0">
+            <Filter className="w-4 h-4" />
+          </span>
+          <div className="relative w-full lg:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+            />
+          </div>
         </div>
 
         <div className="flex flex-wrap w-full lg:w-auto gap-3 flex-1 lg:justify-end">
@@ -628,7 +674,18 @@ const TaskManager = () => {
       </div>
 
       {/* Tasks Table Container */}
-      <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm">
+      <div className="wf-fade bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 dark:ring-1 dark:ring-blue-500/10 rounded-2xl overflow-hidden shadow-sm" style={{ animationDelay: '140ms' }}>
+        <div className="px-5 py-3.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center">
+            <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 mr-2.5">
+              <ClipboardList className="w-4 h-4" />
+            </span>
+            All Tasks
+          </h3>
+          <span className="wf-mono px-2.5 py-0.5 text-[11px] font-bold bg-blue-500/10 text-blue-500 rounded-full">
+            {filteredTasks.length} total
+          </span>
+        </div>
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16">
             <div className="w-10 h-10 border-4 border-blue-500/10 border-t-blue-500 rounded-full animate-spin"></div>
@@ -636,7 +693,9 @@ const TaskManager = () => {
           </div>
         ) : filteredTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <ClipboardList className="w-10 h-10 text-slate-300 dark:text-white/10 mb-2" />
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center mb-3">
+              <ClipboardList className="w-8 h-8 text-slate-300 dark:text-white/20" />
+            </div>
             <h4 className="font-bold text-sm text-slate-800 dark:text-white mb-1">No Tasks Discovered</h4>
             <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
               No tasks matched your current search filters or there are no tasks assigned yet.
@@ -673,9 +732,9 @@ const TaskManager = () => {
                     );
 
                     return (
-                      <tr key={task.id} className="hover:bg-slate-50/[0.01] dark:hover:bg-white/[0.01] transition-colors group">
+                      <tr key={task.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors group">
                         {/* Serial Number */}
-                        <td className="px-4 py-3.5 text-center font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                        <td className="wf-mono px-4 py-3.5 text-center font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap">
                           {startIndex + index + 1}
                         </td>
                         {/* Details & Ad linkages */}
@@ -714,7 +773,7 @@ const TaskManager = () => {
                               const completedCount = task.assignees.filter(a => a.status === 'completed').length;
                               const totalCount = task.assignees.length;
                               const isAllCompleted = completedCount === totalCount;
-                              const badgeColor = isAllCompleted 
+                              const badgeColor = isAllCompleted
                                 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                                 : 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20';
                               return (
@@ -750,11 +809,11 @@ const TaskManager = () => {
                         {/* Assignee */}
                         <td className="px-6 py-3.5 whitespace-nowrap">
                           <div className="flex items-center space-x-2">
-                            <div className="w-6 h-6 rounded-full bg-blue-600/10 border border-blue-500/20 text-blue-500 flex items-center justify-center font-bold text-[10px]">
+                            <div className="w-6 h-6 rounded-full bg-blue-600/10 border border-blue-500/20 text-blue-500 flex items-center justify-center font-bold text-[10px] ring-2 ring-blue-500/5">
                               {task.assignees && task.assignees.length > 1 ? task.assignees.length : (task.assignee_name ? task.assignee_name.charAt(0).toUpperCase() : 'U')}
                             </div>
                             <span className="font-semibold text-slate-800 dark:text-slate-200 max-w-[150px] truncate" title={task.assignees && task.assignees.map(a => a.assignee_name).join(', ')}>
-                              {task.assignees && task.assignees.length > 1 
+                              {task.assignees && task.assignees.length > 1
                                 ? `${task.assignees[0].assignee_name} +${task.assignees.length - 1} others`
                                 : task.assignee_name || 'Unassigned'}
                               {isAssignee && <span className="text-[9px] text-blue-500 font-bold ml-1">(You)</span>}
@@ -772,7 +831,7 @@ const TaskManager = () => {
                           {task.created_at ? (
                             <div className="flex items-center space-x-1">
                               <Clock className="w-3.5 h-3.5 opacity-60 text-slate-400" />
-                              <span>
+                              <span className="wf-mono">
                                 {new Date(task.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                               </span>
                             </div>
@@ -786,7 +845,7 @@ const TaskManager = () => {
                           {task.due_date ? (
                             <div className="flex items-center space-x-1">
                               <Calendar className="w-3.5 h-3.5 opacity-60" />
-                              <span className={taskOverdue ? 'text-rose-500 font-bold animate-pulse' : 'text-slate-600 dark:text-slate-350'}>
+                              <span className={`wf-mono ${taskOverdue ? 'text-rose-500 font-bold animate-pulse' : 'text-slate-600 dark:text-slate-350'}`}>
                                 {new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                               </span>
                               {taskOverdue && <AlertCircle className="w-3 h-3 text-rose-500" />}
@@ -853,7 +912,7 @@ const TaskManager = () => {
             {/* Pagination Controls Bar */}
             <div className="px-6 py-3.5 border-t border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
               <div className="text-slate-500 dark:text-slate-400 font-medium">
-                Showing <span className="font-bold text-slate-800 dark:text-slate-200">{filteredTasks.length === 0 ? 0 : startIndex + 1}</span> to <span className="font-bold text-slate-800 dark:text-slate-200">{endIndex}</span> of <span className="font-bold text-slate-800 dark:text-slate-200">{filteredTasks.length}</span> tasks
+                Showing <span className="wf-mono font-bold text-slate-800 dark:text-slate-200">{filteredTasks.length === 0 ? 0 : startIndex + 1}</span> to <span className="wf-mono font-bold text-slate-800 dark:text-slate-200">{endIndex}</span> of <span className="wf-mono font-bold text-slate-800 dark:text-slate-200">{filteredTasks.length}</span> tasks
               </div>
 
               <div className="flex items-center space-x-2">
@@ -945,18 +1004,19 @@ const TaskManager = () => {
       {/* Create / Edit Modal Screen */}
       {(isCreateModalOpen || isEditModalOpen) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-250">
+          <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-250">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-white/5 flex justify-between items-center bg-slate-50 dark:bg-slate-950/20">
-              <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isEditModalOpen ? 'bg-blue-500/10 text-blue-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+            <div className="relative px-6 py-4 flex justify-between items-center overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600"></div>
+              <h2 className="relative text-base font-bold text-white flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/15">
                   <ClipboardList className="w-4.5 h-4.5" />
                 </div>
                 <span>{isEditModalOpen ? 'Edit Task details' : 'Assign New Task'}</span>
               </h2>
               <button
                 onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); resetForm(); }}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 transition-all p-1.5 rounded-lg"
+                className="relative text-white/70 hover:text-white hover:bg-white/10 transition-all p-1.5 rounded-lg"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1182,18 +1242,19 @@ const TaskManager = () => {
       {/* View Details Modal Screen */}
       {isViewModalOpen && viewingTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-250">
+          <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-250">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-white/5 flex justify-between items-center bg-slate-50 dark:bg-slate-950/20">
-              <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-500/10 text-blue-500">
+            <div className="relative px-6 py-4 flex justify-between items-center overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600"></div>
+              <h2 className="relative text-base font-bold text-white flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/15">
                   <FileText className="w-4.5 h-4.5" />
                 </div>
                 <span>Task Details & Discussion</span>
               </h2>
               <button
                 onClick={() => { setIsViewModalOpen(false); setViewingTask(null); }}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 transition-all p-1.5 rounded-lg"
+                className="relative text-white/70 hover:text-white hover:bg-white/10 transition-all p-1.5 rounded-lg"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1294,13 +1355,16 @@ const TaskManager = () => {
                 </div>
                 <div className="space-y-1">
                   <span className="block text-slate-400 font-medium">Due Date</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                  <span className="wf-mono font-semibold text-slate-800 dark:text-slate-200">
                     {viewingTask.due_date ? new Date(viewingTask.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'No Limit'}
                   </span>
                 </div>
                 {viewingTask.ad_name && (
                   <div className="space-y-1">
-                    <span className="block text-slate-400 font-medium">Linked Asset</span>
+                    <span className="block text-slate-400 font-medium flex items-center gap-1">
+                      Linked Asset
+                      <ExternalLink className="w-3 h-3 text-slate-400" />
+                    </span>
                     <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block max-w-full" title={viewingTask.ad_name}>
                       {viewingTask.ad_name}
                     </span>
@@ -1325,7 +1389,7 @@ const TaskManager = () => {
                             <span className="font-bold text-slate-700 dark:text-slate-350">
                               {rem.username} <span className="ml-1 px-1.5 py-0.2 bg-blue-500/10 text-blue-500 rounded text-[8px] font-bold">{roleStr}</span>
                             </span>
-                            <span>{new Date(rem.at).toLocaleString()}</span>
+                            <span className="wf-mono">{new Date(rem.at).toLocaleString()}</span>
                           </div>
                           <p className="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{rem.text}</p>
                         </div>
@@ -1373,18 +1437,19 @@ const TaskManager = () => {
       {/* Status Update Remark Modal Screen */}
       {isStatusRemarkModalOpen && statusUpdateTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-250">
+          <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-250">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-white/5 flex justify-between items-center bg-slate-50 dark:bg-slate-950/20">
-              <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-500/10 text-amber-500">
+            <div className="relative px-6 py-4 flex justify-between items-center overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-500 to-orange-600"></div>
+              <h2 className="relative text-base font-bold text-white flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/15">
                   <Clock className="w-4.5 h-4.5" />
                 </div>
                 <span>Update Task Status</span>
               </h2>
               <button
                 onClick={() => { setIsStatusRemarkModalOpen(false); setStatusUpdateTask(null); }}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 transition-all p-1.5 rounded-lg"
+                className="relative text-white/70 hover:text-white hover:bg-white/10 transition-all p-1.5 rounded-lg"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1467,18 +1532,18 @@ const KPIItemCard = ({ title, value, color, icon: Icon, badge }) => {
   };
 
   return (
-    <div className={`bg-gradient-to-br border rounded-2xl p-4 shadow-sm dark:shadow-md flex items-center justify-between transition-all hover:scale-[1.01] ${colors[color] || colors.slate}`}>
+    <div className={`bg-gradient-to-br border rounded-2xl p-4 shadow-sm dark:shadow-md flex items-center justify-between transition-all duration-300 hover:scale-[1.02] hover:shadow-md ${colors[color] || colors.slate}`}>
       <div className="space-y-1">
         <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest leading-none">{title}</p>
-        <h4 className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
+        <h4 className="wf-mono text-lg font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
           <span>{value}</span>
           {badge && (
             <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
           )}
         </h4>
       </div>
-      <div className="p-2.5 bg-white/20 dark:bg-white/5 rounded-xl shrink-0">
-        <Icon className="w-4 h-4" />
+      <div className="p-3 bg-white/30 dark:bg-white/[0.06] rounded-xl shrink-0">
+        <Icon className="w-4.5 h-4.5" />
       </div>
     </div>
   );

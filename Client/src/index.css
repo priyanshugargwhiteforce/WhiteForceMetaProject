@@ -23,9 +23,10 @@
   --header-bg: rgba(2, 6, 23, 0.85);
 }
 
+
 .light {
   color-scheme: light;
-  --bg-main: #f8fafc;
+  --bg-main: #edf2f9;
   --bg-sidebar: #ffffff;
   --bg-card: #ffffff;
   --bg-input: #f1f5f9;
@@ -34,6 +35,7 @@
   --border-main: rgba(0, 0, 0, 0.1);
   --glass-bg: rgba(255, 255, 255, 0.85);
   --header-bg: rgba(248, 250, 252, 0.9);
+  --sameFont-col:#21244b;
 }
 
 body {
@@ -181,11 +183,10 @@ body {
   width: 90%;
 }
 
-h2 {
-  font-size: 2rem;
-  margin-bottom: 1.5rem;
+.headerTrack {
+  /* margin-bottom: 1.5rem; */
   text-align: center;
-  background: linear-gradient(to right, #60a5fa, #a855f7);
+  background: linear-gradient(to right, #3a7ed1, #8723e4);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -492,3 +493,44 @@ button:has(.lucide-sun), button:has(.lucide-moon) {
   display: none !important;
 }
 
+
+
+/* CSS by Raman  */
+
+/* header  */
+
+.fontUbuntu{
+font-family: "Roboto", sans-serif;
+    font-weight: 700;
+}
+
+.titleMeeting{
+  font-family: "Roboto", sans-serif;
+    font-weight: 500;
+    color: black;
+    font-size: 13px;
+}
+
+.tracking-tight{
+  color: white;
+}
+
+.pTagFont{
+font-family: "Poppins", sans-serif;
+}
+
+.jakartFont{
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+.letterSpace{
+  letter-spacing: 0.5px;
+}
+
+.colorFill{
+  color: var(--sameFont-col);
+}
+
+.logoHead{
+color: #21244b;
+}
