@@ -3,6 +3,7 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { formatMetaError } = require('../utils/meta-error');
+const { decrypt } = require('../utils/crypto');
 
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL
 
@@ -17,7 +18,7 @@ const resolveWhatsAppConfig = async (configId) => {
         const [[config]] = await pool.query('SELECT phone_number_id, waba_id, access_token FROM whatsapp_configs WHERE id = ?', [configIdVal]);
         if (config) {
             return {
-                token: config.access_token,
+                token: decrypt(config.access_token),
                 phoneId: config.phone_number_id,
                 wabaId: config.waba_id,
                 configId: configIdVal
@@ -35,7 +36,7 @@ const resolveWhatsAppConfig = async (configId) => {
             );
             if (matchedConfig) {
                 return {
-                    token: matchedConfig.access_token,
+                    token: decrypt(matchedConfig.access_token),
                     phoneId: matchedConfig.phone_number_id,
                     wabaId: matchedConfig.waba_id,
                     configId: matchedConfig.id
@@ -46,7 +47,7 @@ const resolveWhatsAppConfig = async (configId) => {
         const [[firstConfig]] = await pool.query('SELECT id, phone_number_id, waba_id, access_token FROM whatsapp_configs ORDER BY id ASC LIMIT 1');
         if (firstConfig) {
             return {
-                token: firstConfig.access_token,
+                token: decrypt(firstConfig.access_token),
                 phoneId: firstConfig.phone_number_id,
                 wabaId: firstConfig.waba_id,
                 configId: firstConfig.id
@@ -349,7 +350,7 @@ const downloadAndSaveWhatsAppAudio = async (mediaId, phoneId) => {
                 [phoneId]
             );
             if (config?.access_token) {
-                token = config.access_token;
+                token = decrypt(config.access_token);
             }
         }
         if (!token) {

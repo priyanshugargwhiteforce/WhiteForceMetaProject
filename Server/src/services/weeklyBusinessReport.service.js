@@ -3,6 +3,7 @@ const axios = require('axios');
 const { pool } = require('../config/db');
 const campaignsService = require('./whatsapp-campaigns.service');
 const { cleanPhoneNumber } = require('./dailyTaskReminder.service');
+const { decrypt } = require('../utils/crypto');
 
 /**
  * Format a 7-day Date range into compact string (e.g. "02-09 Oct" or "26 Sep - 03 Oct")
@@ -181,7 +182,7 @@ async function getWeeklyReportMetrics() {
     const accountMetricsMap = {};
 
     for (const cfg of metaConfigs) {
-        const token = cfg.access_token;
+        const token = decrypt(cfg.access_token);
         if (!token) continue;
 
         const [accs] = await pool.query(

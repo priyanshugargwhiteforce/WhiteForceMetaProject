@@ -30,6 +30,29 @@ const initSchema = async () => {
         `);
         console.log(' - whatsapp_configs table created/verified');
 
+        // 0c. Encrypt any legacy plain-text access tokens stored in config tables (idempotent)
+        try {
+            const { encrypt, decrypt, isEncrypted } = require('../utils/crypto');
+            for (const table of ['meta_configs', 'whatsapp_configs']) {
+                const [rows] = await pool.query(`SELECT id, access_token FROM ${table}`);
+                let migrated = 0;
+                for (const row of rows) {
+                    if (!row.access_token || isEncrypted(row.access_token)) continue;
+                    const encryptedToken = encrypt(row.access_token);
+                    // Safety: only write if the encrypted value decrypts back to the exact original token
+                    if (decrypt(encryptedToken) !== row.access_token) {
+                        console.error(` - Skipped token encryption for ${table} id=${row.id} (round-trip check failed)`);
+                        continue;
+                    }
+                    await pool.query(`UPDATE ${table} SET access_token = ? WHERE id = ?`, [encryptedToken, row.id]);
+                    migrated++;
+                }
+                if (migrated > 0) console.log(` - Encrypted ${migrated} plain-text access token(s) in ${table}`);
+            }
+        } catch (e) {
+            console.error(' - Access token encryption migration failed:', e.message);
+        }
+
         // 1. Meta Ad Accounts
         await pool.query(`
             CREATE TABLE IF NOT EXISTS meta_ad_accounts (

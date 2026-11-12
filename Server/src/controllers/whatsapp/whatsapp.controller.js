@@ -2,6 +2,7 @@ const axios = require('axios');
 const whatsappService = require('../../services/whatsapp.service');
 const { pool } = require('../../config/db');
 const campaignsService = require('../../services/whatsapp-campaigns.service');
+const { encrypt, decrypt } = require('../../utils/crypto');
 
 // WhatsApp Configs CRUD
 exports.getWhatsAppConfigs = async (req, res) => {
@@ -19,7 +20,8 @@ exports.createWhatsAppConfig = async (req, res) => {
         if (!name || !phoneId || !wabaId || !accessToken) {
             return res.status(400).json({ success: false, message: 'Name, Phone Number ID, WABA ID, and Access Token are required.' });
         }
-        const [result] = await pool.query('INSERT INTO whatsapp_configs (name, phone_number_id, waba_id, access_token) VALUES (?, ?, ?, ?)', [name, phoneId, wabaId, accessToken]);
+        const encryptedToken = encrypt(accessToken);
+        const [result] = await pool.query('INSERT INTO whatsapp_configs (name, phone_number_id, waba_id, access_token) VALUES (?, ?, ?, ?)', [name, phoneId, wabaId, encryptedToken]);
         res.status(201).json({ success: true, message: 'WhatsApp Account Config created.', configId: result.insertId });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -30,7 +32,13 @@ exports.updateWhatsAppConfig = async (req, res) => {
     try {
         const { id } = req.params;
         const { name, phoneId, wabaId, accessToken } = req.body;
-        await pool.query('UPDATE whatsapp_configs SET name = ?, phone_number_id = ?, waba_id = ?, access_token = ? WHERE id = ?', [name, phoneId, wabaId, accessToken, id]);
+        if (accessToken) {
+            const encryptedToken = encrypt(accessToken);
+            await pool.query('UPDATE whatsapp_configs SET name = ?, phone_number_id = ?, waba_id = ?, access_token = ? WHERE id = ?', [name, phoneId, wabaId, encryptedToken, id]);
+        } else {
+            // No new token supplied: keep the existing (encrypted) token as-is
+            await pool.query('UPDATE whatsapp_configs SET name = ?, phone_number_id = ?, waba_id = ? WHERE id = ?', [name, phoneId, wabaId, id]);
+        }
         res.json({ success: true, message: 'WhatsApp Account Config updated.' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -64,7 +72,7 @@ exports.getWhatsAppDetails = async (req, res) => {
         if (configIdVal > 0) {
             const [[config]] = await pool.query('SELECT waba_id, access_token FROM whatsapp_configs WHERE id = ?', [configIdVal]);
             if (config) {
-                accessToken = config.access_token;
+                accessToken = decrypt(config.access_token);
                 wabaId = config.waba_id;
             }
         }

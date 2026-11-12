@@ -30,8 +30,13 @@ exports.updateMetaConfig = async (req, res) => {
     try {
         const { id } = req.params;
         const { name, accessToken } = req.body;
-        const encryptedToken = encrypt(accessToken);
-        await pool.query('UPDATE meta_configs SET name = ?, access_token = ? WHERE id = ?', [name, encryptedToken, id]);
+        if (accessToken) {
+            const encryptedToken = encrypt(accessToken);
+            await pool.query('UPDATE meta_configs SET name = ?, access_token = ? WHERE id = ?', [name, encryptedToken, id]);
+        } else {
+            // No new token supplied: keep the existing (encrypted) token as-is
+            await pool.query('UPDATE meta_configs SET name = ? WHERE id = ?', [name, id]);
+        }
         res.json({ success: true, message: 'Meta Account Config updated.' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
