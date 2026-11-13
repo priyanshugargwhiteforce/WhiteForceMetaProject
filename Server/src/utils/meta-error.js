@@ -18,7 +18,12 @@ const formatMetaError = (error) => {
         } else {
             displayMsg = mainMsg;
         }
-        
+
+        // Code 190 = invalid/expired/revoked access token. Make the cause explicit for admins.
+        if (metaError.code === 190) {
+            displayMsg = `${displayMsg} — The saved access token is invalid or expired (Meta error 190). Please generate a new token and update it in Settings.`;
+        }
+
         const newErr = new Error(displayMsg);
         newErr.metaError = metaError; // Keep reference to raw error details
         return newErr;

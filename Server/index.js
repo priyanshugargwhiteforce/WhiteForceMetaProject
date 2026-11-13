@@ -1,3 +1,6 @@
+// Redact access tokens from all console output (PM2 logs) before anything else runs
+require('./src/utils/logRedactor').installConsoleRedaction();
+
 const dotenv = require('dotenv');
 const path = require('path');
 

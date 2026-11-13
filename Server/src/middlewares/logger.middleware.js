@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { redact } = require('../utils/logRedactor');
 
 // Ensure logs directory exists
 const logDir = path.join(__dirname, '..', '..', 'logs');
@@ -28,7 +29,7 @@ const accessLogger = (req, res, next) => {
         const logLine = `[${timestamp}] ${method} ${originalUrl} ${status} - ${duration}ms | IP: ${ip} | User: ${userId}\n`;
         
         // Append log line to access.log
-        fs.appendFile(accessLogStream, logLine, (err) => {
+        fs.appendFile(accessLogStream, redact(logLine), (err) => {
             if (err) console.error('Error writing to access.log:', err);
         });
     });
@@ -47,7 +48,7 @@ const errorLogger = (err, req) => {
                       `Stack: ${err.stack || 'No stack trace available'}\n` +
                       `${'-'.repeat(80)}\n`;
                       
-    fs.appendFile(errorLogStream, errorLine, (writeErr) => {
+    fs.appendFile(errorLogStream, redact(errorLine), (writeErr) => {
         if (writeErr) console.error('Error writing to error.log:', writeErr);
     });
 };

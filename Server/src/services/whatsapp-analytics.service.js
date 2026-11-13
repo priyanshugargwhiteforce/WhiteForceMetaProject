@@ -622,7 +622,7 @@ async function getLiveWabaAnalytics({ configId, start, end }) {
 
   const url = `https://graph.facebook.com/v24.0/${wabaId}?fields=analytics.start(${start}).end(${end}).granularity(DAY)&access_token=${token}`;
 
-  console.log(`Fetching live WABA analytics from Meta API: ${url}`);
+  console.log(`Fetching live WABA analytics from Meta API for WABA ${wabaId} (${start} - ${end})`);
   try {
     const response = await axios.get(url);
     return response.data;
@@ -640,7 +640,7 @@ async function syncLiveWabaPricing({ configId, start, end }) {
 
   const url = `https://graph.facebook.com/v24.0/${wabaId}?fields=pricing_analytics.start(${start}).end(${end}).granularity(DAILY).dimensions(["COUNTRY","PRICING_CATEGORY"])&access_token=${token}`;
 
-  console.log(`Syncing WABA pricing analytics from Meta API: ${url}`);
+  console.log(`Syncing WABA pricing analytics from Meta API for WABA ${wabaId} (${start} - ${end})`);
   try {
     const response = await axios.get(url);
     const dataPoints = response.data?.pricing_analytics?.data?.[0]?.data_points || [];
