@@ -27,6 +27,10 @@ const startServer = async () => {
     const { initWeeklyBusinessReportCron } = require('./src/services/weeklyBusinessReport.service');
     initWeeklyBusinessReportCron();
 
+    // Detect & auto-remove unauthorized WhatsApp webhook overrides (hijack protection)
+    const { initWebhookGuardCron } = require('./src/services/whatsapp-webhook/webhook-guard.service');
+    initWebhookGuardCron();
+
     // Start listening
     app.listen(PORT, () => {
         console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on http://localhost:${PORT}`);

@@ -1,4 +1,4 @@
-const nodemailer = require('nodemailer');
+const { isMailConfigured, createMailTransporter, getMailFrom } = require('../config/mail');
 
 /**
  * Send an email using Nodemailer
@@ -7,7 +7,7 @@ const nodemailer = require('nodemailer');
 const sendEmail = async (options) => {
     const { email, subject, resetUrl, username } = options;
 
-    const hasSmtpConfig = process.env.SMTP_USER && process.env.SMTP_PASS;
+    const hasSmtpConfig = isMailConfigured();
 
     // Premium HTML email template
     const htmlTemplate = `
@@ -153,18 +153,10 @@ const sendEmail = async (options) => {
         return { success: true, loggedToConsole: true };
     }
 
-    const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT || '587', 10),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS
-        }
-    });
+    const transporter = createMailTransporter();
 
     const mailOptions = {
-        from: process.env.SMTP_FROM || `"Meta API Project" <noreply@metaapiproject.com>`,
+        from: getMailFrom(),
         to: email,
         subject: subject,
         html: htmlTemplate
