@@ -511,9 +511,9 @@ font-family: "Roboto", sans-serif;
     font-size: 13px;
 }
 
-.tracking-tight{
-  color: white;
-}
+/* NOTE: a global `.tracking-tight { color: white; }` rule used to be here. It overrode Tailwind text colors
+   on every element using `tracking-tight` (e.g. Task Manager KPI numbers turned white in light theme).
+   Elements that need white text already set `text-white` explicitly. */
 
 .pTagFont{
 font-family: "Poppins", sans-serif;

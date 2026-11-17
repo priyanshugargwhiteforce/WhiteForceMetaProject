@@ -37,7 +37,7 @@ const Register = () => {
             } catch (err) {
                 console.error('Invite token validation error:', err);
                 setInviteExpired(true);
-                setError(err.response?.data?.message || 'Invitation link has expired (10-minute validity limit) or is invalid.');
+                setError(err.response?.data?.message || 'Invitation link has expired or is invalid.');
             } finally {
                 setInviteLoading(false);
             }
@@ -172,7 +172,7 @@ const Register = () => {
                         <div>
                           <span className="font-extrabold text-xs text-rose-700 dark:text-rose-400 uppercase tracking-wider block">Invitation Link Expired</span>
                           <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5 leading-snug">
-                            This registration link has reached its 10-minute validity limit. Please request a new invitation link.
+                            This registration link has expired or has been deactivated. Please request a new invitation link.
                           </p>
                         </div>
                       </div>

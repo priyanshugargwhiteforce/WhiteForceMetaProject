@@ -39,6 +39,14 @@ const Profile = () => {
   const [generatingInvite, setGeneratingInvite] = useState(false);
   const [copiedInvite, setCopiedInvite] = useState(false);
 
+  // Admin Manager Registration Links (no time expiry, expired manually)
+  const [adminInvites, setAdminInvites] = useState([]);
+  const [loadingAdminInvites, setLoadingAdminInvites] = useState(true);
+  const [revokingInviteId, setRevokingInviteId] = useState(null);
+  const [copiedAdminInviteId, setCopiedAdminInviteId] = useState(null);
+  // true when the API server is an older version without the no-expiry invite endpoints
+  const [inviteBackendOutdated, setInviteBackendOutdated] = useState(false);
+
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
@@ -68,6 +76,64 @@ const Profile = () => {
     return () => clearInterval(interval);
   }, [timeLeft]);
 
+  const buildInviteUrl = (inviteToken) => `${window.location.origin}/register?token=${inviteToken}`;
+
+  const fetchAdminInvites = async () => {
+    try {
+      const res = await axios.get('/api/auth/invites', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) setAdminInvites(res.data.invites || []);
+    } catch (err) {
+      console.error('Failed to load manager registration links:', err);
+    } finally {
+      setLoadingAdminInvites(false);
+    }
+  };
+
+  // Load admin Manager Registration Links on mount
+  useEffect(() => {
+    if (user?.role !== 'admin' || !token) return undefined;
+    let cancelled = false;
+    axios.get('/api/auth/invites', { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => {
+        if (!cancelled && res.data.success) setAdminInvites(res.data.invites || []);
+      })
+      .catch((err) => {
+        console.error('Failed to load manager registration links:', err);
+        if (!cancelled && err.response?.status === 404) setInviteBackendOutdated(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingAdminInvites(false);
+      });
+    return () => { cancelled = true; };
+  }, [user?.role, token]);
+
+  const handleRevokeAdminInvite = async (inviteId) => {
+    if (!window.confirm('Expire this Manager Registration Link? Nobody will be able to register with it after this.')) return;
+    setRevokingInviteId(inviteId);
+    try {
+      const res = await axios.post(`/api/auth/invites/${inviteId}/revoke`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) showToast('Manager Registration Link expired successfully.');
+      await fetchAdminInvites();
+    } catch (err) {
+      console.error('Failed to expire invite link:', err);
+      showToast(err.response?.data?.message || 'Failed to expire the link.', 'error');
+    } finally {
+      setRevokingInviteId(null);
+    }
+  };
+
+  const handleCopyAdminInvite = (invite) => {
+    if (!invite?.invite_token) return;
+    navigator.clipboard.writeText(buildInviteUrl(invite.invite_token));
+    setCopiedAdminInviteId(invite.id);
+    showToast('Invitation link copied to clipboard!');
+    setTimeout(() => setCopiedAdminInviteId(null), 3000);
+  };
+
   const handleGenerateInviteLink = async () => {
     setGeneratingInvite(true);
     setCopiedInvite(false);
@@ -75,6 +141,16 @@ const Profile = () => {
       const res = await axios.post('/api/auth/generate-invite', {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (res.data.success && res.data.never_expires) {
+        // Admin Manager link: no countdown, stays active until expired manually
+        showToast('Manager Registration Link generated. It stays active until you expire it.');
+        await fetchAdminInvites();
+        return;
+      }
+      if (res.data.success && user?.role === 'admin') {
+        // Admin got an old-style 10-minute link: the API server has not been updated yet
+        setInviteBackendOutdated(true);
+      }
       if (res.data.success) {
         const fullLink = `${window.location.origin}/register?token=${res.data.invite_token}`;
         setInviteLink(fullLink);
@@ -466,14 +542,14 @@ const Profile = () => {
                       </div>
                       <div>
                         <h4 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center space-x-2 flex-wrap">
-                          <span>{user.role === 'admin' ? 'Manager Registration Link (10-Min Validity)' : 'Team Registration Link (10-Min Validity)'}</span>
+                          <span>{user.role === 'admin' ? 'Manager Registration Link (No Expiry)' : 'Team Registration Link (10-Min Validity)'}</span>
                           <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 border border-indigo-300 dark:bg-indigo-500/20 dark:text-indigo-300 dark:border-indigo-500/30 text-[10px] font-extrabold uppercase rounded-full">
                             {user.role === 'admin' ? 'Admin Scope (Creates Managers)' : 'Manager Scope (Creates Team)'}
                           </span>
                         </h4>
                         <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium mt-0.5 leading-relaxed">
                           {user.role === 'admin' 
-                            ? `Share this link with new Managers. Registered users will automatically receive Manager access under your Admin system.`
+                            ? `Share this link with new Managers. Registered users will automatically receive Manager access under your Admin system. The link has no time limit and stays active until you click "Expire Link".`
                             : `Share this link with new team members. When registered, they will automatically be assigned under your team (${user.username}).`
                           }
                         </p>
@@ -487,11 +563,88 @@ const Profile = () => {
                       className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-500/20 transition-all flex items-center space-x-2 shrink-0 disabled:opacity-50 cursor-pointer"
                     >
                       <Zap className="w-4 h-4 text-amber-300" />
-                      <span>{generatingInvite ? 'Generating...' : (inviteLink && timeLeft > 0 ? 'Re-generate New Link' : '⚡ Generate 10-Min Invite Link')}</span>
+                      <span>{generatingInvite ? 'Generating...' : (user.role === 'admin' ? 'Generate New Manager Link' : (inviteLink && timeLeft > 0 ? 'Re-generate New Link' : '⚡ Generate 10-Min Invite Link'))}</span>
                     </button>
                   </div>
 
-                  {/* DISPLAY GENERATED LINK & COUNTDOWN TIMER */}
+                  {/* ADMIN: MANAGER REGISTRATION LINKS (NO EXPIRY, MANUAL EXPIRE) */}
+                  {user.role === 'admin' && inviteBackendOutdated && (
+                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-300 text-[11px] font-semibold leading-relaxed">
+                      ⚠️ The API server is running an older version that does not support no-expiry Manager links yet.
+                      Links generated now are old 10-minute links and cannot be expired manually.
+                      Deploy the latest backend (and restart the server) to enable no-expiry links with the "Expire Link" button.
+                    </div>
+                  )}
+
+                  {user.role === 'admin' && !inviteBackendOutdated && (
+                    <div className="space-y-3">
+                      {loadingAdminInvites && adminInvites.length === 0 && (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Loading links...</p>
+                      )}
+                      {!loadingAdminInvites && adminInvites.filter(i => i.status === 'active').length === 0 && (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                          No active Manager Registration Link. Click "Generate New Manager Link" to create one.
+                        </p>
+                      )}
+
+                      {adminInvites.filter(i => i.status === 'active').map((invite) => (
+                        <div key={invite.id} className="p-4 rounded-xl bg-white border border-indigo-200 dark:bg-slate-950/80 dark:border-indigo-500/20 space-y-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <span className="font-bold text-indigo-900 dark:text-indigo-300 flex items-center space-x-1.5">
+                              <Clock className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                              <span>Created {invite.created_at ? new Date(invite.created_at).toLocaleString() : ''}{invite.created_by_name ? ` by ${invite.created_by_name}` : ''}</span>
+                            </span>
+                            <span className="font-black text-[10px] uppercase px-2.5 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30">
+                              Active · Used {invite.used_count || 0}x
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                            <input
+                              type="text"
+                              readOnly
+                              value={buildInviteUrl(invite.invite_token)}
+                              className="flex-1 min-w-0 bg-slate-100 border border-slate-300 text-slate-900 font-mono text-xs rounded-xl px-3 py-2 dark:bg-black/40 dark:border-white/10 dark:text-indigo-200 select-all focus:outline-none"
+                            />
+                            <div className="flex gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleCopyAdminInvite(invite)}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer"
+                              >
+                                {copiedAdminInviteId === invite.id ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
+                                <span>{copiedAdminInviteId === invite.id ? 'Copied!' : 'Copy Link'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRevokeAdminInvite(invite.id)}
+                                disabled={revokingInviteId === invite.id}
+                                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                <span>{revokingInviteId === invite.id ? 'Expiring...' : 'Expire Link'}</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {adminInvites.some(i => i.status === 'revoked') && (
+                        <details className="text-[11px] text-slate-600 dark:text-slate-400">
+                          <summary className="cursor-pointer font-semibold">Expired links ({adminInvites.filter(i => i.status === 'revoked').length})</summary>
+                          <ul className="mt-2 space-y-1">
+                            {adminInvites.filter(i => i.status === 'revoked').map((invite) => (
+                              <li key={invite.id}>
+                                Created {invite.created_at ? new Date(invite.created_at).toLocaleString() : ''} · Used {invite.used_count || 0}x · Expired {invite.revoked_at ? new Date(invite.revoked_at).toLocaleString() : ''}{invite.revoked_by_name ? ` by ${invite.revoked_by_name}` : ''}
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                    </div>
+                  )}
+
+                  {/* DISPLAY GENERATED LINK & COUNTDOWN TIMER (10-min links; for admin only shown if backend is an older version) */}
                   {inviteLink && (
                     <div className="p-4 rounded-xl bg-white border border-indigo-200 dark:bg-slate-950/80 dark:border-indigo-500/20 space-y-3">
                       <div className="flex items-center justify-between text-xs">

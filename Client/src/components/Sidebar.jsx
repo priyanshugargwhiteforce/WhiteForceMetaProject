@@ -326,6 +326,12 @@ const Sidebar = ({ isOpen, onClose }) => {
           badge={pendingCount}
         />
         <NavItem
+          icon={FileText}
+          label="MoM"
+          active={isActive('/mom')}
+          onClick={() => navigate('/mom')}
+        />
+        <NavItem
           icon={FolderOpen}
           label="Media Library"
           active={isActive('/media-library')}

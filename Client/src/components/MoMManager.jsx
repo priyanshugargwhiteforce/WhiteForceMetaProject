@@ -888,6 +888,7 @@ const MoMManager = () => {
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-900 dark:to-slate-950 backdrop-blur-md  dark:text-slate-400 border-b border-slate-200 dark:border-white/5 titleMeeting">
                   <tr>
+                    <th className="p-4 text-blue-600 text-center w-14">S.No.</th>
                     <th className="p-4 text-blue-600">Meeting Title</th>
                     <th className="p-4 text-blue-600">Department</th>
                     <th className="p-4 text-blue-600">Meeting Date & Day</th>
@@ -898,7 +899,7 @@ const MoMManager = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-medium text-slate-700 dark:text-slate-200">
-                  {paginatedMoms.map((item) => {
+                  {paginatedMoms.map((item, index) => {
                     const withDisplay = item.meeting_with === 'Other' ? (item.custom_meeting_with || 'Other') : item.meeting_with;
                     const pointsCount = Array.isArray(item.discussion_points) ? item.discussion_points.length : 0;
                     const canEditOrDelete = user?.role === 'admin' || user?.id === item.created_by || user?.id === item.creator_manager_id;
@@ -906,6 +907,7 @@ const MoMManager = () => {
 
                     return (
                       <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] even:bg-slate-50/40 dark:even:bg-white/[0.015] transition-colors">
+                        <td className="p-4 text-center font-bold text-slate-500 dark:text-slate-400 tabular-nums">{startIndex + index + 1}</td>
                         <td className="p-4 font-semibold pTagFont text-slate-900 dark:text-white max-w-xs truncate">
                           <div>
                             <span className="block truncate">{item.title}</span>

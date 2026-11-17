@@ -1597,6 +1597,25 @@ const initSchema = async () => {
             // Initialize PO (Purchase Order) Database Table
             const POModel = require('../models/po/po.model');
             await POModel.createTable();
+
+            // Admin-generated Manager Registration Links (no time expiry, revoked manually by admin)
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS registration_invites (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    jti VARCHAR(64) NOT NULL UNIQUE,
+                    created_by INT NOT NULL,
+                    creator_role VARCHAR(20) NOT NULL,
+                    issued_at INT NOT NULL,
+                    status ENUM('active', 'revoked') NOT NULL DEFAULT 'active',
+                    used_count INT NOT NULL DEFAULT 0,
+                    last_used_at TIMESTAMP NULL,
+                    revoked_by INT NULL,
+                    revoked_at TIMESTAMP NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_registration_invites_status (status)
+                )
+            `);
+            console.log(' - registration_invites table created/verified');
         } catch (migErr) {
             console.error('[Migration Error] database schema initialization failed:', migErr.message);
             throw migErr;

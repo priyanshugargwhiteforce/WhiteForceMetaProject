@@ -233,6 +233,9 @@ const runWebhookGuard = async () => {
             try {
                 const issues = await checkWaba(wabaId, configId, [...phoneIds]);
                 issueCount += issues.length;
+                if (issues.length === 0) {
+                    console.log(`[Webhook Guard] WABA ${wabaId} (config ${configId}) OK - no webhook overrides.`);
+                }
             } catch (err) {
                 failedCount++;
                 const msg = metaErrorMessage(err);
