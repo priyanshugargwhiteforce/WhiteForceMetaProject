@@ -1,5 +1,13 @@
 const { pool } = require('../config/db');
 
+// Never sent to the client / attached to req.user
+const SENSITIVE_FIELDS = ['password', 'reset_token', 'reset_token_expiry'];
+const stripSensitive = (row) => {
+    if (!row) return row;
+    for (const f of SENSITIVE_FIELDS) delete row[f];
+    return row;
+};
+
 const User = {
     async createTable() {
         const query = `
@@ -15,6 +23,8 @@ const User = {
                 whatsapp_access TINYINT(1) DEFAULT 0,
                 linkedin_access TINYINT(1) DEFAULT 0,
                 meta_publish TINYINT(1) DEFAULT 0,
+                media_access TINYINT(1) DEFAULT 0,
+                reports_access TINYINT(1) DEFAULT 0,
                 manager_id INT NULL DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 CONSTRAINT fk_user_manager FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE SET NULL
@@ -42,6 +52,9 @@ const User = {
         try { await pool.query("ALTER TABLE users ADD COLUMN designation VARCHAR(255) NULL"); } catch (e) {}
         try { await pool.query("ALTER TABLE users ADD COLUMN phone VARCHAR(50) NULL"); } catch (e) {}
         try { await pool.query("ALTER TABLE users ADD COLUMN profile_image LONGTEXT NULL"); } catch (e) {}
+        // Media Library / Reports: off by default, only an Admin can grant them
+        try { await pool.query("ALTER TABLE users ADD COLUMN media_access TINYINT(1) DEFAULT 0"); } catch (e) {}
+        try { await pool.query("ALTER TABLE users ADD COLUMN reports_access TINYINT(1) DEFAULT 0"); } catch (e) {}
     },
 
     async findByEmail(email) {
@@ -60,23 +73,29 @@ const User = {
             'INSERT INTO users (username, email, password, role, status, meta_access, google_access, whatsapp_access, linkedin_access, meta_publish, manager_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [username, email, password, role, status, meta_access, google_access, whatsapp_access, linkedin_access, meta_publish, manager_id || null]
         );
+        // Optional extra permissions (set separately so registration never depends on these columns)
+        const extra = {};
+        if (userData.media_access) extra.media_access = 1;
+        if (userData.reports_access) extra.reports_access = 1;
+        if (Object.keys(extra).length) await this.update(result.insertId, extra);
         return result.insertId;
     },
 
     async findById(id) {
+        // u.* keeps this working even if an optional column is missing; sensitive fields are stripped
         const query = `
-            SELECT u.id, u.username, u.email, u.role, u.status, u.meta_access, u.google_access, u.whatsapp_access, u.linkedin_access, u.meta_publish, u.manager_id, u.department, u.designation, u.phone, u.profile_image, mgr.username AS manager_name, u.created_at 
+            SELECT u.*, mgr.username AS manager_name
             FROM users u 
             LEFT JOIN users mgr ON u.manager_id = mgr.id 
             WHERE u.id = ?
         `;
         const [rows] = await pool.query(query, [id]);
-        return rows[0];
+        return stripSensitive(rows[0]);
     },
 
     async findAll(managerId = null) {
         let query = `
-            SELECT u.id, u.username, u.email, u.role, u.status, u.meta_access, u.google_access, u.whatsapp_access, u.linkedin_access, u.meta_publish, u.manager_id, u.department, u.designation, u.phone, u.profile_image, mgr.username AS manager_name, u.created_at 
+            SELECT u.*, mgr.username AS manager_name
             FROM users u 
             LEFT JOIN users mgr ON u.manager_id = mgr.id
         `;
@@ -87,7 +106,7 @@ const User = {
         }
         query += ' ORDER BY u.created_at DESC';
         const [rows] = await pool.query(query, params);
-        return rows;
+        return rows.map(stripSensitive);
     },
 
     async findManagers() {

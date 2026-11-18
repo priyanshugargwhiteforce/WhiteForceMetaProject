@@ -49,8 +49,15 @@ const Register = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    // Form is available only with a valid, verified invitation link
+    const canRegister = Boolean(inviteTokenParam && inviteDetails && !inviteExpired);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!canRegister) {
+            setError('Registration is available only through a valid invitation link.');
+            return;
+        }
         if (inviteExpired) {
             setError('Cannot register with an expired invitation link. Please request a new link from your Manager.');
             return;
@@ -178,7 +185,27 @@ const Register = () => {
                       </div>
                     )}
 
+                    {/* No invitation link: registration is closed to the public */}
+                    {!inviteTokenParam && (
+                      <div className="mb-5 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-200 flex items-start space-x-3 shadow-sm">
+                        <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-extrabold text-xs text-amber-800 dark:text-amber-300 uppercase tracking-wider block">Invitation Only</span>
+                          <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5 leading-snug">
+                            Registration is available only through a link shared by your Admin or Manager. Please ask them for a registration link.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {inviteTokenParam && !inviteDetails && !inviteExpired && (
+                      <div className="mb-5 p-4 rounded-xl text-center text-xs font-semibold text-slate-500 dark:text-slate-400 animate-pulse">
+                        Verifying invitation link...
+                      </div>
+                    )}
+
                     {error && <div className="error-message">{error}</div>}
+                    {canRegister && (
                     <form onSubmit={handleSubmit}>
                         <div className="form-group relative">
                             <label className="text-slate-500 dark:text-slate-400 text-xs font-semibold mb-2 block">Username</label>
@@ -229,6 +256,7 @@ const Register = () => {
                             {loading ? 'Creating account...' : 'Register'}
                         </button>
                     </form>
+                    )}
                     <div className="switch-auth">
                         Already have an account? <Link to="/login">Login here</Link>
                     </div>

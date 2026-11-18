@@ -19,6 +19,7 @@ import {
   MessageCircle,
   PieChart,
   FileText,
+  NotebookPen,
   Send,
   TrendingUp,
   Briefcase,
@@ -226,7 +227,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
         className={`
-          relative shrink-0 ${isPinned ? 'w-72' : 'w-20'} fixed inset-y-0 left-0 z-[70] md:sticky md:top-0 h-screen transition-all duration-300
+          shrink-0 ${isPinned ? 'w-72' : 'w-20'} fixed inset-y-0 left-0 z-[70] md:sticky md:top-0 h-screen transition-all duration-300
           ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
         `}
       >
@@ -311,7 +312,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
       <SidebarUIContext.Provider value={{ collapsed: !(isExpanded || isOpen), expand: () => setIsPinned(true) }}>
-      <nav className={`flex-1 flex justify-between flex-col space-y-1.5 overflow-y-auto pt-4 ${(isExpanded || isOpen) ? 'px-4' : 'px-2'}`}>
+      <nav className={`flex-1 flex flex-col space-y-1.5 overflow-y-auto pt-4 ${(isExpanded || isOpen) ? 'px-4' : 'px-2'}`}>
         <NavItem
           icon={LayoutDashboard}
           label="Overview"
@@ -326,17 +327,20 @@ const Sidebar = ({ isOpen, onClose }) => {
           badge={pendingCount}
         />
         <NavItem
-          icon={FileText}
+          icon={NotebookPen}
           label="MoM"
           active={isActive('/mom')}
           onClick={() => navigate('/mom')}
         />
-        <NavItem
-          icon={FolderOpen}
-          label="Media Library"
-          active={isActive('/media-library')}
-          onClick={() => navigate('/media-library')}
-        />
+        {/* Media Library: only Admin, or users the Admin has given Media Library access */}
+        {(user?.role === 'admin' || !!user?.media_access) && (
+          <NavItem
+            icon={FolderOpen}
+            label="Media Library"
+            active={isActive('/media-library')}
+            onClick={() => navigate('/media-library')}
+          />
+        )}
         {(user?.role === 'admin' || !!user?.meta_access || !!user?.meta_publish) && (
           <NavDropdown
             icon={MetaIcon}
@@ -703,6 +707,16 @@ const Sidebar = ({ isOpen, onClose }) => {
         )}
 
 
+        {/* Reports: only Admin, or users the Admin has given Reports access */}
+        {(user?.role === 'admin' || !!user?.reports_access) && (
+          <NavItem
+            icon={PieChart}
+            label="Reports"
+            active={isActive('/reports')}
+            onClick={() => navigate('/reports')}
+          />
+        )}
+
         {(user?.role === 'admin' || user?.role === 'manager') && (
           <>
             {/* <div className={`pt-6 pb-2 ${(isExpanded || isOpen) ? 'px-4' : 'px-2'}`}>
@@ -712,12 +726,6 @@ const Sidebar = ({ isOpen, onClose }) => {
                 <div className="h-px bg-slate-200 dark:bg-white/10 mx-1"></div>
               )}
             </div> */}
-            <NavItem
-              icon={PieChart}
-              label="Reports"
-              active={isActive('/reports')}
-              onClick={() => navigate('/reports')}
-            />
             <NavDropdown
               icon={Settings}
               label="Settings"

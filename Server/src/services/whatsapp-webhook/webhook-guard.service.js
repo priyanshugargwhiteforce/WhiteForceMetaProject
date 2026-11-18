@@ -21,6 +21,7 @@ const cron = require('node-cron');
 const axios = require('axios');
 const { pool } = require('../../config/db');
 const { getMailConfig, isMailConfigured, createMailTransporter, getMailFrom } = require('../../config/mail');
+const { emailShell, formatIST, getEmailLogoAttachments } = require('../../utils/emailLayout');
 const { resolveWhatsAppConfig } = require('../whatsapp.service');
 
 const GRAPH = 'https://graph.facebook.com/v24.0';
@@ -81,9 +82,15 @@ const sendAlert = async (subject, lines) => {
             to: to.join(','),
             subject: `[SECURITY] ${subject}`,
             text: `${subject}\n\n- ${lines.join('\n- ')}\n\nTime: ${new Date().toISOString()}`,
-            html: `<h3 style="color:#b91c1c">${escapeHtml(subject)}</h3>`
-                + `<ul>${lines.map((l) => `<li>${escapeHtml(l)}</li>`).join('')}</ul>`
-                + `<p style="color:#64748b">Time: ${new Date().toISOString()}</p>`
+            html: emailShell({
+                title: subject,
+                subtitle: 'WhatsApp Security Alert',
+                accent: 'alert',
+                bodyHtml: `<h2 style="margin:0 0 12px;font-size:18px;line-height:1.4;color:#b91c1c;">${escapeHtml(subject)}</h2>`
+                    + `<ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:#334155;">${lines.map((l) => `<li style="margin-bottom:6px;">${escapeHtml(l)}</li>`).join('')}</ul>`
+                    + `<p style="margin:16px 0 0;font-size:12px;color:#64748b;">Time: ${escapeHtml(formatIST())} (${new Date().toISOString()})</p>`
+            }),
+            attachments: getEmailLogoAttachments()
         });
         console.log(`[Webhook Guard] Alert email sent to ${to.length} recipient(s).`);
     } catch (err) {

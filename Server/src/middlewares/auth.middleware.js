@@ -96,6 +96,43 @@ const authorizeLinkedin = (req, res, next) => {
     next();
 };
 
+const hasFlag = (user, flag) => Boolean(user) && (user[flag] === 1 || user[flag] === true);
+
+// Reports: only Admin, or users the Admin has given Reports access
+const authorizeReports = (req, res, next) => {
+    if (!req.user || (req.user.role !== 'admin' && !hasFlag(req.user, 'reports_access'))) {
+        return res.status(403).json({
+            success: false,
+            message: 'Forbidden: You do not have access to Reports. Please ask your Admin.'
+        });
+    }
+    next();
+};
+
+// Media Library page actions that change the library (delete): Admin or Media Library access only
+const authorizeMediaLibrary = (req, res, next) => {
+    if (!req.user || (req.user.role !== 'admin' && !hasFlag(req.user, 'media_access'))) {
+        return res.status(403).json({
+            success: false,
+            message: 'Forbidden: You do not have access to the Media Library. Please ask your Admin.'
+        });
+    }
+    next();
+};
+
+// Browsing / uploading media is also needed by the media picker inside Meta Publish,
+// LinkedIn and WhatsApp template builders, so those permissions keep working as before
+const MEDIA_PICKER_FLAGS = ['media_access', 'meta_publish', 'linkedin_access', 'whatsapp_access'];
+const authorizeMediaUse = (req, res, next) => {
+    if (!req.user || (req.user.role !== 'admin' && !MEDIA_PICKER_FLAGS.some((f) => hasFlag(req.user, f)))) {
+        return res.status(403).json({
+            success: false,
+            message: 'Forbidden: You do not have access to the Media Library. Please ask your Admin.'
+        });
+    }
+    next();
+};
+
 module.exports = { 
     protect, 
     authorize,
@@ -103,5 +140,8 @@ module.exports = {
     authorizeMetaPublish,
     authorizeGoogle,
     authorizeWhatsapp,
-    authorizeLinkedin
+    authorizeLinkedin,
+    authorizeReports,
+    authorizeMediaLibrary,
+    authorizeMediaUse
 };

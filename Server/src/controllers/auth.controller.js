@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/user.model');
-const sendEmail = require('../services/mail.service');
+const otpService = require('../services/passwordOtp.service');
 const { pool } = require('../config/db');
 
 const INVITE_REVOKED_MESSAGE = 'This invitation link has been deactivated by the administrator. Please request a new link.';
@@ -28,6 +28,17 @@ const buildAdminInviteToken = (invite, managerName) => jwt.sign(
     process.env.JWT_SECRET
 );
 
+const INVITE_REQUIRED_MESSAGE = 'Registration is by invitation only. Please ask your Admin or Manager for a registration link.';
+const INVITER_INACTIVE_MESSAGE = 'This invitation link is no longer valid. Please ask your Admin or Manager for a new link.';
+
+// The person who created the link must still exist, be active and have the right role
+const isInviterActive = async (decoded) => {
+    const inviter = await User.findById(decoded.manager_id);
+    if (!inviter || inviter.status !== 'active') return false;
+    if (decoded.creator_role === 'admin') return inviter.role === 'admin';
+    return inviter.role === 'manager' || inviter.role === 'admin';
+};
+
 const generateToken = (id) => {
     if (!process.env.JWT_SECRET) {
         console.error('CRITICAL ERROR: JWT_SECRET is not defined in .env file');
@@ -46,6 +57,11 @@ exports.register = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Please provide all fields' });
         }
 
+        // Invitation only: an account can be created only through a link shared by an Admin or Manager
+        if (!invite_token) {
+            return res.status(403).json({ success: false, invite_required: true, message: INVITE_REQUIRED_MESSAGE });
+        }
+
         const userExists = await User.findByEmail(email);
         if (userExists) {
             return res.status(400).json({ success: false, message: 'User already exists' });
@@ -55,33 +71,38 @@ exports.register = async (req, res) => {
         let assignedRole = 'user';
         let usedInviteJti = null;
 
-        if (invite_token) {
-            try {
-                const decoded = jwt.verify(invite_token, process.env.JWT_SECRET);
-                if (decoded.type === 'team_invite' && decoded.manager_id) {
-                    if (await isInviteRevoked(decoded)) {
-                        return res.status(410).json({ success: false, message: INVITE_REVOKED_MESSAGE });
-                    }
-                    usedInviteJti = decoded.jti || null;
-                    if (decoded.creator_role === 'admin') {
-                        // Admin invites create Manager accounts
-                        assignedRole = 'manager';
-                        assignedManagerId = null;
-                    } else {
-                        // Manager invites create Team Member accounts linked to that Manager
-                        assignedRole = 'user';
-                        assignedManagerId = decoded.manager_id;
-                    }
-                }
-            } catch (err) {
-                if (err.name === 'TokenExpiredError') {
-                    return res.status(410).json({
-                        success: false,
-                        message: 'Invitation link has expired (10-minute limit). Please ask for a new link.'
-                    });
-                }
-                return res.status(400).json({ success: false, message: 'Invalid invitation link.' });
+        let decoded;
+        try {
+            decoded = jwt.verify(invite_token, process.env.JWT_SECRET);
+        } catch (err) {
+            if (err.name === 'TokenExpiredError') {
+                return res.status(410).json({
+                    success: false,
+                    message: 'Invitation link has expired (10-minute limit). Please ask for a new link.'
+                });
             }
+            return res.status(400).json({ success: false, message: 'Invalid invitation link.' });
+        }
+
+        if (decoded.type !== 'team_invite' || !decoded.manager_id) {
+            return res.status(400).json({ success: false, message: 'Invalid invitation link.' });
+        }
+        if (await isInviteRevoked(decoded)) {
+            return res.status(410).json({ success: false, message: INVITE_REVOKED_MESSAGE });
+        }
+        if (!(await isInviterActive(decoded))) {
+            return res.status(410).json({ success: false, message: INVITER_INACTIVE_MESSAGE });
+        }
+
+        usedInviteJti = decoded.jti || null;
+        if (decoded.creator_role === 'admin') {
+            // Admin invites create Manager accounts
+            assignedRole = 'manager';
+            assignedManagerId = null;
+        } else {
+            // Manager invites create Team Member accounts linked to that Manager
+            assignedRole = 'user';
+            assignedManagerId = decoded.manager_id;
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -209,6 +230,9 @@ exports.validateInviteToken = async (req, res) => {
         if (await isInviteRevoked(decoded)) {
             return res.status(410).json({ success: false, expired: true, message: INVITE_REVOKED_MESSAGE });
         }
+        if (!(await isInviterActive(decoded))) {
+            return res.status(410).json({ success: false, expired: true, message: INVITER_INACTIVE_MESSAGE });
+        }
 
         res.status(200).json({
             success: true,
@@ -317,66 +341,100 @@ exports.getMe = async (req, res) => {
     }
 };
 
+/* ------------------------------------------------------------------ */
+/* Forgot password (users & managers) - verification code by email     */
+/* ------------------------------------------------------------------ */
+
+const RESET_SESSION_MINUTES = 15;
+
+const hashResetToken = (value) => crypto.createHash('sha256').update(String(value)).digest('hex');
+
+const sendOtpError = (res, error) => {
+    if (error instanceof otpService.OtpError) {
+        return res.status(error.status).json({ success: false, message: error.message, ...error.extra });
+    }
+    console.error('[Password OTP] Error:', error.message);
+    return res.status(500).json({ success: false, message: 'Something went wrong. Please try again.' });
+};
+
+// Step 1: request a code. The email must belong to a registered, active user/manager account.
 exports.forgotPassword = async (req, res) => {
     try {
-        const { email } = req.body;
-
+        const email = String(req.body?.email || '').trim();
         if (!email) {
             return res.status(400).json({ success: false, message: 'Please provide an email address' });
         }
 
         const user = await User.findByEmail(email);
         if (!user) {
-            return res.status(404).json({ success: false, message: 'No account found with this email' });
+            return res.status(404).json({ success: false, message: 'This email is not registered. Please check the email address and try again.' });
         }
-
-        // Specific condition: admin cannot reset password via email
         if (user.role === 'admin') {
-            return res.status(403).json({ 
-                success: false, 
-                message: 'Password reset via email is disabled for Admin accounts.' 
-            });
+            return res.status(403).json({ success: false, message: 'Password reset via email is disabled for Admin accounts. Please use Change Password in your Profile.' });
+        }
+        if (user.status !== 'active') {
+            return res.status(403).json({ success: false, message: `This account is ${user.status}. Please contact your Admin.` });
         }
 
-        // Generate token
-        const resetToken = crypto.randomBytes(20).toString('hex');
-        const tokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+        const otp = await otpService.createOtp({ userId: user.id, purpose: otpService.PURPOSES.FORGOT_PASSWORD, sentTo: user.email });
 
-        // Update user
-        await User.update(user.id, {
-            reset_token: resetToken,
-            reset_token_expiry: tokenExpiry
-        });
+        try {
+            await otpService.sendForgotPasswordCode({ to: user.email, username: user.username, code: otp.code });
+        } catch (mailError) {
+            await otpService.discardOtp(otp.id).catch(() => {});
+            console.error(`[Password OTP] Could not send forgot-password code to user ${user.id}:`, mailError.message);
+            return res.status(503).json({ success: false, message: 'Could not send the verification email right now. Please try again later.' });
+        }
 
-        // Construct reset URL
-        const frontendUrl = process.env.CLIENT_URL || req.headers.origin || 'http://localhost:5173';
-        const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
-
-        // Send email
-        const mailResult = await sendEmail({
-            email: user.email,
-            subject: 'Password Reset Request',
-            resetUrl,
-            username: user.username
-        });
-
-        const responseObj = {
+        return res.status(200).json({
             success: true,
-            message: 'Password reset email sent successfully.'
-        };
-
-        // If in development mode and SMTP not configured, return reset token in response to make testing easier!
-        if (process.env.NODE_ENV === 'development' && mailResult.loggedToConsole) {
-            responseObj.testResetUrl = resetUrl;
-            responseObj.debug = 'SMTP not configured, reset URL printed to server console and sent in this response.';
-        }
-
-        res.status(200).json(responseObj);
+            message: `Verification code sent to ${user.email}. The code is valid for ${otpService.OTP_TTL_MINUTES} minutes.`,
+            otp_flow: true,
+            expires_in_seconds: otpService.OTP_TTL_MINUTES * 60,
+            resend_after_seconds: otpService.OTP_RESEND_COOLDOWN_SECONDS
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        return sendOtpError(res, error);
     }
 };
 
+// Step 2: verify the code. Returns a short-lived reset token used by /reset-password/:token.
+exports.verifyForgotPasswordCode = async (req, res) => {
+    try {
+        const email = String(req.body?.email || '').trim();
+        const code = req.body?.code;
+        if (!email || !code) {
+            return res.status(400).json({ success: false, message: 'Please provide your email and the verification code.' });
+        }
+
+        const user = await User.findByEmail(email);
+        if (!user || user.role === 'admin' || user.status !== 'active') {
+            return res.status(400).json({ success: false, message: 'This code has expired or is no longer valid. Please request a new code.' });
+        }
+
+        const result = await otpService.verifyOtp({ userId: user.id, purpose: otpService.PURPOSES.FORGOT_PASSWORD, code });
+        if (!result.ok) {
+            return res.status(400).json({ success: false, message: result.message, attempts_left: result.attemptsLeft });
+        }
+
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        await User.update(user.id, {
+            reset_token: hashResetToken(resetToken),
+            reset_token_expiry: new Date(Date.now() + RESET_SESSION_MINUTES * 60 * 1000)
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Code verified. Please set your new password.',
+            reset_token: resetToken,
+            expires_in_seconds: RESET_SESSION_MINUTES * 60
+        });
+    } catch (error) {
+        return sendOtpError(res, error);
+    }
+};
+
+// Step 3: set the new password (also still accepts reset links emailed before this update)
 exports.resetPassword = async (req, res) => {
     try {
         const { token } = req.params;
@@ -386,21 +444,28 @@ exports.resetPassword = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Please provide a new password' });
         }
 
-        // Find user by token
-        const user = await User.findByResetToken(token);
-        if (!user) {
-            return res.status(400).json({ success: false, message: 'Invalid or expired password reset token' });
+        const passwordError = otpService.validateNewPassword(password);
+        if (passwordError) {
+            return res.status(400).json({ success: false, message: passwordError });
         }
 
-        // Hash new password
+        // New tokens are stored hashed; older emailed links stored the raw token
+        const user = (await User.findByResetToken(hashResetToken(token))) || (await User.findByResetToken(token));
+        if (!user) {
+            return res.status(400).json({ success: false, message: 'Invalid or expired password reset session. Please start again.' });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Update user password and clear token fields
         await User.update(user.id, {
             password: hashedPassword,
             reset_token: null,
             reset_token_expiry: null
         });
+        await otpService.invalidateOtps(user.id, otpService.PURPOSES.FORGOT_PASSWORD).catch(() => {});
+
+        otpService.sendPasswordChangedNotice({ to: user.email, username: user.username, context: 'your account' })
+            .catch((err) => console.error(`[Password OTP] Could not send password-changed notice to user ${user.id}:`, err.message));
 
         res.status(200).json({
             success: true,
@@ -408,5 +473,106 @@ exports.resetPassword = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/* ------------------------------------------------------------------ */
+/* Admin change password - OTP goes to IT support                      */
+/* ------------------------------------------------------------------ */
+
+const getAdminOtpEmail = () => (process.env.ADMIN_PASSWORD_OTP_EMAIL || 'itsupport@white-force.in').trim();
+
+// Slows down guessing of the current password with a stolen session
+const CURRENT_PASSWORD_MAX_FAILS = 5;
+const CURRENT_PASSWORD_LOCK_MS = 15 * 60 * 1000;
+const currentPasswordFails = new Map(); // userId -> { count, until }
+
+const checkCurrentPassword = async (userId, email, currentPassword) => {
+    const entry = currentPasswordFails.get(userId);
+    if (entry && entry.until > Date.now() && entry.count >= CURRENT_PASSWORD_MAX_FAILS) {
+        throw new otpService.OtpError('Too many wrong current-password attempts. Please try again after 15 minutes.', 429);
+    }
+
+    const fullUser = await User.findByEmail(email);
+    const ok = Boolean(fullUser && currentPassword && await bcrypt.compare(String(currentPassword), fullUser.password));
+    if (!ok) {
+        const fresh = entry && entry.until > Date.now() ? entry : { count: 0, until: Date.now() + CURRENT_PASSWORD_LOCK_MS };
+        fresh.count += 1;
+        currentPasswordFails.set(userId, fresh);
+        throw new otpService.OtpError('Current password is incorrect.', 400);
+    }
+    currentPasswordFails.delete(userId);
+    return fullUser;
+};
+
+// Step 1: verify current password and email a code to IT support
+exports.requestAdminPasswordChangeOtp = async (req, res) => {
+    try {
+        const { currentPassword } = req.body || {};
+        if (!currentPassword) {
+            return res.status(400).json({ success: false, message: 'Please enter your current password.' });
+        }
+
+        const admin = await checkCurrentPassword(req.user.id, req.user.email, currentPassword);
+        const sendTo = getAdminOtpEmail();
+
+        const otp = await otpService.createOtp({ userId: admin.id, purpose: otpService.PURPOSES.ADMIN_CHANGE_PASSWORD, sentTo: sendTo });
+        try {
+            await otpService.sendAdminChangeCode({ to: sendTo, adminName: admin.username, adminEmail: admin.email, code: otp.code });
+        } catch (mailError) {
+            await otpService.discardOtp(otp.id).catch(() => {});
+            console.error(`[Password OTP] Could not send admin change-password code for user ${admin.id}:`, mailError.message);
+            if (mailError instanceof otpService.OtpError) throw mailError;
+            return res.status(503).json({ success: false, message: 'Could not send the verification email right now. Please try again later.' });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Verification code sent to ${otpService.maskEmail(sendTo)}. Ask IT support for the code.`,
+            sent_to: otpService.maskEmail(sendTo),
+            expires_in_seconds: otpService.OTP_TTL_MINUTES * 60,
+            resend_after_seconds: otpService.OTP_RESEND_COOLDOWN_SECONDS
+        });
+    } catch (error) {
+        return sendOtpError(res, error);
+    }
+};
+
+// Step 2: verify code + current password, then change the password
+exports.confirmAdminPasswordChange = async (req, res) => {
+    try {
+        const { currentPassword, newPassword, code } = req.body || {};
+        if (!currentPassword || !newPassword || !code) {
+            return res.status(400).json({ success: false, message: 'Please enter the current password, new password and verification code.' });
+        }
+
+        const passwordError = otpService.validateNewPassword(newPassword);
+        if (passwordError) {
+            return res.status(400).json({ success: false, message: passwordError });
+        }
+
+        const admin = await checkCurrentPassword(req.user.id, req.user.email, currentPassword);
+        if (await bcrypt.compare(String(newPassword), admin.password)) {
+            return res.status(400).json({ success: false, message: 'New password must be different from the current password.' });
+        }
+
+        const result = await otpService.verifyOtp({ userId: admin.id, purpose: otpService.PURPOSES.ADMIN_CHANGE_PASSWORD, code });
+        if (!result.ok) {
+            return res.status(400).json({ success: false, message: result.message, attempts_left: result.attemptsLeft });
+        }
+
+        await User.update(admin.id, {
+            password: await bcrypt.hash(String(newPassword), 10),
+            reset_token: null,
+            reset_token_expiry: null
+        });
+        console.log(`[Password OTP] Admin password changed for user ${admin.id}.`);
+
+        otpService.sendPasswordChangedNotice({ to: getAdminOtpEmail(), username: 'IT Support', context: `admin account ${admin.username} (${admin.email})` })
+            .catch((err) => console.error('[Password OTP] Could not send admin password-changed notice:', err.message));
+
+        return res.status(200).json({ success: true, message: 'Password changed successfully.' });
+    } catch (error) {
+        return sendOtpError(res, error);
     }
 };

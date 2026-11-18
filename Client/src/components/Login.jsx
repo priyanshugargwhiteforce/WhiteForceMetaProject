@@ -41,9 +41,16 @@ const Login = () => {
                 <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-500/10 dark:bg-purple-500/5 blur-[120px] pointer-events-none animate-pulse-subtle" />
 
                 {/* Header Logo & Name */}
-                <div className="flex items-center gap-3 z-10">
-                    <img src={logoImg} alt="White Force Logo" className="w-10 h-10 object-contain" />
-                    <span className="text-xl font-bold tracking-wider text-slate-900 dark:text-white">WHITE FORCE</span>
+                <div className="flex items-center gap-3.5 z-10">
+                    <img src={logoImg} alt="White Force Logo" className="w-12 h-12 object-contain drop-shadow-md" />
+                    <div className="leading-none" style={{ fontFamily: "'Montserrat', 'Outfit', sans-serif" }}>
+                        <span className="block text-[26px] font-black italic tracking-tight bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-300 dark:to-purple-400 bg-clip-text text-transparent pr-1">
+                            White Force
+                        </span>
+                        <span className="block mt-1 text-[10px] font-bold uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400">
+                            Ad Management
+                        </span>
+                    </div>
                 </div>
 
                 {/* Animated SVG Illustration */}
@@ -93,12 +100,21 @@ const Login = () => {
                             </defs>
                         </svg>
                     </div>
-                    <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight leading-none">
-                        Marketing Automation Portal
+                    <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight leading-tight">
+                        Grow Smarter,{' '}
+                        <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">Together</span>
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 max-w-md text-base leading-relaxed">
-                        Log in to manage and analyze your Meta, Google, and LinkedIn campaigns in a unified dashboard.
+                        Welcome back to your workspace. Sign in and pick up right where your team left off.
                     </p>
+
+                    {/* About White Force */}
+                    <div className="mt-8 max-w-md px-5 py-4 rounded-2xl bg-white/60 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 backdrop-blur-sm">
+                        <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                            <span className="font-bold text-slate-900 dark:text-white" style={{ fontFamily: "'Montserrat', 'Outfit', sans-serif" }}>White Force</span>
+                            {' '}is a team built on creativity, strategy and dedication, helping brands grow their digital presence and turn ideas into real results.
+                        </p>
+                    </div>
                 </div>
 
                 {/* Footer Brand Info */}
@@ -118,7 +134,12 @@ const Login = () => {
                 </button>
 
                 <div className="auth-container auth-card-glass fade-in max-w-md w-full p-8 border border-white/5 shadow-2xl">
-                    <h2>Login</h2>
+                    <div className="mb-6 text-left">
+                        <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">Welcome Back</h2>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                            Sign in to continue to <span className="font-semibold text-slate-700 dark:text-slate-200">White Force Manager</span>
+                        </p>
+                    </div>
                     {error && <div className="error-message">{error}</div>}
                     <form onSubmit={handleSubmit}>
                         <div className="form-group relative">
@@ -161,7 +182,7 @@ const Login = () => {
                         </button>
                     </form>
                     <div className="switch-auth">
-                        Don't have an account? <Link to="/register">Register here</Link>
+                        New here? Ask your Admin or Manager for a registration link.
                     </div>
                 </div>
             </div>

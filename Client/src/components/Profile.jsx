@@ -23,6 +23,8 @@ import {
   Zap
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import AdminChangePassword from './AdminChangePassword';
+import bgBanner from '../assets/bgbanner.png';
 
 const Profile = () => {
   const { user, setUser, fetchUser, token } = useAuth();
@@ -263,14 +265,18 @@ const Profile = () => {
       {/* Profile Banner Hero Header */}
       <div className="relative rounded-3xl overflow-hidden border border-slate-200 dark:border-white/10 shadow-xl bg-white dark:bg-slate-900">
         
-        {/* Cover Background */}
-        <div className="h-44 sm:h-52 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent opacity-40"></div>
-          <div className="absolute -bottom-10 -right-10 w-72 h-72 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+        {/* Cover Banner: same 4:1 ratio as the image, so the full banner shows on every screen size */}
+        <div className="relative w-full aspect-[4/1] overflow-hidden bg-slate-900">
+          <img
+            src={bgBanner}
+            alt="White Force"
+            className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
+            draggable={false}
+          />
         </div>
 
-        {/* Profile Card Header Info */}
-        <div className="px-6 sm:px-8 pb-6 pt-0 relative flex flex-col sm:flex-row items-center sm:items-end space-y-4 sm:space-y-0 sm:space-x-6 -mt-16 sm:-mt-20">
+        {/* Profile Card Header Info (overlap is a % of the banner width, so the avatar never covers the banner text) */}
+        <div className="px-6 sm:px-8 pb-6 pt-0 relative flex flex-col sm:flex-row items-center sm:items-end space-y-4 sm:space-y-0 sm:space-x-6 -mt-[4%]">
           
           {/* Avatar Upload Container */}
           <div className="relative group shrink-0">
@@ -703,6 +709,9 @@ const Profile = () => {
         </div>
 
       </form>
+
+      {/* Admin Change Password (verification code goes to IT support) */}
+      {user?.role === 'admin' && <AdminChangePassword />}
     </div>
   );
 };

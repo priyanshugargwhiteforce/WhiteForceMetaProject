@@ -6,6 +6,7 @@ import {
 import MediaCard from './MediaCard';
 import MediaUploadModal from './MediaUploadModal';
 import MediaPreviewModal from './MediaPreviewModal';
+import { useAuth } from '../../context/AuthContext';
 
 // Icon per category tab — purely presentational, keyed off the same tab ids used below
 const TAB_ICONS = {
@@ -27,6 +28,9 @@ const SORT_LABELS = {
 };
 
 const MediaLibrary = ({ onSelectAsset, selectMode = false }) => {
+    const { user } = useAuth();
+    // Deleting library assets needs Media Library access (pickers inside other tools can only browse/upload/use)
+    const canManageLibrary = user?.role === 'admin' || !!user?.media_access;
     const [assets, setAssets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -362,7 +366,7 @@ const MediaLibrary = ({ onSelectAsset, selectMode = false }) => {
                                 key={asset.id}
                                 asset={asset}
                                 onPreview={setPreviewAsset}
-                                onDelete={handleDeleteAsset}
+                                onDelete={canManageLibrary ? handleDeleteAsset : undefined}
                                 onUse={onSelectAsset}
                             />
                         ))}

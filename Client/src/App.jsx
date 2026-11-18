@@ -448,7 +448,9 @@ function App() {
                             path="/reports" 
                             element={
                                 <ProtectedRoute>
-                                    <Reports />
+                                    <PermissionRoute permission="reports_access">
+                                        <Reports />
+                                    </PermissionRoute>
                                 </ProtectedRoute>
                             } 
                         />
@@ -590,7 +592,9 @@ function App() {
                             path="/media-library" 
                             element={
                                 <ProtectedRoute>
-                                    <MediaLibrary />
+                                    <PermissionRoute permission="media_access">
+                                        <MediaLibrary />
+                                    </PermissionRoute>
                                 </ProtectedRoute>
                             } 
                         />

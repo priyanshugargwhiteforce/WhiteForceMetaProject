@@ -39,7 +39,8 @@ exports.getUser = async (req, res) => {
 // @access  Private/Admin
 exports.createUser = async (req, res) => {
     try {
-        const { username, email, password, role, status, meta_access, google_access, whatsapp_access, linkedin_access, meta_publish, manager_id } = req.body;
+        const { username, email, password, role, status, meta_access, google_access, whatsapp_access, linkedin_access, meta_publish, media_access, reports_access, manager_id } = req.body;
+        const isAdmin = req.user.role === 'admin';
         
         if (!username || !email || !password) {
             return res.status(400).json({ success: false, message: 'Please provide all required fields' });
@@ -76,6 +77,9 @@ exports.createUser = async (req, res) => {
             whatsapp_access: whatsapp_access ? 1 : 0,
             linkedin_access: linkedin_access ? 1 : 0,
             meta_publish: meta_publish ? 1 : 0,
+            // Only an Admin can grant Media Library / Reports
+            media_access: isAdmin && media_access ? 1 : 0,
+            reports_access: isAdmin && reports_access ? 1 : 0,
             manager_id: finalManagerId
         };
 
@@ -94,6 +98,8 @@ exports.createUser = async (req, res) => {
                 whatsapp_access: userData.whatsapp_access,
                 linkedin_access: userData.linkedin_access,
                 meta_publish: userData.meta_publish,
+                media_access: userData.media_access,
+                reports_access: userData.reports_access,
                 manager_id: userData.manager_id
             }
         });
@@ -107,7 +113,7 @@ exports.createUser = async (req, res) => {
 // @access  Private/Admin
 exports.updateUser = async (req, res) => {
     try {
-        const { role, status, username, email, password, meta_access, google_access, whatsapp_access, linkedin_access, meta_publish, manager_id } = req.body;
+        const { role, status, username, email, password, meta_access, google_access, whatsapp_access, linkedin_access, meta_publish, media_access, reports_access, manager_id } = req.body;
         
         const targetUser = await User.findById(req.params.id);
         if (!targetUser) {
@@ -145,6 +151,11 @@ exports.updateUser = async (req, res) => {
         if (whatsapp_access !== undefined) updateData.whatsapp_access = whatsapp_access ? 1 : 0;
         if (linkedin_access !== undefined) updateData.linkedin_access = linkedin_access ? 1 : 0;
         if (meta_publish !== undefined) updateData.meta_publish = meta_publish ? 1 : 0;
+        // Only an Admin can grant or remove Media Library / Reports access
+        if (req.user.role === 'admin') {
+            if (media_access !== undefined) updateData.media_access = media_access ? 1 : 0;
+            if (reports_access !== undefined) updateData.reports_access = reports_access ? 1 : 0;
+        }
         if (finalManagerId !== undefined) updateData.manager_id = finalManagerId ? parseInt(finalManagerId) : null;
         
         if (password) {

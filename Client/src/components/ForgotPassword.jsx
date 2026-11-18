@@ -1,35 +1,128 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { Sun, Moon, ArrowLeft, Mail } from 'lucide-react';
+import { Sun, Moon, ArrowLeft, Mail, KeyRound, Lock, CheckCircle2 } from 'lucide-react';
 import logoImg from '../assets/white-forcelogo.png';
+
+const RESEND_SECONDS = 60;
+
+const passwordRuleError = (password) => {
+    if (password.length < 8) return 'Password must be at least 8 characters long.';
+    if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) return 'Password must contain at least one letter and one number.';
+    return '';
+};
 
 const ForgotPassword = () => {
     const { theme, toggleTheme } = useTheme();
+    const navigate = useNavigate();
+    // step: 'email' -> 'code' -> 'password' -> 'done'
+    const [step, setStep] = useState('email');
     const [email, setEmail] = useState('');
+    const [code, setCode] = useState('');
+    const [resetToken, setResetToken] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
-    const [testUrl, setTestUrl] = useState('');
     const [loading, setLoading] = useState(false);
+    const [resendIn, setResendIn] = useState(0);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    useEffect(() => {
+        if (resendIn <= 0) return undefined;
+        const timer = setTimeout(() => setResendIn((s) => s - 1), 1000);
+        return () => clearTimeout(timer);
+    }, [resendIn]);
+
+    useEffect(() => {
+        if (step !== 'done') return undefined;
+        const timer = setTimeout(() => navigate('/login'), 3000);
+        return () => clearTimeout(timer);
+    }, [step, navigate]);
+
+    const requestCode = async () => {
         setError('');
-        setMessage('');
-        setTestUrl('');
         setLoading(true);
         try {
-            const res = await axios.post('/api/auth/forgot-password', { email });
-            setMessage(res.data.message || 'Password reset link sent to your email.');
-            if (res.data.testResetUrl) {
-                setTestUrl(res.data.testResetUrl);
-            }
+            const res = await axios.post('/api/auth/forgot-password', { email: email.trim() });
+            setMessage(res.data.message || 'Verification code sent to your email.');
+            setResendIn(res.data.resend_after_seconds || RESEND_SECONDS);
+            setCode('');
+            setStep('code');
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to send password reset email. Please try again.');
+            const retryAfter = err.response?.data?.retry_after_seconds;
+            if (err.response?.status === 429 && retryAfter && retryAfter <= RESEND_SECONDS) {
+                // A code was sent less than a minute ago: let the user enter it instead of blocking them
+                setMessage('A verification code was already sent to this email. Please check your inbox (and spam folder).');
+                setResendIn(retryAfter);
+                setStep('code');
+            } else {
+                // e.g. email not registered: stay on the email step and show the error
+                setError(err.response?.data?.message || 'Failed to send the verification code. Please try again.');
+            }
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleEmailSubmit = (e) => {
+        e.preventDefault();
+        requestCode();
+    };
+
+    const handleCodeSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        const cleaned = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (cleaned.length !== 8) {
+            setError('Please enter the 8-character code from the email.');
+            return;
+        }
+        setLoading(true);
+        try {
+            const res = await axios.post('/api/auth/forgot-password/verify', { email: email.trim(), code: cleaned });
+            setResetToken(res.data.reset_token);
+            setMessage('');
+            setStep('password');
+        } catch (err) {
+            setError(err.response?.data?.message || 'Invalid or expired code.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePasswordSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        const ruleError = passwordRuleError(password);
+        if (ruleError) {
+            setError(ruleError);
+            return;
+        }
+        if (password !== confirmPassword) {
+            setError('Passwords do not match.');
+            return;
+        }
+        setLoading(true);
+        try {
+            const res = await axios.post(`/api/auth/reset-password/${resetToken}`, { password });
+            setMessage(res.data.message || 'Password has been reset successfully.');
+            setStep('done');
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to reset password. Please start again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const startOver = () => {
+        setStep('email');
+        setCode('');
+        setResetToken('');
+        setPassword('');
+        setConfirmPassword('');
+        setError('');
+        setMessage('');
     };
 
     return (
@@ -74,7 +167,7 @@ const ForgotPassword = () => {
                         Password Recovery
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 max-w-md text-base leading-relaxed">
-                        Recover access to your account quickly. Enter your email, and we will dispatch a reset link to verify your identity.
+                        Recover access to your account quickly. Enter your registered email and we will send a one-time verification code to confirm it is you.
                     </p>
                 </div>
 
@@ -95,32 +188,32 @@ const ForgotPassword = () => {
                 </button>
 
                 <div className="auth-container auth-card-glass fade-in max-w-md w-full p-8 border border-white/5 shadow-2xl">
-                    <h2>Forgot Password</h2>
+                    <h2>{step === 'password' ? 'Set New Password' : 'Forgot Password'}</h2>
+
+                    {/* Step indicator */}
+                    {step !== 'done' && (
+                        <div className="flex items-center justify-center gap-2 mb-5 text-[11px] font-semibold">
+                            {['Email', 'Verify Code', 'New Password'].map((label, i) => {
+                                const current = ['email', 'code', 'password'].indexOf(step);
+                                return (
+                                    <span key={label} className={`px-2.5 py-1 rounded-full border ${i === current ? 'bg-blue-500/15 border-blue-500/40 text-blue-500' : i < current ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' : 'border-slate-300 dark:border-white/10 text-slate-400'}`}>
+                                        {i + 1}. {label}
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    )}
+
                     {error && <div className="error-message">{error}</div>}
-                    
-                    {message && (
-                        <div className="mb-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm text-center">
+
+                    {message && step !== 'password' && (
+                        <div className="mb-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-sm text-center">
                             {message}
                         </div>
                     )}
 
-                    {testUrl && (
-                        <div className="mb-6 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-left">
-                            <div className="text-blue-400 font-bold mb-1">🛠️ Dev Testing Helper:</div>
-                            <div className="text-xs text-slate-400 mb-2">Since SMTP is not configured locally, use this generated link to test:</div>
-                            <a 
-                                href={testUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="text-xs text-blue-400 underline hover:text-blue-300 break-all block"
-                            >
-                                {testUrl}
-                            </a>
-                        </div>
-                    )}
-
-                    {!message && (
-                        <form onSubmit={handleSubmit}>
+                    {step === 'email' && (
+                        <form onSubmit={handleEmailSubmit}>
                             <div className="form-group relative">
                                 <label className="text-slate-500 dark:text-slate-400 text-xs font-semibold mb-2 block">Email Address</label>
                                 <div className="relative">
@@ -137,9 +230,102 @@ const ForgotPassword = () => {
                             </div>
 
                             <button type="submit" className="auth-btn flex items-center justify-center gap-2" disabled={loading}>
-                                {'Send Reset Link'}
+                                {loading ? 'Sending Code...' : 'Send Verification Code'}
                             </button>
                         </form>
+                    )}
+
+                    {step === 'code' && (
+                        <form onSubmit={handleCodeSubmit}>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 text-center">
+                                Enter the 8-character code (letters &amp; numbers) sent to <span className="font-semibold">{email}</span>.
+                            </p>
+                            <div className="form-group relative">
+                                <label className="text-slate-500 dark:text-slate-400 text-xs font-semibold mb-2 block">Verification Code</label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        inputMode="text"
+                                        autoComplete="one-time-code"
+                                        placeholder="e.g. K7QM-4X9P"
+                                        value={code}
+                                        maxLength={12}
+                                        onChange={(e) => setCode(e.target.value.toUpperCase())}
+                                        required
+                                        className="pl-10 w-full font-mono tracking-[0.3em] uppercase"
+                                    />
+                                    <KeyRound className="w-5 h-5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                                </div>
+                            </div>
+
+                            <button type="submit" className="auth-btn flex items-center justify-center gap-2" disabled={loading}>
+                                {loading ? 'Verifying...' : 'Verify Code'}
+                            </button>
+
+                            <div className="flex items-center justify-between mt-4 text-xs">
+                                <button type="button" onClick={startOver} className="text-slate-500 hover:text-blue-500 bg-transparent border-0 cursor-pointer p-0">
+                                    Change email
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={requestCode}
+                                    disabled={resendIn > 0 || loading}
+                                    className="text-blue-500 disabled:text-slate-400 bg-transparent border-0 cursor-pointer disabled:cursor-not-allowed p-0"
+                                >
+                                    {resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code'}
+                                </button>
+                            </div>
+                        </form>
+                    )}
+
+                    {step === 'password' && (
+                        <form onSubmit={handlePasswordSubmit}>
+                            <div className="form-group">
+                                <label className="text-slate-500 dark:text-slate-400 text-xs font-semibold mb-2 block">New Password</label>
+                                <div className="relative">
+                                    <input
+                                        type="password"
+                                        autoComplete="new-password"
+                                        placeholder="Enter new password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                        className="pl-10 w-full"
+                                    />
+                                    <Lock className="w-5 h-5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label className="text-slate-500 dark:text-slate-400 text-xs font-semibold mb-2 block">Confirm New Password</label>
+                                <div className="relative">
+                                    <input
+                                        type="password"
+                                        autoComplete="new-password"
+                                        placeholder="Confirm new password"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        required
+                                        className="pl-10 w-full"
+                                    />
+                                    <Lock className="w-5 h-5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                                </div>
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-4">
+                                At least 8 characters, with at least one letter and one number.
+                            </p>
+                            <button type="submit" className="auth-btn flex items-center justify-center gap-2" disabled={loading}>
+                                {loading ? 'Updating Password...' : 'Reset Password'}
+                            </button>
+                        </form>
+                    )}
+
+                    {step === 'done' && (
+                        <div className="flex flex-col items-center justify-center py-2">
+                            <div className="w-10 h-10 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-500 mb-3">
+                                <CheckCircle2 className="w-6 h-6" />
+                            </div>
+                            <div className="text-xs text-slate-500 mb-4 animate-pulse">Redirecting to login page shortly...</div>
+                        </div>
                     )}
 
                     <div className="switch-auth flex items-center justify-center gap-2 mt-6">

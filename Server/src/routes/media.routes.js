@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { protect } = require('../middlewares/auth.middleware');
+const { protect, authorizeMediaUse, authorizeMediaLibrary } = require('../middlewares/auth.middleware');
 const { 
     uploadMedia, 
     getMediaList, 
@@ -39,7 +39,7 @@ const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads');
  * POST /api/media/upload
  * Multi-part form upload
  */
-router.post('/upload', protect, upload.single('file'), async (req, res, next) => {
+router.post('/upload', protect, authorizeMediaUse, upload.single('file'), async (req, res, next) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'Please provide a file field named "file".' });
@@ -58,7 +58,7 @@ router.post('/upload', protect, upload.single('file'), async (req, res, next) =>
  * GET /api/media/search
  * Search assets by name
  */
-router.get('/search', protect, async (req, res, next) => {
+router.get('/search', protect, authorizeMediaUse, async (req, res, next) => {
     try {
         const { query, category } = req.query;
         const result = await getMediaList({
@@ -76,7 +76,7 @@ router.get('/search', protect, async (req, res, next) => {
  * GET /api/media
  * Pagination and listing
  */
-router.get('/', protect, async (req, res, next) => {
+router.get('/', protect, authorizeMediaUse, async (req, res, next) => {
     try {
         const { category, search, page = 1, limit = 20 } = req.query;
         const result = await getMediaList({ category, search, page, limit });
@@ -90,7 +90,7 @@ router.get('/', protect, async (req, res, next) => {
  * GET /api/media/:id
  * Retrieve metadata details
  */
-router.get('/:id', protect, async (req, res, next) => {
+router.get('/:id', protect, authorizeMediaUse, async (req, res, next) => {
     try {
         const asset = await getAssetById(req.params.id);
         if (!asset) {
@@ -106,7 +106,7 @@ router.get('/:id', protect, async (req, res, next) => {
  * DELETE /api/media/:id
  * Soft delete media asset
  */
-router.delete('/:id', protect, async (req, res, next) => {
+router.delete('/:id', protect, authorizeMediaLibrary, async (req, res, next) => {
     try {
         await deleteAsset(req.params.id, req.user?.id);
         res.status(200).json({ success: true, message: 'Asset deleted successfully.' });
@@ -168,7 +168,7 @@ router.get('/:id/preview', async (req, res, next) => {
  * GET /api/media/:id/download
  * Authenticated download stream with attachment headers
  */
-router.get('/:id/download', protect, async (req, res, next) => {
+router.get('/:id/download', protect, authorizeMediaUse, async (req, res, next) => {
     try {
         const asset = await getAssetById(req.params.id);
         let finalAsset = asset;
