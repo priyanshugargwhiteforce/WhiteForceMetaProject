@@ -59,10 +59,12 @@ exports.createUser = async (req, res) => {
             // Managers can only create users under their own team
             finalManagerId = req.user.id;
             // Managers cannot create other admins or managers
-            if (finalRole === 'admin' || finalRole === 'manager') {
+            if (finalRole === 'admin' || finalRole === 'manager' || finalRole === 'head') {
                 return res.status(403).json({ success: false, message: 'Forbidden: Managers cannot create administrative accounts.' });
             }
         }
+        // Head sits above all managers, so it never has a manager
+        if (finalRole === 'head' || finalRole === 'admin') finalManagerId = null;
 
         const hashedPassword = await bcrypt.hash(password, 10);
         
@@ -129,7 +131,7 @@ exports.updateUser = async (req, res) => {
                 return res.status(403).json({ success: false, message: 'Forbidden: You can only edit users on your team.' });
             }
             // Managers cannot promote to admin or manager
-            if (role && (role === 'admin' || role === 'manager')) {
+            if (role && (role === 'admin' || role === 'manager' || role === 'head')) {
                 return res.status(403).json({ success: false, message: 'Forbidden: Managers cannot assign administrative roles.' });
             }
             // Freeze manager_id to current manager
@@ -157,6 +159,8 @@ exports.updateUser = async (req, res) => {
             if (reports_access !== undefined) updateData.reports_access = reports_access ? 1 : 0;
         }
         if (finalManagerId !== undefined) updateData.manager_id = finalManagerId ? parseInt(finalManagerId) : null;
+        // Head sits above all managers, so it never has a manager
+        if (finalRole === 'head') updateData.manager_id = null;
         
         if (password) {
             updateData.password = await bcrypt.hash(password, 10);
@@ -228,6 +232,53 @@ exports.getDashboardStats = async (req, res) => {
     try {
         const { role, id: userId } = req.user;
         const { pool } = require('../config/db');
+
+        if (role === 'head') {
+            // Head: organisation-wide view of every Manager and Employee (not Admins/Heads), same shape as the manager dashboard
+            const emptyTaskStats = () => ({ total: 0, pending: 0, in_progress: 0, completed: 0, cancelled: 0, on_hold: 0 });
+            const addTaskRows = (target, rows) => {
+                for (const row of rows) {
+                    if (target[row.status] !== undefined) target[row.status] = row.count;
+                    target.total += row.count;
+                }
+                return target;
+            };
+
+            const [members] = await pool.query(
+                `SELECT u.id, u.username, u.email, u.role, u.status, u.manager_id, mgr.username AS manager_name
+                 FROM users u
+                 LEFT JOIN users mgr ON u.manager_id = mgr.id
+                 WHERE u.role NOT IN ('admin', 'head')
+                 ORDER BY (u.role = 'manager') DESC, u.username ASC`
+            );
+
+            const teamStats = { total: 0, active: 0, hold: 0, rejected: 0 };
+            for (const m of members) {
+                if (teamStats[m.status] !== undefined) teamStats[m.status] += 1;
+                teamStats.total += 1;
+            }
+
+            const [teamTaskRows] = await pool.query(
+                `SELECT t.status, COUNT(*) as count
+                 FROM tasks t
+                 JOIN users u ON t.assigned_to = u.id
+                 WHERE u.role NOT IN ('admin', 'head')
+                 GROUP BY t.status`
+            );
+            const [myTaskRows] = await pool.query(
+                `SELECT status, COUNT(*) as count FROM tasks WHERE assigned_to = ? GROUP BY status`,
+                [userId]
+            );
+
+            return res.status(200).json({
+                success: true,
+                role,
+                teamStats,
+                teamTasksStats: addTaskRows(emptyTaskStats(), teamTaskRows),
+                myTasksStats: addTaskRows(emptyTaskStats(), myTaskRows),
+                members
+            });
+        }
 
         if (role === 'manager') {
             // 1. Team members status count (excluding the manager themselves)

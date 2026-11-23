@@ -59,7 +59,8 @@ function parseDateValue(val) {
  *   - Regular User: can edit/delete ONLY their own tasks (created by them or assigned to them).
  */
 async function buildRoleScope(user) {
-    if (!user || user.role === 'admin') {
+    // Head has the same Daily Task powers as Admin
+    if (!user || user.role === 'admin' || user.role === 'head') {
         return {
             clause: '',
             params: [],

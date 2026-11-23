@@ -32,7 +32,8 @@ import {
     EyeOff
 } from 'lucide-react';
 
-const ROLES = ['admin', 'user', 'manager', 'hr', 'sales', 'seo', 'marketing'];
+// 'head' sits between Admin and all Managers (sees every Task / MoM by default)
+const ROLES = ['admin', 'head', 'user', 'manager', 'hr', 'sales', 'seo', 'marketing'];
 const STATUSES = ['active', 'hold', 'rejected'];
 
 // Access permissions shown in the Add/Edit user popup.
@@ -142,7 +143,7 @@ const UserManagement = () => {
     // Derived State
     const availableRoles = useMemo(() => {
         if (user?.role === 'manager') {
-            return ROLES.filter(r => r !== 'admin' && r !== 'manager');
+            return ROLES.filter(r => r !== 'admin' && r !== 'head' && r !== 'manager');
         }
         return ROLES;
     }, [user]);
@@ -297,6 +298,7 @@ const UserManagement = () => {
     const getRoleBadgeColor = (role) => {
         switch (role) {
             case 'admin': return 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-400 dark:border-purple-500/30';
+            case 'head': return 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-500/20 dark:text-teal-400 dark:border-teal-500/30';
             case 'manager': return 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-400 dark:border-indigo-500/30';
             case 'hr': return 'bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-500/20 dark:text-pink-400 dark:border-pink-500/30';
             case 'sales': return 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-400 dark:border-orange-500/30';
@@ -638,7 +640,7 @@ const UserManagement = () => {
                                         </div>
                                     </div>
 
-                                    {formData.role !== 'admin' && isAdminUser && (
+                                    {formData.role !== 'admin' && formData.role !== 'head' && isAdminUser && (
                                         <div className="space-y-1">
                                             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400">Assign Manager</label>
                                             <div className="relative">
@@ -721,6 +723,12 @@ const UserManagement = () => {
                                                 </div>
                                             ))}
 
+                                            {formData.role === 'head' && (
+                                                <div className="flex items-start gap-2 p-3 rounded-xl border border-teal-500/30 bg-teal-500/5 text-[11px] text-slate-700 dark:text-slate-200 leading-relaxed">
+                                                    <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-teal-500" />
+                                                    <span><span className="font-bold">Head</span> always sees every Task, MoM and Daily Task of all Managers and Employees, and has their own too. Choose any other modules below.</span>
+                                                </div>
+                                            )}
                                             <div className="flex items-start gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
                                                 <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
                                                 <span>

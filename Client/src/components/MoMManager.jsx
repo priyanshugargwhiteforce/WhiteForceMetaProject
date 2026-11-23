@@ -902,7 +902,7 @@ const MoMManager = () => {
                   {paginatedMoms.map((item, index) => {
                     const withDisplay = item.meeting_with === 'Other' ? (item.custom_meeting_with || 'Other') : item.meeting_with;
                     const pointsCount = Array.isArray(item.discussion_points) ? item.discussion_points.length : 0;
-                    const canEditOrDelete = user?.role === 'admin' || user?.id === item.created_by || user?.id === item.creator_manager_id;
+                    const canEditOrDelete = user?.role === 'admin' || user?.role === 'head' || user?.id === item.created_by || user?.id === item.creator_manager_id;
                     const deptStyle = getDeptStyle(item.department);
 
                     return (

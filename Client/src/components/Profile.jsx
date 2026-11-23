@@ -333,12 +333,14 @@ const Profile = () => {
               <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-xl text-xs font-bold tracking-wide uppercase shadow-sm ${
                 user?.role === 'admin' 
                   ? 'bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400' 
+                  : user?.role === 'head'
+                  ? 'bg-teal-500/10 border border-teal-500/20 text-teal-600 dark:text-teal-400'
                   : user?.role === 'manager'
                   ? 'bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400'
                   : 'bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400'
               }`}>
                 <ShieldCheck className="w-3.5 h-3.5 mr-1" />
-                <span>{user?.role === 'admin' ? 'Administrator' : (user?.role === 'manager' ? 'Manager' : 'Team Member')}</span>
+                <span>{user?.role === 'admin' ? 'Administrator' : user?.role === 'head' ? 'Head' : (user?.role === 'manager' ? 'Manager' : 'Team Member')}</span>
               </span>
             </div>
 
@@ -439,7 +441,7 @@ const Profile = () => {
                 <input
                   type="text"
                   disabled
-                  value={user?.role === 'admin' ? 'Administrator' : (user?.role === 'manager' ? 'Manager' : 'User / Team Member')}
+                  value={user?.role === 'admin' ? 'Administrator' : user?.role === 'head' ? 'Head' : (user?.role === 'manager' ? 'Manager' : 'User / Team Member')}
                   className="w-full bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl pl-10 pr-4 py-2.5 text-xs font-semibold text-slate-500 dark:text-slate-400 cursor-not-allowed capitalize"
                 />
               </div>

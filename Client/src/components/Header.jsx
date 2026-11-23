@@ -48,6 +48,8 @@ const Header = ({ onMenuClick }) => {
 
   const roleBadgeStyles = user?.role === 'admin'
     ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
+    : user?.role === 'head'
+      ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20'
     : user?.role === 'manager'
       ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
       : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20';
@@ -142,7 +144,7 @@ const Header = ({ onMenuClick }) => {
                 {user?.username || 'User'}
               </p>
               <p className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 font-semibold tracking-wider uppercase">
-                {user?.role === 'admin' ? 'ADMINISTRATOR' : (user?.role === 'manager' ? 'MANAGER' : 'TEAM MEMBER')}
+                {user?.role === 'admin' ? 'ADMINISTRATOR' : user?.role === 'head' ? 'HEAD' : (user?.role === 'manager' ? 'MANAGER' : 'TEAM MEMBER')}
               </p>
             </div>
 

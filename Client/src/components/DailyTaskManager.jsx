@@ -139,7 +139,7 @@ const DailyTaskManager = () => {
 
   const canUserEditOrDelete = (task) => {
     if (!user || !task) return false;
-    if (user.role === 'admin' || user.role === 'manager') return true;
+    if (user.role === 'admin' || user.role === 'head' || user.role === 'manager') return true;
     const isCreator = task.created_by && Number(task.created_by) === Number(user.id);
     const isAssignee = task.employee && (
       task.employee.trim().toLowerCase() === (user.username || '').toLowerCase() ||

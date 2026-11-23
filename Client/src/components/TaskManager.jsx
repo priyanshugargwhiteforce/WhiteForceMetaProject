@@ -371,7 +371,7 @@ const TaskManager = () => {
   };
 
   const resetForm = () => {
-    const isStandardUser = user?.role !== 'admin' && user?.role !== 'manager';
+    const isStandardUser = user?.role !== 'admin' && user?.role !== 'head' && user?.role !== 'manager';
     setFormData({
       title: '',
       description: '',
@@ -638,8 +638,8 @@ const TaskManager = () => {
             <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
           </div>
 
-          {/* Assignee filter (Admin/Manager only) */}
-          {(user?.role === 'admin' || user?.role === 'manager') && (
+          {/* Assignee filter (Admin/Head/Manager only) */}
+          {(user?.role === 'admin' || user?.role === 'head' || user?.role === 'manager') && (
             <div className="relative min-w-[140px]">
               <select
                 value={filterAssignee}
@@ -724,7 +724,7 @@ const TaskManager = () => {
                     const taskOverdue = isOverdue(task);
                     const isCreator = Number(task.assigned_by) === Number(user?.id);
                     const isAssignee = Number(task.assigned_to) === Number(user?.id) || (task.assignees && task.assignees.some(a => Number(a.assigned_to) === Number(user?.id)));
-                    const isAdmin = user?.role === 'admin';
+                    const isAdmin = user?.role === 'admin' || user?.role === 'head';
                     const isManagerOfAssignee = user?.role === 'manager' && (
                       Number(task.assignee_manager_id) === Number(user?.id) ||
                       Number(task.assigned_by) === Number(user?.id) ||
@@ -1055,7 +1055,7 @@ const TaskManager = () => {
                 {/* Assignee Selection */}
                 <div className="space-y-1">
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Assignee(s)</label>
-                  {(isCreateModalOpen || user?.role === 'admin' || user?.role === 'manager' || Number(currentTask?.assigned_by) === Number(user?.id)) ? (
+                  {(isCreateModalOpen || user?.role === 'admin' || user?.role === 'head' || user?.role === 'manager' || Number(currentTask?.assigned_by) === Number(user?.id)) ? (
                     // Multi-select scrollable checklist for Creation & Management
                     <div className="border border-slate-200 dark:border-white/10 rounded-xl bg-slate-50 dark:bg-slate-800 p-3 space-y-2.5">
                       <span className="text-[10px] text-slate-550 dark:text-slate-400 font-bold block mb-1">

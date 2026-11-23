@@ -126,7 +126,7 @@ exports.getMoMs = async (req, res) => {
         const queryParams = [];
 
         // Role & Team Access Control
-        if (user.role === 'admin') {
+        if (user.role === 'admin' || user.role === 'head') {
             // Admin sees all MoMs across the entire company
         } else if (user.role === 'manager') {
             // Manager sees MoMs created by themselves OR by their team members (where creator_manager_id = manager.id)
@@ -224,7 +224,7 @@ exports.getMoMAssignableUsers = async (req, res) => {
         let query = 'SELECT id, username, email, role, manager_id FROM users WHERE status = "active"';
         const params = [];
 
-        if (user.role === 'admin') {
+        if (user.role === 'admin' || user.role === 'head') {
             // Admin sees all active users across company
         } else if (user.role === 'manager') {
             // Manager sees self + team members reporting to them
@@ -402,7 +402,7 @@ exports.updateMoM = async (req, res) => {
 
         const record = existing[0];
         // Access Check: Admin can edit any, creator can edit, manager of creator can edit
-        if (req.user.role !== 'admin' && record.created_by !== req.user.id && record.creator_manager_id !== req.user.id) {
+        if (req.user.role !== 'admin' && req.user.role !== 'head' && record.created_by !== req.user.id && record.creator_manager_id !== req.user.id) {
             return res.status(403).json({
                 success: false,
                 message: 'Unauthorized to edit this MoM record.'
@@ -505,7 +505,7 @@ exports.deleteMoM = async (req, res) => {
         }
 
         const record = existing[0];
-        if (req.user.role !== 'admin' && record.created_by !== req.user.id && record.creator_manager_id !== req.user.id) {
+        if (req.user.role !== 'admin' && req.user.role !== 'head' && record.created_by !== req.user.id && record.creator_manager_id !== req.user.id) {
             return res.status(403).json({
                 success: false,
                 message: 'Unauthorized to delete this MoM record.'

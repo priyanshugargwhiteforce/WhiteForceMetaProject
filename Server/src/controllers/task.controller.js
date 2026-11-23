@@ -28,8 +28,8 @@ exports.getTasks = async (req, res) => {
         if (my_tasks === 'true') {
             conditions.push('t.assigned_to = ?');
             params.push(userId);
-        } else if (role === 'admin') {
-            // Admin sees all tasks
+        } else if (role === 'admin' || role === 'head') {
+            // Admin and Head see all tasks
         } else if (role === 'manager') {
             // Manager sees tasks assigned to them, created by them, or assigned to/created by their team members
             conditions.push('(t.assigned_to = ? OR t.assigned_by = ? OR t.assigned_to IN (SELECT id FROM users WHERE manager_id = ?) OR t.assigned_by IN (SELECT id FROM users WHERE manager_id = ?))');
@@ -72,7 +72,7 @@ exports.getTasks = async (req, res) => {
 
         // Grouping logic for Admin/Manager (skip if my_tasks is requested)
         let tasksList = [];
-        if ((role === 'admin' || role === 'manager') && my_tasks !== 'true') {
+        if ((role === 'admin' || role === 'head' || role === 'manager') && my_tasks !== 'true') {
             const groups = {};
             for (const row of rows) {
                 const groupKey = row.parent_task_id || row.id;
@@ -150,7 +150,7 @@ exports.createTask = async (req, res) => {
         }
 
         // Assignee permission checks
-        if (role !== 'admin' && role !== 'manager') {
+        if (role !== 'admin' && role !== 'head' && role !== 'manager') {
             // Rule 1: Standard users MUST include themselves as an assignee
             const includesSelf = assignees.some(id => Number(id) === Number(assigned_by));
             if (!includesSelf) {
@@ -251,7 +251,8 @@ exports.updateTask = async (req, res) => {
 
         const isCreator = Number(task.assigned_by) === Number(userId);
         const isAssignee = Number(task.assigned_to) === Number(userId);
-        const isAdmin = role === 'admin';
+        // Head has the same Task powers as Admin
+        const isAdmin = role === 'admin' || role === 'head';
 
         // Check if manager is managing the assigned user or the creator user
         let isManagerOfTask = false;
@@ -430,7 +431,8 @@ exports.deleteTask = async (req, res) => {
 
         const isCreator = Number(task.assigned_by) === Number(userId);
         const isAssignee = Number(task.assigned_to) === Number(userId);
-        const isAdmin = role === 'admin';
+        // Head has the same Task powers as Admin
+        const isAdmin = role === 'admin' || role === 'head';
 
         // Check if assignee or creator is a team member of current manager
         let isManagerOfTask = false;
@@ -474,8 +476,8 @@ exports.getAssignableUsers = async (req, res) => {
         let query = 'SELECT id, username, email, role FROM users WHERE status = "active"';
         const params = [];
 
-        if (role === 'admin') {
-            // Admin can assign to anyone active
+        if (role === 'admin' || role === 'head') {
+            // Admin and Head can assign to anyone active
         } else if (role === 'manager') {
             // Manager can assign to their team or themselves
             query += ' AND (manager_id = ? OR id = ?)';

@@ -62,8 +62,9 @@ const Overview = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  if (user?.role === 'manager') {
-    return <ManagerOverview user={user} navigate={navigate} />;
+  if (user?.role === 'manager' || user?.role === 'head') {
+    // Head uses the same dashboard with organisation-wide data (all Managers & Employees)
+    return <ManagerOverview user={user} navigate={navigate} isHead={user?.role === 'head'} />;
   }
 
   if (user?.role === 'user') {
@@ -786,7 +787,7 @@ const MetaOverviewSection = ({ navigate }) => {
 /* ==========================================
    MANAGER OVERVIEW
    ========================================== */
-const ManagerOverview = ({ user, navigate }) => {
+const ManagerOverview = ({ user, navigate, isHead = false }) => {
   const [stats, setStats] = useState(null);
   const [team, setTeam] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -798,14 +799,15 @@ const ManagerOverview = ({ user, navigate }) => {
         const token = localStorage.getItem('token');
         const headers = { 'Authorization': `Bearer ${token}` };
 
+        // Head has no User Management access: its member list comes with the dashboard stats
         const [statsRes, teamRes, tasksRes] = await Promise.all([
           fetch('/api/users/dashboard/stats', { headers }),
-          fetch('/api/users', { headers }),
+          isHead ? Promise.resolve(null) : fetch('/api/users', { headers }),
           fetch('/api/tasks?my_tasks=true', { headers })
         ]);
 
         const statsData = await statsRes.json();
-        const teamData = await teamRes.json();
+        const teamData = teamRes ? await teamRes.json() : { success: true, users: statsData.members || [] };
         const tasksData = await tasksRes.json();
 
         if (statsData.success) setStats(statsData);
@@ -819,7 +821,7 @@ const ManagerOverview = ({ user, navigate }) => {
     };
 
     fetchManagerData();
-  }, []);
+  }, [isHead]);
 
   // Filter out manager themselves from the team view list
   const employees = team.filter(member => member.id !== user.id);
@@ -874,8 +876,8 @@ const ManagerOverview = ({ user, navigate }) => {
         <div className="absolute -right-10 -top-16 w-56 h-56 rounded-full bg-white/15 blur-3xl"></div>
         <div className="relative flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h2 className="text-2xl font-bold text-white tracking-tight mb-1.5">Team & Progress Overview</h2>
-            <p className="text-white/70 text-xs max-w-md">Dashboard summary of your team size, employee statuses, and work checklists.</p>
+            <h2 className="text-2xl font-bold text-white tracking-tight mb-1.5">{isHead ? 'Organisation & Progress Overview' : 'Team & Progress Overview'}</h2>
+            <p className="text-white/70 text-xs max-w-md">{isHead ? 'Summary of all Managers and Employees, their statuses, and work checklists.' : 'Dashboard summary of your team size, employee statuses, and work checklists.'}</p>
           </div>
           <button
             onClick={() => navigate('/tasks')}
@@ -898,14 +900,14 @@ const ManagerOverview = ({ user, navigate }) => {
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <StatCard
-              title="Team Size"
+              title={isHead ? 'Organisation Size' : 'Team Size'}
               value={stats?.teamStats?.total || 0}
               subtitle={`Active: ${stats?.teamStats?.active || 0} | On Hold: ${stats?.teamStats?.hold || 0}`}
               icon={Users}
               color="blue"
             />
             <StatCard
-              title="Team Tasks Summary"
+              title={isHead ? 'All Tasks Summary' : 'Team Tasks Summary'}
               value={stats?.teamTasksStats?.total || 0}
               subtitle={`Pending: ${stats?.teamTasksStats?.pending || 0} | In Progress: ${stats?.teamTasksStats?.in_progress || 0} | Done: ${stats?.teamTasksStats?.completed || 0}`}
               icon={Activity}
@@ -928,7 +930,7 @@ const ManagerOverview = ({ user, navigate }) => {
                   <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-500/10 text-blue-500 mr-2.5">
                     <UserCheck className="w-4.5 h-4.5" />
                   </span>
-                  My Team Members
+                  {isHead ? 'Managers & Employees' : 'My Team Members'}
                 </h3>
                 <span className="text-[10px] font-bold px-2.5 py-1 bg-blue-500/10 text-blue-500 rounded-full">
                   {employees.length} members
@@ -938,8 +940,10 @@ const ManagerOverview = ({ user, navigate }) => {
               {employees.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-slate-500 dark:text-slate-400">
                   <Users className="w-12 h-12 mb-3 opacity-30" />
-                  <p className="text-sm font-semibold">No team members registered under you.</p>
-                  <button onClick={() => navigate('/users')} className="mt-3 text-xs text-blue-500 hover:underline">Register an Employee</button>
+                  <p className="text-sm font-semibold">{isHead ? 'No Managers or Employees found.' : 'No team members registered under you.'}</p>
+                  {!isHead && (
+                    <button onClick={() => navigate('/users')} className="mt-3 text-xs text-blue-500 hover:underline">Register an Employee</button>
+                  )}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -979,12 +983,18 @@ const ManagerOverview = ({ user, navigate }) => {
                             </span>
                           </td>
                           <td className="py-4 text-right">
-                            <button
-                              onClick={() => navigate('/users')}
-                              className="px-3 py-1.5 text-xs font-bold text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all"
-                            >
-                              Edit Profile
-                            </button>
+                            {isHead ? (
+                              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                                {member.manager_name ? `Under: ${member.manager_name}` : '—'}
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => navigate('/users')}
+                                className="px-3 py-1.5 text-xs font-bold text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all"
+                              >
+                                Edit Profile
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
