@@ -11,7 +11,12 @@ const app = express();
 
 // Middlewares
 app.use(cors());
-app.use(express.json());
+app.use(express.json({
+    // Keep the raw bytes only for Webhook v2, so Meta's X-Hub-Signature-256 can be verified
+    verify: (req, res, buf) => {
+        if (req.originalUrl && req.originalUrl.startsWith('/api/whatsapp/webhook-v2')) req.rawBody = buf;
+    }
+}));
 app.use(express.urlencoded({ extended: true }));
 app.use(accessLogger);
 

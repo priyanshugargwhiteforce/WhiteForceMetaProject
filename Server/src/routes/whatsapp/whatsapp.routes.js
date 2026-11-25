@@ -9,9 +9,15 @@ const whatsappCallsController = require('../../controllers/whatsapp/whatsapp-cal
 const { protect, authorizeWhatsapp } = require('../../middlewares/auth.middleware');
 
 // Public Webhook endpoints (No protect middleware) - Handled by Webhook Dispatcher
-const whatsappWebhookController = require('../../controllers/whatsapp/whatsapp-webhook.controller');
-router.get('/webhook', whatsappWebhookController.verifyWebhook);
-router.post('/webhook', whatsappWebhookController.receiveWebhook);
+// OLD webhook (previous Meta account) - disabled, replaced by Webhook v2 below.
+// const whatsappWebhookController = require('../../controllers/whatsapp/whatsapp-webhook.controller');
+// router.get('/webhook', whatsappWebhookController.verifyWebhook);
+// router.post('/webhook', whatsappWebhookController.receiveWebhook);
+
+// Webhook v2 (new Meta account): Callback URL = https://<your-domain>/api/whatsapp/webhook-v2
+const whatsappWebhookV2Controller = require('../../controllers/whatsapp/whatsapp-webhook-v2.controller');
+router.get('/webhook-v2', whatsappWebhookV2Controller.verifyWebhookV2);
+router.post('/webhook-v2', whatsappWebhookV2Controller.receiveWebhookV2);
 
 // --- External In-House App Tracking APIs (x-internal-api-key) ---
 const whatsappExternalController = require('../../controllers/whatsapp/whatsapp-external.controller');

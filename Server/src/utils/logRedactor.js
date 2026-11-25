@@ -7,13 +7,14 @@ const util = require('util');
 const REDACTIONS = [
     [/(access_token=)[^&\s"'\\]+/gi, '$1[REDACTED]'],
     [/(input_token=)[^&\s"'\\]+/gi, '$1[REDACTED]'],
+    [/(verify_token=)[^&\s"'\\]+/gi, '$1[REDACTED]'],
     [/([?&]token=)[^&\s"'\\]+/gi, '$1[REDACTED]'],
     [/(Bearer\s+)[A-Za-z0-9._~+/=-]{20,}/g, '$1[REDACTED]'],
     [/\bEAA[A-Za-z0-9]{20,}/g, '[REDACTED_META_TOKEN]'],
 ];
 
 // Quick pre-check so normal logs are printed exactly as before
-const SENSITIVE_HINT = /access_token=|input_token=|[?&]token=|Bearer\s|EAA[A-Za-z0-9]{20,}/i;
+const SENSITIVE_HINT = /access_token=|input_token=|verify_token=|[?&]token=|Bearer\s|EAA[A-Za-z0-9]{20,}/i;
 
 const redact = (text) => {
     if (typeof text !== 'string' || !SENSITIVE_HINT.test(text)) return text;
